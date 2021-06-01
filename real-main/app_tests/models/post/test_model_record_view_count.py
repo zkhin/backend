@@ -1,5 +1,7 @@
 import logging
 import uuid
+from decimal import BasicContext, Decimal
+from random import random
 
 import pytest
 
@@ -23,6 +25,18 @@ def post(post_manager, user):
 
 
 post2 = post
+
+
+@pytest.fixture
+def ad(post_manager, user):
+    yield post_manager.add_post(
+        user,
+        str(uuid.uuid4()),
+        PostType.TEXT_ONLY,
+        text='t',
+        is_ad=True,
+        ad_payment=Decimal(random()).normalize(BasicContext),
+    )
 
 
 def test_record_view_count_logs_warning_for_non_completed_posts(post, user2, caplog):

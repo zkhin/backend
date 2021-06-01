@@ -168,6 +168,7 @@ module.exports.simpleUserFields = gql`
     blockedStatus
     blockerStatus
     acceptedEULAVersion
+    adsDisabled
     commentsDisabled
     likesDisabled
     sharingDisabled

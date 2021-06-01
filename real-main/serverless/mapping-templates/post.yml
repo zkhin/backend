@@ -1,4 +1,9 @@
 - type: Post
+  field: adStatus
+  dataSource: NoneDataSource
+  response: PassThru.response.vtl
+
+- type: Post
   field: flagStatus
   dataSource: DynamodbDataSource
   caching:
@@ -29,7 +34,7 @@
   kind: PIPELINE
   functions:
     - Posts.batchGet
-    - Posts.filterBy.postStatus
+    - Posts.filterBy.adStatus
     - Users.beginPipeline
     - Users.batchGet
     - Users.batchGet.blockerStatus

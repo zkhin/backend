@@ -77,8 +77,10 @@ class ViewDynamo:
 
         if view_type == ViewType.THUMBNAIL:
             query_kwargs['Item']['thumbnailViewCount'] = view_count
+            query_kwargs['Item']['thumbnailLastViewedAt'] = viewed_at_str
         if view_type == ViewType.FOCUS:
             query_kwargs['Item']['focusViewCount'] = view_count
+            query_kwargs['Item']['focusLastViewedAt'] = viewed_at_str
 
         try:
             return self.client.add_item(query_kwargs)
@@ -86,17 +88,20 @@ class ViewDynamo:
             raise exceptions.ViewAlreadyExists(self.item_type, item_id, user_id) from err
 
     def increment_view_count(self, item_id, user_id, view_count, viewed_at, view_type=None):
+        add_exps = ['viewCount :vc']
+        set_exps = ['lastViewedAt = :lva']
+        if view_type == ViewType.THUMBNAIL:
+            add_exps.append('thumbnailViewCount :vc')
+            set_exps.append('thumbnailLastViewedAt = :lva')
+        if view_type == ViewType.FOCUS:
+            add_exps.append('focusViewCount :vc')
+            set_exps.append('focusLastViewedAt = :lva')
+
         query_kwargs = {
             'Key': self.key(item_id, user_id),
-            'UpdateExpression': 'ADD viewCount :vc SET lastViewedAt = :lva',
+            'UpdateExpression': 'ADD ' + ', '.join(add_exps) + ' SET ' + ', '.join(set_exps),
             'ExpressionAttributeValues': {':vc': view_count, ':lva': viewed_at.to_iso8601_string()},
         }
-
-        if view_type == ViewType.THUMBNAIL:
-            query_kwargs['UpdateExpression'] = 'ADD viewCount :vc, thumbnailViewCount :vc SET lastViewedAt = :lva'
-        if view_type == ViewType.FOCUS:
-            query_kwargs['UpdateExpression'] = 'ADD viewCount :vc, focusViewCount :vc SET lastViewedAt = :lva'
-
         try:
             return self.client.update_item(query_kwargs)
         except self.client.exceptions.ConditionalCheckFailedException as err:

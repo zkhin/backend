@@ -273,10 +273,11 @@ describe('wrapper to ensure cleanup', () => {
     })
 
     // we should both be in trending users
-    await otherClient.query({query: queries.trendingUsers}).then(({data: {trendingUsers}}) => {
-      expect(trendingUsers.items).toHaveLength(2)
-      expect(trendingUsers.items[0].userId).toBe(theirUserId)
-      expect(trendingUsers.items[1].userId).toBe(ourUserId)
+    await eventually(async () => {
+      const {data} = await otherClient.query({query: queries.trendingUsers})
+      expect(data.trendingUsers.items).toHaveLength(2)
+      expect(data.trendingUsers.items[0].userId).toBe(theirUserId)
+      expect(data.trendingUsers.items[1].userId).toBe(ourUserId)
     })
 
     // they delete themselves

@@ -473,12 +473,11 @@ def test_on_user_subscription_level_change_update_card(card_manager, user):
 
 def test_on_user_change_update_photo_card_scenario1(card_manager, user):
     # check starting state
-    assert 'userStatus' not in user.item
+    assert user.item['userStatus'] == UserStatus.ACTIVE
     template = templates.AddProfilePhotoCardTemplate(user.id)
     assert card_manager.get_card(template.card_id) is None
 
     # user status to active with photoPostId, process, check card is not created
-    user.item['userStatus'] = UserStatus.ACTIVE
     user.item['photoPostId'] = str(uuid4())
     card_manager.on_user_change_update_photo_card(user.id, new_item=user.item)
     assert card_manager.get_card(template.card_id) is None
@@ -497,7 +496,7 @@ def test_on_user_change_update_photo_card_scenario1(card_manager, user):
 
 def test_on_user_change_update_photo_card_scenario2(card_manager, user):
     # check starting state
-    assert 'userStatus' not in user.item
+    assert user.item['userStatus'] == UserStatus.ACTIVE
     template = templates.AddProfilePhotoCardTemplate(user.id)
     assert card_manager.get_card(template.card_id) is None
 
@@ -516,12 +515,11 @@ def test_on_user_change_update_photo_card_scenario2(card_manager, user):
 
 def test_on_user_change_update_anonymous_upsell_card(card_manager, user):
     # check starting state
-    assert 'userStatus' not in user.item
+    assert user.item['userStatus'] == UserStatus.ACTIVE
     template = templates.AnonymousUserUpsellCardTemplate(user.id)
     assert card_manager.get_card(template.card_id) is None
 
     # create ACTIVE user, check card is not created
-    user.item['userStatus'] = UserStatus.ACTIVE
     card_manager.on_user_change_update_anonymous_upsell_card(user.id, new_item=user.item)
     assert card_manager.get_card(template.card_id) is None
 

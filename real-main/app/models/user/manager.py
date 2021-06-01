@@ -34,6 +34,8 @@ S3_PLACEHOLDER_PHOTOS_DIRECTORY = os.environ.get('S3_PLACEHOLDER_PHOTOS_DIRECTOR
 
 class UserManager(TrendingManagerMixin, ManagerBase):
 
+    admin_usernames = ('real', 'ian')
+
     client_names = [
         'amplitude',
         'apple',

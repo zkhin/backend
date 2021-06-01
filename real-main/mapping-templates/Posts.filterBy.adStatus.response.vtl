@@ -1,0 +1,21 @@
+#if ($ctx.error)
+  $util.error($ctx.error.message, $ctx.error.type)
+#end
+
+#set ($callerUser = $ctx.result)
+#set ($prevPosts = $ctx.prev.result)
+
+## if caller has adsDisabled, filter out ads caller does not own
+#if ($callerUser.adsDisabled)
+  #set ($posts = [])
+  #foreach ($post in $prevPosts)
+    #set ($adStatus = $util.defaultIfNull($post.adStatus, 'NOT_AD'))
+    #if ($adStatus == 'NOT_AD' || $post.postedByUserId == $callerUser.userId)
+      $util.qr($posts.add($post))
+    #end
+  #end
+#else
+  #set ($posts = $prevPosts)
+#end
+
+$util.toJson($posts)

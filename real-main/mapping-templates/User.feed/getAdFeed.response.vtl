@@ -1,0 +1,25 @@
+#if ($ctx.error)
+  $util.error($ctx.error.message, $ctx.error.type)
+#end
+
+#set ($items = [])
+#set ($posts = $ctx.prev.result.items)
+#set ($adPosts = $ctx.result.items)
+
+## insert the ad we pulled out as the second post in the response
+#if ($posts.size() > 0)
+  $util.qr($items.add($posts[0]))
+#end
+#if ($adPosts.size() > 0)
+  $util.qr($items.add($adPosts[0].postId))
+#end
+#foreach ($post in $posts)
+  #if ($velocityCount > 1)
+    $util.qr($items.add($post))
+  #end
+#end
+
+$util.toJson({
+  'nextToken': $ctx.prev.result.nextToken,
+  'items': $items
+})

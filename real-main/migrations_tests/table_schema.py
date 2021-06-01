@@ -64,6 +64,14 @@ main_table_schema = {
             ],
             'Projection': {'ProjectionType': 'KEYS_ONLY'},
         },
+        {
+            'IndexName': 'GSI-K4',
+            'KeySchema': [
+                {'AttributeName': 'gsiK4PartitionKey', 'KeyType': 'HASH'},
+                {'AttributeName': 'gsiK4SortKey', 'KeyType': 'RANGE'},
+            ],
+            'Projection': {'ProjectionType': 'KEYS_ONLY'},
+        },
     ],
     'AttributeDefinitions': [
         {'AttributeName': 'partitionKey', 'AttributeType': 'S'},
@@ -82,6 +90,8 @@ main_table_schema = {
         {'AttributeName': 'gsiK2SortKey', 'AttributeType': 'S'},
         {'AttributeName': 'gsiK3PartitionKey', 'AttributeType': 'S'},
         {'AttributeName': 'gsiK3SortKey', 'AttributeType': 'N'},
+        {'AttributeName': 'gsiK4PartitionKey', 'AttributeType': 'S'},
+        {'AttributeName': 'gsiK4SortKey', 'AttributeType': 'S'},
     ],
 }
 

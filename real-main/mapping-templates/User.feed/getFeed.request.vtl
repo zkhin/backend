@@ -3,12 +3,13 @@
 #end
 #set ($limit = $util.defaultIfNull($ctx.args.limit, 20))
 
-## feed is private to the user themselves
-#if ($ctx.source.userId != $ctx.identity.cognitoIdentityId)
-  #return
-#end
-
+#set ($adsDisabled = $ctx.stash.adsDisabled)
 #set ($targetUserId = $ctx.source.userId)
+
+## we inject ads if the user has ads enabled and the query is for at least 3 ads
+#if (! $ctx.stash.adsDisabled and $limit > 2)
+  #set ($limit = $limit - 1)
+#end
 
 {
     "version": "2018-05-29",

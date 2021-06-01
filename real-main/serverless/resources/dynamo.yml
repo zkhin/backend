@@ -45,6 +45,10 @@ Resources:
           AttributeType: S
         - AttributeName: gsiK3SortKey
           AttributeType: N
+        - AttributeName: gsiK4PartitionKey
+          AttributeType: S
+        - AttributeName: gsiK4SortKey
+          AttributeType: S
       KeySchema:
         - AttributeName: partitionKey
           KeyType: HASH
@@ -107,6 +111,14 @@ Resources:
             KeyType: RANGE
           Projection:
             ProjectionType: KEYS_ONLY
+        - IndexName: GSI-K4
+          KeySchema:
+          - AttributeName: gsiK4PartitionKey
+            KeyType: HASH
+          - AttributeName: gsiK4SortKey
+            KeyType: RANGE
+          Projection:
+            ProjectionType: KEYS_ONLY
 
   FeedTable:
     Type: AWS::DynamoDB::Table
@@ -144,6 +156,36 @@ Resources:
           - AttributeName: feedUserId
             KeyType: HASH
           - AttributeName: postedByUserId
+            KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+
+  AdFeedTable:
+    Type: AWS::DynamoDB::Table
+    DeletionPolicy: Retain
+    Properties:
+      TableName: ${self:provider.environment.DYNAMO_AD_FEED_TABLE}
+      BillingMode: PAY_PER_REQUEST
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+      AttributeDefinitions:
+        - AttributeName: postId
+          AttributeType: S
+        - AttributeName: userId
+          AttributeType: S
+        - AttributeName: lastViewedAt
+          AttributeType: S
+      KeySchema:
+        - AttributeName: postId
+          KeyType: HASH
+        - AttributeName: userId
+          KeyType: RANGE
+      GlobalSecondaryIndexes:
+        - IndexName: GSI-A1
+          KeySchema:
+          - AttributeName: userId
+            KeyType: HASH
+          - AttributeName: lastViewedAt
             KeyType: RANGE
           Projection:
             ProjectionType: ALL

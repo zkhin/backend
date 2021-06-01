@@ -1,12 +1,12 @@
 import logging
-from decimal import Decimal
+from decimal import BasicContext, Decimal
 from uuid import uuid4
 
 import pendulum
 import pytest
 
 from app.models.post.dynamo import PostDynamo
-from app.models.post.enums import PostStatus
+from app.models.post.enums import AdStatus, PostStatus
 
 
 @pytest.fixture
@@ -120,6 +120,35 @@ def test_add_pending_post_with_options(post_dynamo):
         'setAsUserPhoto': True,
         'keywords': list(set(keywords)),
     }
+
+
+@pytest.mark.parametrize('ad_status', [None, AdStatus.NOT_AD])
+def test_add_pending_post_not_as_ad(post_dynamo, ad_status):
+    user_id, post_id = str(uuid4()), str(uuid4())
+    post_item = post_dynamo.add_pending_post(user_id, post_id, 'ptype', ad_status=ad_status)
+    assert post_dynamo.get_post(post_id) == post_item
+    assert 'adStatus' not in post_item
+    assert 'adPayment' not in post_item
+    assert 'adPaymentPeriod' not in post_item
+
+
+@pytest.mark.parametrize('ad_payment', [42, 0.123456789, Decimal('12.3498')])
+def test_add_pending_post_as_ad(post_dynamo, ad_payment):
+    user_id, post_id = str(uuid4()), str(uuid4())
+    ad_status = AdStatus.PENDING
+    ad_payment_period = str(uuid4())
+    post_item = post_dynamo.add_pending_post(
+        user_id,
+        post_id,
+        'ptype',
+        ad_status=ad_status,
+        ad_payment=ad_payment,
+        ad_payment_period=ad_payment_period,
+    )
+    assert post_dynamo.get_post(post_id) == post_item
+    assert post_item['adStatus'] == ad_status
+    assert post_item['adPayment'] == Decimal(ad_payment).normalize(context=BasicContext)
+    assert post_item['adPaymentPeriod'] == ad_payment_period
 
 
 def test_transact_add_post_already_exists(post_dynamo):
@@ -306,6 +335,42 @@ def test_set_post_status_album_rank_handled_correctly_to_and_from_COMPLETED_in_a
     post_item = post_dynamo.set_post_status(post_item, PostStatus.ARCHIVED)
     assert post_item['postStatus'] == PostStatus.ARCHIVED
     assert post_item['gsiK3SortKey'] == -1
+
+
+def test_set_ad_status(post_dynamo, caplog):
+    user_id, post_id = str(uuid4()), str(uuid4())
+
+    # by default, adStatus not set
+    post_item = post_dynamo.add_pending_post(user_id, post_id, 'ptype')
+    posted_at_str = post_item['postedAt']
+    assert post_dynamo.get_post(post_id) == post_item
+    assert 'adStatus' not in post_item
+    assert 'gsiK4PartitionKey' not in post_item
+    assert 'gsiK4SortKey' not in post_item
+
+    # set to random value, check
+    ad_status = 'blahblah'
+    post_dynamo.set_ad_status(post_id, posted_at_str, ad_status)
+    assert post_dynamo.get_post(post_id) == {
+        **post_item,
+        'adStatus': ad_status,
+        'gsiK4PartitionKey': f'postAdStatus/{ad_status}',
+        'gsiK4SortKey': post_item['postedAt'],
+    }
+
+    # set to NOT_AD, verify clears ad status in db
+    post_dynamo.set_ad_status(post_id, posted_at_str, AdStatus.NOT_AD)
+    assert post_dynamo.get_post(post_id) == post_item
+
+    # set for post that DNE, verify error thrown by default, silenced by fail_softly
+    post_id_dne = str(uuid4())
+    with pytest.raises(post_dynamo.client.exceptions.ConditionalCheckFailedException):
+        post_dynamo.set_ad_status(post_id_dne, posted_at_str, AdStatus.NOT_AD)
+    with caplog.at_level(logging.WARNING):
+        post_dynamo.set_ad_status(post_id_dne, posted_at_str, AdStatus.NOT_AD, fail_softly=True)
+    assert len(caplog.records) == 1
+    assert caplog.records[0].levelname == 'WARNING'
+    assert post_id_dne in caplog.records[0].msg
 
 
 def test_set_checksum(post_dynamo):
@@ -1052,3 +1117,47 @@ def test_increment_decrement_count(post_dynamo, caplog, incrementor_name, decrem
         assert caplog.records[0].levelname == 'WARNING'
         assert all(x in caplog.records[0].msg for x in ['Failed to decrement', attribute_name, post_id])
         assert post_dynamo.get_post(post_id)[attribute_name] == 0
+
+
+def test_generate_post_ids_by_ad_status(post_dynamo):
+    # verify can't generate by non-ad-status and not by NOT_AD
+    generate = post_dynamo.generate_post_ids_by_ad_status
+    with pytest.raises(AssertionError):
+        generate('not-a-status')
+    with pytest.raises(AssertionError):
+        generate(AdStatus.NOT_AD)
+
+    # add a handlful of posts
+    uid1, uid2, uid3, uid4 = str(uuid4()), str(uuid4()), str(uuid4()), str(uuid4())
+    pid1, pid2, pid3, pid4 = str(uuid4()), str(uuid4()), str(uuid4()), str(uuid4())
+    post_dynamo.add_pending_post(uid1, pid1, 'ptype', text='lore')
+    post_dynamo.add_pending_post(uid2, pid2, 'ptype', text='lore', ad_status=AdStatus.PENDING)
+    post_dynamo.add_pending_post(uid3, pid3, 'ptype', text='lore', ad_status=AdStatus.PENDING)
+    post_dynamo.add_pending_post(uid4, pid4, 'ptype', text='lore', ad_status=AdStatus.PENDING)
+
+    # test generation
+    assert sorted(list(generate(AdStatus.PENDING))) == sorted([pid2, pid3, pid4])
+    assert sorted(list(generate(AdStatus.ACTIVE))) == []
+    assert sorted(list(generate(AdStatus.INACTIVE))) == []
+
+    # transition some of those posts to active
+    post_dynamo.set_ad_status(pid3, 'posted-at-str', AdStatus.ACTIVE)
+    post_dynamo.set_ad_status(pid4, 'posted-at-str', AdStatus.ACTIVE)
+
+    # test generation
+    assert sorted(list(generate(AdStatus.PENDING))) == [pid2]
+    assert sorted(list(generate(AdStatus.ACTIVE))) == sorted([pid3, pid4])
+    assert sorted(list(generate(AdStatus.INACTIVE))) == []
+
+    # test exclude_posted_by_user_id
+    assert sorted(list(generate(AdStatus.ACTIVE, exclude_posted_by_user_id=uid2))) == sorted([pid3, pid4])
+    assert sorted(list(generate(AdStatus.ACTIVE, exclude_posted_by_user_id=uid3))) == sorted([pid4])
+    assert sorted(list(generate(AdStatus.ACTIVE, exclude_posted_by_user_id=uid4))) == sorted([pid3])
+
+    # transition some of those posts to inactive
+    post_dynamo.set_ad_status(pid4, 'posted-at-str', AdStatus.INACTIVE)
+
+    # test generation
+    assert sorted(list(generate(AdStatus.PENDING))) == [pid2]
+    assert sorted(list(generate(AdStatus.ACTIVE))) == [pid3]
+    assert sorted(list(generate(AdStatus.INACTIVE))) == [pid4]

@@ -60,7 +60,7 @@
   kind: PIPELINE
   functions:
     - Posts.batchGet
-    - Posts.filterBy.postStatus
+    - Posts.filterBy.adStatus
     - Users.beginPipeline
     - Users.batchGet
     - Users.batchGet.blockerStatus

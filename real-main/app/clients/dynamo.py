@@ -5,19 +5,45 @@ import os
 import re
 
 import boto3
+from boto3.dynamodb.types import TypeDeserializer, TypeSerializer
+from more_itertools import chunked
 
 DYNAMO_TABLE = os.environ.get('DYNAMO_TABLE')
+DYNAMO_PARTITION_KEY = os.environ.get('DYNAMO_PARTITION_KEY')
+DYNAMO_SORT_KEY = os.environ.get('DYNAMO_SORT_KEY')
 logger = logging.getLogger()
+
+# https://stackoverflow.com/a/46738251
+deserialize = TypeDeserializer().deserialize
+serialize = TypeSerializer().serialize
+
+
+def serialize_item(item):
+    return {k: serialize(v) for k, v in item.items()}
+
+
+def deserialize_item(item):
+    return {k: deserialize(v) for k, v in item.items()}
 
 
 class DynamoClient:
-    def __init__(self, table_name=DYNAMO_TABLE, create_table_schema=None):
+    def __init__(
+        self,
+        table_name=DYNAMO_TABLE,
+        partition_key=DYNAMO_PARTITION_KEY,
+        sort_key=DYNAMO_SORT_KEY,
+        batch_get_items_max=100,
+        create_table_schema=None,
+    ):
         """
         If create_table_schema is not None, then the table will be created
         on-the-fly. Useful when testing with a mocked dynamodb backend.
         """
         assert table_name, "Table name is required"
         self.table_name = table_name
+        self.partition_key = partition_key
+        self.sort_key = sort_key
+        self.batch_get_items_max = batch_get_items_max
 
         boto3_resource = boto3.resource('dynamodb')
         self.table = (
@@ -32,7 +58,7 @@ class DynamoClient:
     def add_item(self, query_kwargs):
         "Put an item and return what was putted"
         # ensure query fails if the item already exists
-        cond_exp = 'attribute_not_exists(partitionKey)'
+        cond_exp = f'attribute_not_exists({self.partition_key})'
         if 'ConditionExpression' in query_kwargs:
             cond_exp += ' and (' + query_kwargs['ConditionExpression'] + ')'
         query_kwargs['ConditionExpression'] = cond_exp
@@ -43,24 +69,18 @@ class DynamoClient:
         "Get an item by its primary key"
         return self.table.get_item(Key=pk, **kwargs).get('Item')
 
-    def get_typed_item(self, typed_pk, **kwargs):
-        "Get an typed version of the item by its typed primary key"
-        return self.boto3_client.get_item(Key=typed_pk, TableName=self.table_name, **kwargs).get('Item')
-
-    def batch_get_items(self, typed_keys, projection_expression=None):
+    def batch_get_items(self, key_generator, projection_expression=None):
         """
-        Get a bunch of items in one batch request.
-        Both the input `typed_keys` and the return value should/will be in
-        verbose format, with types.
-        Order *not* maintained.
+        Batch get the items identified by `key_generator`.
+        If `projection_expression` is supplied, apply it.
+        Returns a generator of item responses, output order may not match input order.
         """
-        assert len(typed_keys) <= 100, "Max 100 items per batch get request"
-        if len(typed_keys) == 0:
-            return []
-        kwargs = {'RequestItems': {self.table_name: {'Keys': typed_keys}}}
-        if projection_expression:
-            kwargs['RequestItems'][self.table_name]['ProjectionExpression'] = projection_expression
-        return self.boto3_client.batch_get_item(**kwargs)['Responses'][self.table_name]
+        base_table_request = {'ProjectionExpression': projection_expression} if projection_expression else {}
+        for keys in chunked(key_generator, self.batch_get_items_max):
+            request_items = {self.table_name: {**base_table_request, 'Keys': [serialize_item(k) for k in keys]}}
+            items = self.boto3_client.batch_get_item(RequestItems=request_items)['Responses'][self.table_name]
+            for item in items:
+                yield deserialize_item(item)
 
     def update_item(self, query_kwargs, failure_warning=None):
         """
@@ -68,7 +88,7 @@ class DynamoClient:
         Set `failure_warning` fail softly with a logged warning rather than raise an exception.
         """
         # ensure query fails if the item does not exist
-        cond_exp = 'attribute_exists(partitionKey)'
+        cond_exp = f'attribute_exists({self.partition_key})'
         if 'ConditionExpression' in query_kwargs:
             cond_exp += ' and (' + query_kwargs['ConditionExpression'] + ')'
         query_kwargs['ConditionExpression'] = cond_exp
@@ -101,7 +121,7 @@ class DynamoClient:
             'UpdateExpression': 'ADD #attrName :one',
             'ExpressionAttributeNames': {'#attrName': attribute_name},
             'ExpressionAttributeValues': {':one': 1},
-            'ConditionExpression': 'attribute_exists(partitionKey)',
+            'ConditionExpression': f'attribute_exists({self.partition_key})',
         }
         failure_warning = f'Failed to increment {attribute_name} for key `{key}`'
         return self.update_item(query_kwargs, failure_warning=failure_warning)
@@ -113,7 +133,7 @@ class DynamoClient:
             'UpdateExpression': 'ADD #attrName :neg_one',
             'ExpressionAttributeNames': {'#attrName': attribute_name},
             'ExpressionAttributeValues': {':neg_one': -1, ':zero': 0},
-            'ConditionExpression': 'attribute_exists(partitionKey) AND #attrName > :zero',
+            'ConditionExpression': f'attribute_exists({self.partition_key}) AND #attrName > :zero',
         }
         failure_warning = f'Failed to decrement {attribute_name} for key `{key}`'
         return self.update_item(query_kwargs, failure_warning=failure_warning)
@@ -135,7 +155,7 @@ class DynamoClient:
 
     def batch_delete_items(self, generator):
         "Batch delete the items or keys yielded by `generator`. Returns count of how many deletes requested."
-        key_generator = ({k: item[k] for k in ('partitionKey', 'sortKey')} for item in generator)
+        key_generator = ({k: item[k] for k in (self.partition_key, self.sort_key)} for item in generator)
         return self.batch_delete(key_generator)
 
     def batch_delete(self, key_generator):

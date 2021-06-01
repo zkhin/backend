@@ -3,7 +3,7 @@ const got = require('got')
 const path = require('path')
 const {v4: uuidv4} = require('uuid')
 
-const {cognito} = require('../../utils')
+const {cognito, eventually} = require('../../utils')
 const {mutations, queries} = require('../../schema')
 
 let anonClient, anonUserId
@@ -579,6 +579,44 @@ test('User accepted EULA version - get, set, privacy', async () => {
   await expect(
     client.mutate({mutation: mutations.setUserAcceptedEULAVersion, variables: {version: '42'}}),
   ).rejects.toThrow(/ClientError: User .* is not ACTIVE/)
+})
+
+describe('User.adsDisabled', () => {
+  let client, userId, theirClient
+
+  beforeEach(async () => {
+    ;({client, userId} = await loginCache.getCleanLogin())
+    ;({client: theirClient} = await loginCache.getCleanLogin())
+  })
+
+  test('defaults to False', async () => {
+    const {data} = await client.query({query: queries.self})
+    expect(data.self.adsDisabled).toBe(false)
+  })
+
+  test('can be set by the user', async () => {
+    // set it to true
+    await client
+      .mutate({mutation: mutations.setUserMentalHealthSettings, variables: {adsDisabled: true}})
+      .then(({data}) => expect(data.setUserDetails.adsDisabled).toBe(true))
+    await eventually(async () => {
+      const {data} = await client.query({query: queries.self})
+      expect(data.self.adsDisabled).toBe(true)
+    })
+    // set it to false
+    await client
+      .mutate({mutation: mutations.setUserMentalHealthSettings, variables: {adsDisabled: false}})
+      .then(({data}) => expect(data.setUserDetails.adsDisabled).toBe(false))
+    await eventually(async () => {
+      const {data} = await client.query({query: queries.self})
+      expect(data.self.adsDisabled).toBe(false)
+    })
+  })
+
+  test('cannot be read by other users', async () => {
+    const {data} = await theirClient.query({query: queries.user, variables: {userId: userId}})
+    expect(data.user.adsDisabled).toBeNull()
+  })
 })
 
 test('User commentsDisabled - get, set, privacy', async () => {

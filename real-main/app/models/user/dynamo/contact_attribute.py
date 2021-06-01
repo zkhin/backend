@@ -14,23 +14,20 @@ class UserContactAttributeDynamo:
     def key(self, attr):
         return {'partitionKey': f'{self.pk_prefix}/{attr}', 'sortKey': '-'}
 
-    def typed_key(self, attr):
-        return {'partitionKey': {'S': f'{self.pk_prefix}/{attr}'}, 'sortKey': {'S': '-'}}
-
     def get(self, attr, strongly_consistent=False):
         return self.client.get_item(self.key(attr), ConsistentRead=strongly_consistent)
 
     def batch_get_user_ids(self, attrs):
         # dynamo can't handle duplicates
-        typed_keys = [self.typed_key(attr) for attr in set(attrs)]
-        items = self.client.batch_get_items(typed_keys, projection_expression='userId')
-        return [item['userId']['S'] for item in items]
+        key_generator = (self.key(attr) for attr in set(attrs))
+        item_generator = self.client.batch_get_items(key_generator, projection_expression='userId')
+        return [item['userId'] for item in item_generator]
 
     def batch_get_user_ids_attr_mapped(self, attrs):
         # dynamo can't handle duplicates
-        typed_keys = [self.typed_key(attr) for attr in set(attrs)]
-        items = self.client.batch_get_items(typed_keys, projection_expression='partitionKey, userId')
-        return {item['partitionKey']['S'].split('/')[1]: item['userId']['S'] for item in items}
+        key_generator = (self.key(attr) for attr in set(attrs))
+        item_generator = self.client.batch_get_items(key_generator, projection_expression='partitionKey, userId')
+        return {item['partitionKey'].split('/')[1]: item['userId'] for item in item_generator}
 
     def add(self, attr, user_id):
         item = {

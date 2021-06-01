@@ -1,4 +1,5 @@
 __all__ = [
+    'AdFeedManager',
     'AlbumManager',
     'AppStoreManager',
     'BlockManager',
@@ -14,6 +15,7 @@ __all__ = [
     'UserManager',
 ]
 
+from .ad_feed.manager import AdFeedManager
 from .album.manager import AlbumManager
 from .appstore.manager import AppStoreManager
 from .block.manager import BlockManager

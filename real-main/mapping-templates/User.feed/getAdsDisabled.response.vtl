@@ -1,0 +1,7 @@
+#if ($ctx.error)
+  $util.error($ctx.error.message, $ctx.error.type)
+#end
+
+#set ($ctx.stash.adsDisabled = $ctx.result.adsDisabled)
+
+{}

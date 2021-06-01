@@ -320,6 +320,7 @@ def set_user_details(caller_user, arguments, **kwargs):
     view_counts_hidden = arguments.get('viewCountsHidden')
     language_code = arguments.get('languageCode')
     theme_code = arguments.get('themeCode')
+    ads_disabled = arguments.get('adsDisabled')
     comments_disabled = arguments.get('commentsDisabled')
     likes_disabled = arguments.get('likesDisabled')
     sharing_disabled = arguments.get('sharingDisabled')
@@ -343,6 +344,7 @@ def set_user_details(caller_user, arguments, **kwargs):
         follow_counts_hidden,
         language_code,
         theme_code,
+        ads_disabled,
         comments_disabled,
         likes_disabled,
         sharing_disabled,
@@ -409,6 +411,7 @@ def set_user_details(caller_user, arguments, **kwargs):
         theme_code=theme_code,
         follow_counts_hidden=follow_counts_hidden,
         view_counts_hidden=view_counts_hidden,
+        ads_disabled=ads_disabled,
         comments_disabled=comments_disabled,
         likes_disabled=likes_disabled,
         sharing_disabled=sharing_disabled,
@@ -753,17 +756,24 @@ def add_post(caller_user, arguments, **kwargs):
     sharing_disabled = arguments.get('sharingDisabled')
     verification_hidden = arguments.get('verificationHidden')
     keywords = arguments.get('keywords')
+    is_ad = arguments.get('isAd')
+    ad_payment = arguments.get('adPayment')
 
-    lifetime_iso = arguments.get('lifetime')
-    if lifetime_iso:
+    def parse_iso_duration(name, value_str):
         try:
-            lifetime_duration = pendulum.parse(lifetime_iso)
+            value_dur = pendulum.parse(value_str)
         except pendulum.exceptions.ParserError as err:
-            raise ClientException(f'Unable to parse lifetime `{lifetime_iso}`') from err
-        if not isinstance(lifetime_duration, pendulum.Duration):
-            raise ClientException(f'Unable to parse lifetime `{lifetime_iso}` as duration')
-    else:
-        lifetime_duration = None
+            raise ClientException(f'Unable to parse {name} `{value_str}`') from err
+        if not isinstance(value_dur, pendulum.Duration):
+            raise ClientException(f'Unable to parse {name} `{value_str}` as duration')
+        return value_dur
+
+    lifetime = arguments.get('lifetime')
+    lifetime_duration = parse_iso_duration('lifetime', lifetime) if lifetime else None
+
+    ad_payment_period = arguments.get('adPaymentPeriod')
+    if ad_payment_period:
+        parse_iso_duration('adPaymentPeriod', ad_payment_period)
 
     try:
         post = post_manager.add_post(
@@ -780,6 +790,9 @@ def add_post(caller_user, arguments, **kwargs):
             verification_hidden=verification_hidden,
             keywords=keywords,
             set_as_user_photo=set_as_user_photo,
+            is_ad=is_ad,
+            ad_payment=ad_payment,
+            ad_payment_period=ad_payment_period,
         )
     except PostException as err:
         raise ClientException(str(err)) from err
@@ -1038,6 +1051,28 @@ def restore_archived_post(caller_user, arguments, **kwargs):
 
     try:
         post.restore()
+    except PostException as err:
+        raise ClientException(str(err)) from err
+
+    return post.serialize(caller_user.id)
+
+
+@routes.register('Mutation.approveAdPost')
+@validate_caller
+@update_last_client
+@update_last_disable_dating_date
+def approve_ad_post(caller_user, arguments, **kwargs):
+    post_id = arguments['postId']
+
+    if not caller_user.is_real_admin:
+        raise ClientException(f'User `{caller_user.id}` may not approve ads')
+
+    post = post_manager.get_post(post_id)
+    if not post:
+        raise ClientException(f'Post `{post_id}` does not exist')
+
+    try:
+        post.approve()
     except PostException as err:
         raise ClientException(str(err)) from err
 

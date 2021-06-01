@@ -59,6 +59,7 @@ test('Blocked user only see absolutely minimal profile of blocker via direct acc
     expect(data.self.userId).toBe(ourUserId)
     expect(data.self.username).toBeTruthy()
     expect(data.self.acceptedEULAVersion).toBeTruthy()
+    expect(data.self.adsDisabled).toBe(false)
     expect(data.self.albumCount).toBe(0)
     expect(data.self.albums.items).toHaveLength(0)
     expect(data.self.anonymouslyLikedPosts.items).toHaveLength(0)
@@ -121,6 +122,7 @@ test('Blocked user only see absolutely minimal profile of blocker via direct acc
 
   // adjust everything nulled out or changed, then compare
   ourUserFull.acceptedEULAVersion = null
+  ourUserFull.adsDisabled = null
   ourUserFull.albumCount = null
   ourUserFull.albums = null
   ourUserFull.anonymouslyLikedPosts = null

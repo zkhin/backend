@@ -1,0 +1,11 @@
+#set ($callerUserId = $ctx.identity.cognitoIdentityId)
+
+## retrieve caller's profile to get their adsDisabled value
+{
+  "version": "2018-05-29",
+  "operation": "GetItem",
+  "key": {
+    "partitionKey": {"S": "user/$callerUserId"},
+    "sortKey": {"S": "profile"}
+  }
+}

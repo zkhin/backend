@@ -26,8 +26,15 @@ provider:
     PINPOINT_APPLICATION_ID: !Ref PinpointApp
     REAL_USER_ID: ${env:REAL_USER_ID, 'us-east-1:8a4d7c3b-809e-4182-859c-a2bdafa1a8ae'}  # default is correct value for production
 
-    DYNAMO_TABLE: ${self:provider.stackName}
+    DYNAMO_TABLE: real-${self:provider.stage}-main
+    DYNAMO_PARTITION_KEY: partitionKey
+    DYNAMO_SORT_KEY: sortKey
     DYNAMO_FEED_TABLE: real-${self:provider.stage}-feed
+    DYNAMO_FEED_PARTITION_KEY: postId
+    DYNAMO_FEED_SORT_KEY: feedUserId
+    DYNAMO_AD_FEED_TABLE: real-${self:provider.stage}-ad-feed
+    DYNAMO_AD_FEED_PARTITION_KEY: postId
+    DYNAMO_AD_FEED_SORT_KEY: userId
     DYNAMO_MATCHES_TABLE: real-${self:provider.stage}-dating-matches
 
     REAL_DATING_PUT_USER_ARN: ${self:custom.realDating.lambdaFunctionArnPrefix}-put-user
@@ -35,6 +42,10 @@ provider:
     REAL_DATING_MATCH_STATUS_ARN: ${self:custom.realDating.lambdaFunctionArnPrefix}-match-status
     REAL_DATING_SWIPED_RIGHT_USERS_ARN: ${self:custom.realDating.lambdaFunctionArnPrefix}-swiped-right-users
     REAL_DATING_GET_USER_MATCHES_COUNT_ARN: ${self:custom.realDating.lambdaFunctionArnPrefix}-get-user-matches-count
+
+    REAL_TRANSACTIONS_API_HOST: ${env:REAL_TRANSACTIONS_API_HOST, self:custom.realTransactions.apiHost.${self:provider.stage}}
+    REAL_TRANSACTIONS_API_STAGE: ${env:REAL_TRANSACTIONS_API_STAGE, self:provider.stage}
+    REAL_TRANSACTIONS_API_REGION: ${env:REAL_TRANSACTIONS_API_REGION, self:provider.region}
 
     USER_NOTIFICATIONS_ENABLED: ${env:USER_NOTIFICATIONS_ENABLED, 'true'}
     USER_NOTIFICATIONS_ONLY_USERNAMES: ${env:USER_NOTIFICATIONS_ONLY_USERNAMES, ''}  # space-seperated list
@@ -84,6 +95,8 @@ provider:
         - !Join [ /, [ !GetAtt DynamoDbTable.Arn, index, '*' ] ]
         - !GetAtt FeedTable.Arn
         - !Join [ /, [ !GetAtt FeedTable.Arn, index, '*' ] ]
+        - !GetAtt AdFeedTable.Arn
+        - !Join [ /, [ !GetAtt AdFeedTable.Arn, index, '*' ] ]
     - Effect: Allow
       Action:
         - secretsmanager:GetSecretValue
@@ -167,6 +180,11 @@ custom:
     stackName: real-${self:provider.stage}-dating
     lambdaFunctionArnPrefix: 'arn:aws:lambda:#{AWS::Region}:#{AWS::AccountId}:function:${self:custom.realDating.stackName}'
 
+  realTransactions:
+    apiHost:
+      staging: ?????????.execute-api.??????.amazonaws.com
+      production: ?????????.execute-api.?????.amazonaws.com
+
   sesSender:
     defaultAddress: 'no-reply@real.app'
     address: ${env:SES_SENDER_ADDRESS, self:custom.sesSender.defaultAddress}
@@ -244,7 +262,7 @@ custom:
         kind: PIPELINE
         functions:
           - Posts.batchGet
-          - Posts.filterBy.postStatus
+          - Posts.filterBy.adStatus
           - PaginatedPosts.items.applyFilters
           - Users.beginPipeline
           - Users.batchGet
@@ -265,6 +283,26 @@ custom:
           - Users.batchGet.followedStatus
 
     functionConfigurations:
+
+      - dataSource: DynamodbAdFeedDataSource
+        name: User.feed.getAdFeed
+        request: User.feed/getAdFeed.request.vtl
+        response: User.feed/getAdFeed.response.vtl
+
+      - dataSource: DynamodbDataSource
+        name: User.feed.getAdsDisabled
+        request: User.feed/getAdsDisabled.request.vtl
+        response: User.feed/getAdsDisabled.response.vtl
+
+      - dataSource: DynamodbFeedDataSource
+        name: User.feed.getFeed
+        request: User.feed/getFeed.request.vtl
+        response: User.feed/getFeed.response.vtl
+
+      - dataSource: DynamodbDataSource
+        name: User.feed.getPosts
+        request: User.feed/getPosts.request.vtl
+        response: User.feed/getPosts.response.vtl
 
       - dataSource: DynamodbDataSource
         name: Users.batchGet
@@ -294,9 +332,8 @@ custom:
       - dataSource: DynamodbDataSource
         name: Posts.batchGet
 
-      - dataSource: NoneDataSource
-        name: Posts.filterBy.postStatus
-        response: PassThru.response.vtl
+      - dataSource: DynamodbDataSource
+        name: Posts.filterBy.adStatus
 
       - dataSource: DynamodbDataSource
         name: PaginatedPosts.items.applyFilters
@@ -342,6 +379,11 @@ custom:
         name: DynamodbDataSource
         config:
           tableName: ${self:provider.environment.DYNAMO_TABLE}
+
+      - type: AMAZON_DYNAMODB
+        name: DynamodbAdFeedDataSource
+        config:
+          tableName: ${self:provider.environment.DYNAMO_AD_FEED_TABLE}
 
       - type: AMAZON_DYNAMODB
         name: DynamodbFeedDataSource

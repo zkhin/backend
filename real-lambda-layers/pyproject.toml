@@ -22,6 +22,7 @@ pyheif = "^0.5.1"
 aws-xray-sdk = "^2.5.0"
 stringcase = "^1.2.0"
 pyjwt = "^1.7.1"
+aws-requests-auth = "^0.4.3"
 
 [tool.poetry.dev-dependencies]
 

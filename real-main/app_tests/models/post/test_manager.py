@@ -1,5 +1,7 @@
 import logging
 import uuid
+from decimal import BasicContext, Decimal
+from random import random
 from unittest.mock import call, patch
 
 import pendulum
@@ -7,7 +9,7 @@ import pytest
 import stringcase
 
 from app.mixins.view.enums import ViewType
-from app.models.post.enums import PostStatus, PostType
+from app.models.post.enums import AdStatus, PostStatus, PostType
 from app.models.post.exceptions import PostException
 from app.utils import image_size
 
@@ -85,6 +87,24 @@ def test_add_post_errors(post_manager, user):
     # try to add post with invalid post type
     with pytest.raises(Exception, match='Invalid PostType'):
         post_manager.add_post(user, 'pid', 'notaposttype')
+
+
+def test_add_post_as_ad_errors(post_manager, user):
+    # try to add an ad without setting ad_payment
+    with pytest.raises(PostException, match='Cannot add advertisement post without setting adPayment'):
+        post_manager.add_post(user, 'pid', PostType.IMAGE, is_ad=True)
+
+    # try to add a non-ad while setting ad_payment
+    with pytest.raises(PostException, match='Cannot add non-advertisement post with adPayment set'):
+        post_manager.add_post(user, 'pid', PostType.IMAGE, is_ad=False, ad_payment=random())
+    with pytest.raises(PostException, match='Cannot add non-advertisement post with adPayment set'):
+        post_manager.add_post(user, 'pid', PostType.IMAGE, ad_payment=random())
+
+    # try to add a non-ad while setting ad_payment_period
+    with pytest.raises(PostException, match='Cannot add non-advertisement post with adPaymentPeriod set'):
+        post_manager.add_post(user, 'pid', PostType.IMAGE, is_ad=False, ad_payment_period=str(uuid.uuid4()))
+    with pytest.raises(PostException, match='Cannot add non-advertisement post with adPaymentPeriod set'):
+        post_manager.add_post(user, 'pid', PostType.IMAGE, ad_payment_period=str(uuid.uuid4()))
 
 
 @pytest.mark.parametrize(
@@ -412,6 +432,43 @@ def test_add_post_settings_default_to_user_level_settings(post_manager, user):
     post = post_manager.add_post(user, str(uuid.uuid4()), PostType.IMAGE)
     for k, v in defaults.items():
         assert post.item.get(stringcase.camelcase(k)) is v
+
+
+@pytest.mark.parametrize('is_ad', [None, False])
+def test_add_post_not_an_ad(post_manager, user, is_ad):
+    post_id = 'pid'
+    post_manager.add_post(
+        user,
+        post_id,
+        PostType.IMAGE,
+        is_ad=is_ad,
+    )
+    post = post_manager.get_post(post_id)
+    assert post.id == post_id
+    assert 'adStatus' not in post.item
+    assert 'adPayment' not in post.item
+
+
+@pytest.mark.parametrize('ad_payment_period', [None, 'any-string'])
+def test_add_post_is_an_ad(post_manager, user, ad_payment_period):
+    post_id = 'pid'
+    ad_payment = random()
+    post_manager.add_post(
+        user,
+        post_id,
+        PostType.IMAGE,
+        is_ad=True,
+        ad_payment=ad_payment,
+        ad_payment_period=ad_payment_period,
+    )
+    post = post_manager.get_post(post_id)
+    assert post.id == post_id
+    assert post.item['adStatus'] == AdStatus.PENDING
+    assert post.item['adPayment'] == Decimal(ad_payment).normalize(context=BasicContext)
+    if ad_payment_period:
+        assert post.item['adPaymentPeriod'] == ad_payment_period
+    else:
+        assert 'adPaymentPeriod' not in post.item
 
 
 def test_delete_recently_expired_posts(post_manager, user, caplog):

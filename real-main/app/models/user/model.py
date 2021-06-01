@@ -133,6 +133,10 @@ class User(TrendingModelMixin):
     def subscription_level(self):
         return self.item.get('subscriptionLevel', UserSubscriptionLevel.BASIC)
 
+    @property
+    def is_real_admin(self):
+        return self.username in self.user_manager.admin_usernames
+
     def set_password(self, encrypted_password):
         try:
             self.cognito_client.set_user_password(self.id, encrypted_password)
@@ -354,6 +358,7 @@ class User(TrendingModelMixin):
         theme_code=None,
         follow_counts_hidden=None,
         view_counts_hidden=None,
+        ads_disabled=None,
         comments_disabled=None,
         likes_disabled=None,
         sharing_disabled=None,

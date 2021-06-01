@@ -1,10 +1,12 @@
 from decimal import Decimal
+from random import randint
 from uuid import uuid4
 
 import pendulum
 import pytest
 
 from app.mixins.view.dynamo import ViewDynamo
+from app.mixins.view.enums import ViewType
 from app.mixins.view.exceptions import ViewAlreadyExists, ViewDoesNotExist
 
 
@@ -13,60 +15,91 @@ def view_dynamo(dynamo_client):
     yield ViewDynamo('itype', dynamo_client)
 
 
-def test_add_and_increment_view(view_dynamo):
-    item_id = 'iid'
-    user_id = 'uid'
-    view_count = 5
-    viewed_at = pendulum.now('utc')
+@pytest.fixture
+def item_id():
+    return str(uuid4())
+
+
+@pytest.fixture
+def user_id():
+    return str(uuid4())
+
+
+@pytest.fixture
+def view_count():
+    return randint(1, 10)
+
+
+@pytest.fixture
+def viewed_at():
+    return pendulum.now('utc')
+
+
+view_count1 = view_count
+view_count2 = view_count
+viewed_at1 = viewed_at
+viewed_at2 = viewed_at
+
+
+@pytest.mark.parametrize('view_type', [None, ViewType.FOCUS, ViewType.THUMBNAIL])
+def test_add_view(view_dynamo, item_id, user_id, view_count, viewed_at, view_type):
     viewed_at_str = viewed_at.to_iso8601_string()
-
-    # verify can't increment view that doesn't exist
-    with pytest.raises(ViewDoesNotExist):
-        view_dynamo.increment_view_count(item_id, user_id, 1, pendulum.now('utc'))
-
-    # verify the view does not exist
-    assert view_dynamo.get_view(item_id, user_id) is None
-
-    # add a new view, verify form is correct
-    view = view_dynamo.add_view(item_id, user_id, view_count, viewed_at)
-    assert view == {
-        'partitionKey': 'itype/iid',
-        'sortKey': 'view/uid',
+    expected_view = {
+        'partitionKey': f'itype/{item_id}',
+        'sortKey': f'view/{user_id}',
         'schemaVersion': 0,
-        'gsiA1PartitionKey': 'itypeView/iid',
+        'gsiA1PartitionKey': f'itypeView/{item_id}',
         'gsiA1SortKey': viewed_at_str,
-        'gsiA2PartitionKey': 'itypeView/uid',
+        'gsiA2PartitionKey': f'itypeView/{user_id}',
         'gsiA2SortKey': viewed_at_str,
-        'viewCount': 5,
+        'viewCount': view_count,
         'firstViewedAt': viewed_at_str,
         'lastViewedAt': viewed_at_str,
     }
+    if view_type == ViewType.FOCUS:
+        expected_view['focusViewCount'] = view_count
+        expected_view['focusLastViewedAt'] = viewed_at_str
+    if view_type == ViewType.THUMBNAIL:
+        expected_view['thumbnailViewCount'] = view_count
+        expected_view['thumbnailLastViewedAt'] = viewed_at_str
+    assert view_dynamo.add_view(item_id, user_id, view_count, viewed_at, view_type=view_type) == expected_view
+    assert view_dynamo.get_view(item_id, user_id) == expected_view
 
-    # verify can't add another view with same key
+
+def test_add_view_cant_ad_view_that_already_exists(view_dynamo, item_id, user_id, view_count, viewed_at):
+    assert view_dynamo.add_view(item_id, user_id, view_count, viewed_at)
     with pytest.raises(ViewAlreadyExists):
-        view_dynamo.add_view(item_id, user_id, 1, pendulum.now('utc'))
+        view_dynamo.add_view(item_id, user_id, randint(1, 10), pendulum.now('utc'))
 
-    # verify a read from the DB has the form we expect
-    assert view_dynamo.get_view(item_id, user_id) == view
 
-    # increment the view, verify the new form is correct
-    new_viewed_at = pendulum.now('utc')
-    view = view_dynamo.increment_view_count(item_id, user_id, view_count, new_viewed_at)
-    assert view == {
-        'partitionKey': 'itype/iid',
-        'sortKey': 'view/uid',
-        'schemaVersion': 0,
-        'gsiA1PartitionKey': 'itypeView/iid',
-        'gsiA1SortKey': viewed_at_str,
-        'gsiA2PartitionKey': 'itypeView/uid',
-        'gsiA2SortKey': viewed_at_str,
-        'viewCount': 10,
-        'firstViewedAt': viewed_at_str,
-        'lastViewedAt': new_viewed_at.to_iso8601_string(),
+def test_increment_view_count_error_dne(view_dynamo, item_id, user_id, view_count, viewed_at):
+    with pytest.raises(ViewDoesNotExist):
+        view_dynamo.increment_view_count(item_id, user_id, view_count, viewed_at)
+
+
+@pytest.mark.parametrize('view_type1', [None, ViewType.FOCUS, ViewType.THUMBNAIL])
+@pytest.mark.parametrize('view_type2', [None, ViewType.FOCUS, ViewType.THUMBNAIL])
+def test_increment_view_count(
+    view_dynamo, item_id, user_id, view_count1, view_count2, viewed_at1, viewed_at2, view_type1, view_type2
+):
+    org_view = view_dynamo.add_view(item_id, user_id, view_count1, viewed_at1, view_type=view_type1)
+    viewed_at2_str = viewed_at2.to_iso8601_string()
+    expected_view = {
+        **org_view,
+        'viewCount': view_count1 + view_count2,
+        'lastViewedAt': viewed_at2_str,
     }
-
-    # verify a read from the DB has the form we expect
-    assert view_dynamo.get_view(item_id, user_id) == view
+    if view_type2 == ViewType.FOCUS:
+        expected_view['focusViewCount'] = org_view.get('focusViewCount', 0) + view_count2
+        expected_view['focusLastViewedAt'] = viewed_at2_str
+    if view_type2 == ViewType.THUMBNAIL:
+        expected_view['thumbnailViewCount'] = org_view.get('thumbnailViewCount', 0) + view_count2
+        expected_view['thumbnailLastViewedAt'] = viewed_at2_str
+    assert (
+        view_dynamo.increment_view_count(item_id, user_id, view_count2, viewed_at2, view_type=view_type2)
+        == expected_view
+    )
+    assert view_dynamo.get_view(item_id, user_id) == expected_view
 
 
 def test_generate_keys_by_item_and_generate_keys_by_user(view_dynamo):

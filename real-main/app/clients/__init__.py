@@ -16,6 +16,7 @@ __all__ = [
     'PinpointClient',
     'PostVerificationClient',
     'RealDatingClient',
+    'RealTransactionsClient',
     'RedeemPromotionClient',
     'S3Client',
     'SecretsManagerClient',
@@ -38,6 +39,7 @@ from .mediaconvert import MediaConvertClient
 from .pinpoint import PinpointClient
 from .post_verification import PostVerificationClient
 from .real_dating import RealDatingClient
+from .real_transactions import RealTransactionsClient
 from .redeem_promotion import RedeemPromotionClient
 from .s3 import S3Client
 from .secretsmanager import SecretsManagerClient

@@ -35,7 +35,10 @@ def test_add_user_minimal(user_dynamo):
         'sortKey': 'profile',
         'gsiA1PartitionKey': f'username/{username}',
         'gsiA1SortKey': '-',
+        'gsiK4PartitionKey': 'user',
+        'gsiK4SortKey': UserStatus.ACTIVE,
         'userId': user_id,
+        'userStatus': UserStatus.ACTIVE,
         'username': username,
         'privacyStatus': UserPrivacyStatus.PUBLIC,
         'signedUpAt': now.to_iso8601_string(),
@@ -69,6 +72,8 @@ def test_add_user_maximal(user_dynamo):
         'sortKey': 'profile',
         'gsiA1PartitionKey': f'username/{username}',
         'gsiA1SortKey': '-',
+        'gsiK4PartitionKey': 'user',
+        'gsiK4SortKey': UserStatus.ANONYMOUS,
         'userId': user_id,
         'username': username,
         'userStatus': UserStatus.ANONYMOUS,
@@ -110,7 +115,10 @@ def test_add_user_at_specific_time(user_dynamo):
         'sortKey': 'profile',
         'gsiA1PartitionKey': f'username/{username}',
         'gsiA1SortKey': '-',
+        'gsiK4PartitionKey': 'user',
+        'gsiK4SortKey': UserStatus.ACTIVE,
         'userId': user_id,
+        'userStatus': UserStatus.ACTIVE,
         'username': username,
         'privacyStatus': UserPrivacyStatus.PUBLIC,
         'signedUpAt': now.to_iso8601_string(),
@@ -260,6 +268,7 @@ def test_set_user_details(user_dynamo):
         view_counts_hidden=True,
         email='e',
         phone='p',
+        ads_disabled=True,
         comments_disabled=True,
         likes_disabled=True,
         sharing_disabled=True,
@@ -285,6 +294,7 @@ def test_set_user_details(user_dynamo):
             'viewCountsHidden': True,
             'email': 'e',
             'phoneNumber': 'p',
+            'adsDisabled': True,
             'commentsDisabled': True,
             'likesDisabled': True,
             'sharingDisabled': True,
@@ -332,6 +342,7 @@ def test_set_user_details_delete_for_empty_string(user_dynamo):
         view_counts_hidden=True,
         email='e',
         phone='p',
+        ads_disabled=True,
         comments_disabled=True,
         likes_disabled=True,
         sharing_disabled=True,
@@ -349,6 +360,7 @@ def test_set_user_details_delete_for_empty_string(user_dynamo):
             'viewCountsHidden': True,
             'email': 'e',
             'phoneNumber': 'p',
+            'adsDisabled': True,
             'commentsDisabled': True,
             'likesDisabled': True,
             'sharingDisabled': True,
@@ -361,6 +373,7 @@ def test_set_user_details_delete_for_empty_string(user_dynamo):
         user_id,
         follow_counts_hidden=False,
         view_counts_hidden=False,
+        ads_disabled=False,
         comments_disabled=False,
         likes_disabled=False,
         sharing_disabled=False,
@@ -378,6 +391,7 @@ def test_set_user_details_delete_for_empty_string(user_dynamo):
             'viewCountsHidden': False,
             'email': 'e',
             'phoneNumber': 'p',
+            'adsDisabled': False,
             'commentsDisabled': False,
             'likesDisabled': False,
             'sharingDisabled': False,
@@ -397,6 +411,7 @@ def test_set_user_details_delete_for_empty_string(user_dynamo):
         view_counts_hidden='',
         email='',
         phone='',
+        ads_disabled='',
         comments_disabled='',
         likes_disabled='',
         sharing_disabled='',
@@ -467,11 +482,12 @@ def test_set_user_accepted_eula_version(user_dynamo):
 
 
 def test_set_user_status(user_dynamo):
-    # create the user, verify user starts as ACTIVE as default
+    # create the user, verify user starts as ACTIVE
     user_id = 'my-user-id'
     user_item = user_dynamo.add_user(user_id, 'thebestuser')
     assert user_item['userId'] == user_id
-    assert 'userStatus' not in user_item
+    assert user_item['userStatus'] == UserStatus.ACTIVE
+    assert user_item['gsiK4SortKey'] == UserStatus.ACTIVE
     assert 'lastDisabledAt' not in user_item
 
     # can't set it to an invalid value
@@ -481,28 +497,33 @@ def test_set_user_status(user_dynamo):
     # set it, check
     item = user_dynamo.set_user_status(user_id, UserStatus.DELETING)
     assert item['userStatus'] == UserStatus.DELETING
+    assert item['gsiK4SortKey'] == UserStatus.DELETING
     assert 'lastDisabledAt' not in item
 
     # set it to DISABLED, check
     now = pendulum.now('utc')
     item = user_dynamo.set_user_status(user_id, UserStatus.DISABLED, now=now)
     assert item['userStatus'] == UserStatus.DISABLED
+    assert item['gsiK4SortKey'] == UserStatus.DISABLED
     assert item['lastDisabledAt'] == now.to_iso8601_string()
 
     # double check our writes really have been saving in the DB
     item = user_dynamo.get_user(user_id)
     assert item['userStatus'] == UserStatus.DISABLED
+    assert item['gsiK4SortKey'] == UserStatus.DISABLED
     assert item['lastDisabledAt'] == now.to_iso8601_string()
 
     # set it to DISABLED again, check
     item = user_dynamo.set_user_status(user_id, UserStatus.DISABLED)
     assert item['userStatus'] == UserStatus.DISABLED
+    assert item['gsiK4SortKey'] == UserStatus.DISABLED
     last_disabled_at = pendulum.parse(item['lastDisabledAt'])
     assert last_disabled_at > now
 
-    # set it to the default, check
+    # set it back to ACTIVE, check
     item = user_dynamo.set_user_status(user_id, UserStatus.ACTIVE)
-    assert 'userStatus' not in item
+    assert item['userStatus'] == UserStatus.ACTIVE
+    assert item['gsiK4SortKey'] == UserStatus.ACTIVE
     assert item['lastDisabledAt'] == last_disabled_at.to_iso8601_string()
 
 
@@ -736,6 +757,51 @@ def test_update_subscription_not_a_grant(user_dynamo):
     # check idempotent
     user_dynamo.update_subscription(user_id, UserSubscriptionLevel.DIAMOND)
     assert user_dynamo.get_user(user_id) == {**user_item, 'subscriptionLevel': UserSubscriptionLevel.DIAMOND}
+
+
+def test_generate_user_ids(user_dynamo):
+    # add a few users
+    user_id_1, user_id_2, user_id_3 = str(uuid4()), str(uuid4()), str(uuid4())
+    user_dynamo.add_user(user_id_1, str(uuid4())[:8])
+    user_dynamo.add_user(user_id_2, str(uuid4())[:8])
+    user_dynamo.add_user(user_id_3, str(uuid4())[:8])
+    all_user_ids = sorted([user_id_1, user_id_2, user_id_3])
+
+    # check we can generate them as expected
+    generate = user_dynamo.generate_user_ids
+    assert sorted(list(generate())) == all_user_ids
+    assert sorted(list(generate(status=UserStatus.ACTIVE))) == all_user_ids
+    assert sorted(list(generate(status=UserStatus.DISABLED))) == []
+
+    # disable one of the users
+    user_dynamo.set_user_status(user_id_2, UserStatus.DISABLED)
+
+    # check we can generate them as expected
+    assert sorted(list(generate())) == all_user_ids
+    assert sorted(list(generate(status=UserStatus.ACTIVE))) == sorted([user_id_1, user_id_3])
+    assert sorted(list(generate(status=UserStatus.DISABLED))) == [user_id_2]
+
+
+def test_generate_user_ids_by_ads_disabled(user_dynamo):
+    # add a few users
+    uid1, uid2, uid3 = str(uuid4()), str(uuid4()), str(uuid4())
+    user_dynamo.add_user(uid1, str(uuid4())[:8])
+    user_dynamo.add_user(uid2, str(uuid4())[:8])
+    user_dynamo.add_user(uid3, str(uuid4())[:8])
+    user_dynamo.set_user_details(uid1, ads_disabled=True)
+    user_dynamo.set_user_details(uid2, ads_disabled=False)
+
+    # check we can generate them as expected
+    generate = user_dynamo.generate_user_ids_by_ads_disabled
+    assert sorted(list(generate(True))) == [uid1]
+    assert sorted(list(generate(False))) == sorted([uid2, uid3])
+    with pytest.raises(AssertionError):
+        generate('b')
+
+    # check exclude_user_id works
+    assert sorted(list(generate(False, exclude_user_id=uid1))) == sorted([uid2, uid3])
+    assert sorted(list(generate(False, exclude_user_id=uid2))) == sorted([uid3])
+    assert sorted(list(generate(False, exclude_user_id=uid3))) == sorted([uid2])
 
 
 def test_generate_user_ids_by_subscription_level(user_dynamo):

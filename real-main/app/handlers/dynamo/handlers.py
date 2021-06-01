@@ -7,11 +7,17 @@ from app import clients, models
 from app.handlers import xray
 from app.logging import LogLevelContext, handler_logging
 from app.models.follower.enums import FollowStatus
+from app.models.post.enums import AdStatus
 from app.models.user.enums import UserStatus, UserSubscriptionLevel
 
 from .dispatch import DynamoDispatch
 
 DYNAMO_FEED_TABLE = os.environ.get('DYNAMO_FEED_TABLE')
+DYNAMO_FEED_PARTITION_KEY = os.environ.get('DYNAMO_FEED_PARTITION_KEY')
+DYNAMO_FEED_SORT_KEY = os.environ.get('DYNAMO_FEED_SORT_KEY')
+DYNAMO_AD_FEED_TABLE = os.environ.get('DYNAMO_AD_FEED_TABLE')
+DYNAMO_AD_FEED_PARTITION_KEY = os.environ.get('DYNAMO_AD_FEED_PARTITION_KEY')
+DYNAMO_AD_FEED_SORT_KEY = os.environ.get('DYNAMO_AD_FEED_SORT_KEY')
 S3_UPLOADS_BUCKET = os.environ.get('S3_UPLOADS_BUCKET')
 
 logger = logging.getLogger()
@@ -24,14 +30,25 @@ clients = {
     'appsync': clients.AppSyncClient(),
     'cognito': clients.CognitoClient(),
     'dynamo': clients.DynamoClient(),
-    'dynamo_feed': clients.DynamoClient(table_name=DYNAMO_FEED_TABLE),
+    'dynamo_feed': clients.DynamoClient(
+        table_name=DYNAMO_FEED_TABLE,
+        partition_key=DYNAMO_FEED_PARTITION_KEY,
+        sort_key=DYNAMO_FEED_SORT_KEY,
+    ),
+    'dynamo_ad_feed': clients.DynamoClient(
+        table_name=DYNAMO_AD_FEED_TABLE,
+        partition_key=DYNAMO_AD_FEED_PARTITION_KEY,
+        sort_key=DYNAMO_AD_FEED_SORT_KEY,
+    ),
     'elasticsearch': clients.ElasticSearchClient(),
     'pinpoint': clients.PinpointClient(),
     'real_dating': clients.RealDatingClient(),
+    'real_transactions': clients.RealTransactionsClient(),
     's3_uploads': clients.S3Client(S3_UPLOADS_BUCKET),
 }
 
 managers = {}
+ad_feed_manager = managers.get('ad_feed') or models.AdFeedManager(clients, managers=managers)
 album_manager = managers.get('album') or models.AlbumManager(clients, managers=managers)
 appstore_manager = managers.get('appstore') or models.AppStoreManager(clients, managers=managers)
 block_manager = managers.get('block') or models.BlockManager(clients, managers=managers)
@@ -121,6 +138,13 @@ register(
     'post',
     '-',
     ['INSERT', 'MODIFY'],
+    ad_feed_manager.on_ad_post_ad_status_change,
+    {'adStatus': AdStatus.NOT_AD},
+)
+register(
+    'post',
+    '-',
+    ['INSERT', 'MODIFY'],
     card_manager.on_post_comments_unviewed_count_change_update_card,
     {'commentsUnviewedCount': 0},
 )
@@ -155,6 +179,13 @@ register(
 register(
     'post',
     '-',
+    ['INSERT', 'MODIFY'],
+    post_manager.on_post_status_change_update_ad_status,
+    {'postStatus': None},
+)
+register(
+    'post',
+    '-',
     ['INSERT', 'MODIFY', 'REMOVE'],
     feed_manager.on_post_status_change_sync_feed,
     {'postStatus': None},
@@ -184,6 +215,20 @@ register('post', 'flag', ['INSERT'], post_manager.on_flag_add)
 register('post', 'flag', ['REMOVE'], post_manager.on_flag_delete)
 register('post', 'like', ['INSERT'], post_manager.on_like_add)
 register('post', 'like', ['REMOVE'], post_manager.on_like_delete)
+register(
+    'post',
+    'view',
+    ['INSERT', 'MODIFY'],
+    ad_feed_manager.on_post_view_focus_last_viewed_at_change,
+    {'focusLastViewedAt': None},
+)
+register(
+    'post',
+    'view',
+    ['INSERT', 'MODIFY'],
+    ad_feed_manager.on_post_view_last_viewed_at_change,
+    {'lastViewedAt': None},
+)
 register(
     'post',
     'view',
@@ -245,6 +290,13 @@ register(
     {'followStatus': FollowStatus.NOT_FOLLOWING},
 )
 register('user', 'profile', ['INSERT'], user_manager.on_user_add_delete_user_deleted_subitem)
+register(
+    'user',
+    'profile',
+    ['INSERT', 'MODIFY'],
+    ad_feed_manager.on_user_ads_disabled_change,
+    {'adsDisabled': False},
+)
 register(
     'user',
     'profile',
@@ -355,6 +407,7 @@ register(
     {'idAnalyzerResult': None},
 )
 register('user', 'profile', ['INSERT', 'MODIFY'], user_manager.on_user_change_log_amplitude_event)
+register('user', 'profile', ['REMOVE'], ad_feed_manager.on_user_delete)
 register('user', 'profile', ['REMOVE'], album_manager.on_user_delete_delete_all_by_user)
 register('user', 'profile', ['REMOVE'], appstore_manager.on_user_delete_delete_all_by_user)
 register('user', 'profile', ['REMOVE'], block_manager.on_user_delete_unblock_all_blocks)

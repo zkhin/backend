@@ -7,7 +7,7 @@ import pendulum
 import pytest
 
 from app.models.like.enums import LikeStatus
-from app.models.post.enums import PostStatus, PostType
+from app.models.post.enums import AdStatus, PostStatus, PostType
 from app.utils import GqlNotificationType
 
 
@@ -517,6 +517,52 @@ def test_sync_elasticsearch(post_manager, post):
         call.put_post(post.id, ['spock']),
         call.put_keyword(post.id, 'spock'),
     ]
+
+
+def test_on_post_status_change_update_ad_status_asserts_post_status_changed(post_manager, post):
+    with pytest.raises(AssertionError, match='postStatus'):
+        post_manager.on_post_status_change_update_ad_status(post.id, new_item=post.item, old_item=post.item)
+
+
+def test_on_post_status_change_update_ad_status_changes_active_to_inactive(post_manager, post):
+    old_item = {**post.item, 'adStatus': AdStatus.ACTIVE}
+    new_item = {**old_item, 'postStatus': PostStatus.ARCHIVED}
+    post_manager.on_post_status_change_update_ad_status(post.id, new_item=new_item, old_item=old_item)
+    assert post.refresh_item().ad_status == AdStatus.INACTIVE
+
+
+def test_on_post_status_change_update_ad_status_changes_post_dne_deleting_warning(post_manager, caplog):
+    post_id = str(uuid4())
+    old_item = {'postId': post_id, 'postedAt': '-', 'adStatus': AdStatus.ACTIVE}
+    new_item = {**old_item, 'postStatus': PostStatus.DELETING}
+    with caplog.at_level(logging.WARNING):
+        post_manager.on_post_status_change_update_ad_status(post_id, new_item=new_item, old_item=old_item)
+    assert len(caplog.records) == 1
+    assert caplog.records[0].levelname == 'WARNING'
+    assert post_id in caplog.records[0].msg
+
+
+def test_on_post_status_change_update_ad_status_changes_post_dne_error(post_manager):
+    post_id = str(uuid4())
+    old_item = {'postId': post_id, 'postedAt': '-', 'adStatus': AdStatus.ACTIVE}
+    new_item = {**old_item, 'postStatus': PostStatus.ARCHIVED}
+    with pytest.raises(post_manager.dynamo.client.exceptions.ConditionalCheckFailedException):
+        post_manager.on_post_status_change_update_ad_status(post_id, new_item=new_item, old_item=old_item)
+
+
+def test_on_post_status_change_update_ad_status_changes_inactive_to_active(post_manager, post):
+    old_item = {**post.item, 'postStatus': PostStatus.ARCHIVED, 'adStatus': AdStatus.INACTIVE}
+    new_item = {**old_item, 'postStatus': PostStatus.COMPLETED}
+    post_manager.on_post_status_change_update_ad_status(post.id, new_item=new_item, old_item=old_item)
+    assert post.refresh_item().ad_status == AdStatus.ACTIVE
+
+
+@pytest.mark.parametrize('ad_status', [None, AdStatus.NOT_AD, AdStatus.PENDING])
+def test_on_post_status_change_update_ad_status_does_nothing_to_other_adstatuses(post_manager, post, ad_status):
+    old_item = {**post.item, 'adStatus': ad_status}
+    new_item = {**old_item, 'postStatus': PostStatus.ARCHIVED}
+    post_manager.on_post_status_change_update_ad_status(post.id, new_item=new_item, old_item=old_item)
+    assert post.item == post.refresh_item().item
 
 
 def test_get_royalty_paid_and_posts_viewed_past_30_days(post_manager, user):

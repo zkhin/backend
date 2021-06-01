@@ -28,11 +28,12 @@ We have no local secondary indexes.
 - GSI-K1: (`gsiK1PartitionKey`, `gsiK1SortKey`) with keys only.
 - GSI-K2: (`gsiK2PartitionKey`, `gsiK2SortKey`) with keys only.
 - GSI-K3: (`gsiK3PartitionKey`, `gsiK3SortKey:Number`) with keys only.
+- GSI-K4: (`gsiK4PartitionKey`, `gsiK4SortKey`) with keys only.
 
 #### Schema
 
-| Table Partition Key `partitionKey` | Table Sort Key `sortKey` | Schema Version `schemaVersion` | Attributes | GSI-A1 Partition Key `gsiA1PartitionKey` | GSI-A1 Sort Key `gsiA1SortKey` | GSI-A2 Partition Key `gsiA2PartitionKey` | GSI-A2 Sort Key `gsiA2SortKey` | GSI-A3 Partition Key `gsiA3PartitionKey` | GSI-A3 Sort Key `gsiA3SortKey` | GSI-A4 Partition Key `gsiA4PartitionKey` | GSI-A4 Sort Key `gsiA4SortKey:Number` | GSI-K1 Partition Key `gsiK1PartitionKey` | GSI-K1 Sort Key `gsiK1SortKey` | GSI-K2 Partition Key `gsiK2PartitionKey` | GSI-K2 Sort Key `gsiK2SortKey` | GSI-K3 Partition Key `gsiK3PartitionKey` | GSI-K3 Sort Key `gsiK3SortKey:Number` |
-| - | - | - | - | - | - | - | - | - | - | - | - | - | - | - | - | - | - |
+| Table Partition Key `partitionKey` | Table Sort Key `sortKey` | Schema Version `schemaVersion` | Attributes | GSI-A1 Partition Key `gsiA1PartitionKey` | GSI-A1 Sort Key `gsiA1SortKey` | GSI-A2 Partition Key `gsiA2PartitionKey` | GSI-A2 Sort Key `gsiA2SortKey` | GSI-A3 Partition Key `gsiA3PartitionKey` | GSI-A3 Sort Key `gsiA3SortKey` | GSI-A4 Partition Key `gsiA4PartitionKey` | GSI-A4 Sort Key `gsiA4SortKey:Number` | GSI-K1 Partition Key `gsiK1PartitionKey` | GSI-K1 Sort Key `gsiK1SortKey` | GSI-K2 Partition Key `gsiK2PartitionKey` | GSI-K2 Sort Key `gsiK2SortKey` | GSI-K3 Partition Key `gsiK3PartitionKey` | GSI-K3 Sort Key `gsiK3SortKey:Number` | GSI-K4 Partition Key `gsiK4PartitionKey` | GSI-K4 Sort Key `gsiK4SortKey` |
+| - | - | - | - | - | - | - | - | - | - | - | - | - | - | - | - | - | - | - | - |
 | `album/{albumId}` | `-` | `0` | `albumId`, `ownedByUserId`, `name`, `description`, `createdAt`, `postCount`, `rankCount`, `postsLastUpdatedAt`, `artHash` | `album/{userId}` | `{createdAt}` | | | | | | | `album` | `{deleteAt}` |
 | `appStoreSub/{originalTransactionId}` | `-` | `0` | `userId`, `status`, `createdAt`, `lastVerificationAt`, `originalReceipt`, `latestReceipt`, `latestReceiptInfo`, `pendingRenewalInfo`, `price` | `appStoreSub/{userId}` | `{createdAt}` | | | | | | | `appStoreSub` | `{nextVerificationAt}` |
 | `transaction/{transactionId}` | `-` | `0` | `userId`, `status`, `createdAt`, `originalTransactionId`, `latestReceiptInfo`, `pendingRenewalInfo`, `price` | `transaction/{userId}` | `{createdAt}` | | | | | | | | |
@@ -45,16 +46,16 @@ We have no local secondary indexes.
 | `chatMessage/{messageId}` | `flag/{userId}` | `0` | `createdAt` | | | | | | | | | `flag/{userId}` | `chatMessage` |
 | `comment/{commentId}` | `-` | `1` | `commentId`, `postId`, `userId`, `commentedAt`, `text`, `textTags:[{tag, userId}]`, `flagCount` | `comment/{postId}` | `{commentedAt}` | `comment/{userId}` | `{commentedAt}` |
 | `comment/{commentId}` | `flag/{userId}` | `0` | `createdAt` | | | | | | | | | `flag/{userId}` | `comment` |
-| `post/{postId}` | `-` | `3` | `postId`, `postedAt`, `postedByUserId`, `postType`, `postStatus`, `postStatusReason`, `albumId`, `originalPostId`, `expiresAt`, `text`, `keywords`, `textTags:[{tag, userId}]`, `checksum`, `isVerified:Boolean`, `isVerifiedHiddenValue:Boolean`, `viewedByCount`, `onymousLikeCount`, `anonymousLikeCount`, `flagCount`, `commentCount`, `commentsUnviewedCount`, `commentsDisabled:Boolean`, `likesDisabled:Boolean`, `sharingDisabled:Boolean`, `verificationHidden:Boolean`, `setAsUserPhoto:Boolean` | `post/{postedByUserId}` | `{postStatus}/{expiresAt}` | `post/{postedByUserId}` | `{postStatus}/{postedAt}` | `post/{postedByUserId}` | `{lastUnreadCommentAt}` | | | `post/{expiresAtDate}` | `{expiresAtTime}` | `postChecksum/{checksum}` | `{postedAt}` | `post/{albumId}` | `{albumRank:Number}` |
+| `post/{postId}` | `-` | `3` | `postId`, `postedAt`, `postedByUserId`, `postType`, `postStatus`, `postStatusReason`, `albumId`, `originalPostId`, `expiresAt`, `text`, `keywords`, `textTags:[{tag, userId}]`, `checksum`, `isVerified:Boolean`, `isVerifiedHiddenValue:Boolean`, `viewedByCount`, `onymousLikeCount`, `anonymousLikeCount`, `flagCount`, `commentCount`, `commentsUnviewedCount`, `commentsDisabled:Boolean`, `likesDisabled:Boolean`, `sharingDisabled:Boolean`, `verificationHidden:Boolean`, `setAsUserPhoto:Boolean`, `adStatus`, `adPayment:Number` | `post/{postedByUserId}` | `{postStatus}/{expiresAt}` | `post/{postedByUserId}` | `{postStatus}/{postedAt}` | `post/{postedByUserId}` | `{lastUnreadCommentAt}` | | | `post/{expiresAtDate}` | `{expiresAtTime}` | `postChecksum/{checksum}` | `{postedAt}` | `post/{albumId}` | `{albumRank:Number}` | `postAdStatus/{adStatus}` | `{postedAt}` |
 | `post/{postId}` | `feed/{userId}` | `3` | | `feed/{userId}` | `{postedAt}` | `feed/{userId}` | `{postedByUserId}` |
 | `post/{postId}` | `flag/{userId}` | `0` | `createdAt` | | | | | | | | | `flag/{userId}` | `post` |
 | `post/{postId}` | `image` | `0` | `takenInReal:Boolean`, `originalFormat`, `imageFormat`, `width:Number`, `height:Number`, `colors:[{r:Number, g:Number, b:Number}]`, `crop:[{upperLeft:{x:Number, y:Number}, lowerRight:{x:Number, y:Number}}]`, `rotate:Number` |
 | `post/{postId}` | `like/{userId}` | `1` | `likedByUserId`, `likeStatus`, `likedAt`, `postId` | `like/{likedByUserId}` | `{likeStatus}/{likedAt}` | `like/{postId}` | `{likeStatus}/{likedAt}` | | | | | | | `like/{postedByUserId}` | `{likedByUserId}` |
 | `post/{postId}` | `originalMetadata` | `0` | `originalMetadata` |
 | `post/{postId}` | `trending` | `0` | `lastDeflatedAt`, `createdAt` | | | | | | | `post/trending` | `{score}` |
-| `post/{postId}` | `view/{userId}` | `0` | `firstViewedAt`, `lastViewedAt`, `viewCount`, `thumbnailViewCount`, `focusViewCount`, `royaltyFee` | `postView/{postId}` | `{firstViewedAt}` | `postView/{userId}` | `{firstViewedAt}` |
+| `post/{postId}` | `view/{userId}` | `0` | `firstViewedAt`, `lastViewedAt`, `thumbnailLastViewedAt`, `focusLastViewedAt`, `viewCount`, `thumbnailViewCount`, `focusViewCount`, `royaltyFee` | `postView/{postId}` | `{firstViewedAt}` | `postView/{userId}` | `{firstViewedAt}` |
 | `screen/{screenId}` | `view/{userId}` | `0` | `firstViewedAt`, `lastViewedAt`, `viewCount` | `screenView/{screenId}` | `{firstViewedAt}` | `screenView/{userId}` | `{firstViewedAt}` |
-| `user/{userId}` | `profile` | `11` | `userId`, `username`, `email`, `phoneNumber`, `fullName`, `displayName`, `dateOfBirth`, `gender`, `bio`, `photoPostId`, `userStatus`, `privacyStatus`, `subscriptionLevel`, `subscriptionGrantedAt`, `subscriptionExpiresAt`, `subscriptionGrantCode`, `height`, `currentLocation:Map`, `matchAgeRange:Map`, `matchGenders:List`, `matchLocationRadius:Number`, `matchHeightRange:Map`, `datingStatus`, `albumCount`, `chatMessagesCreationCount`, `chatMessagesDeletionCount`, `chatMessagesForcedDeletionCount`, `chatCount`, `chatsWithUnviewedMessagesCount`, `cardCount`, `commentCount`, `commentDeletedCount`, `commentForcedDeletionCount`, `followedCount`, `followerCount`, `followersRequestedCount`, `postCount`, `postArchivedCount`, `postDeletedCount`, `postForcedArchivingCount`, `lastManuallyReindexedAt`, `lastPostViewAt`, `lastClient`, `languageCode`, `themeCode`, `placeholderPhotoCode`, `signedUpAt`, `lastDisabedAt`, `acceptedEULAVersion`, `postViewedByCount`, `usernameLastValue`, `usernameLastChangedAt`, `lastFoundContactsAt`, `userDisableDatingDate`, `followCountsHidden:Boolean`, `commentsDisabled:Boolean`, `likesDisabled:Boolean`, `sharingDisabled:Boolean`, `verificationHidden:Boolean`, `paidRealSoFar`, `wallet`, `idVerificationStatus`, `jumioResponse`, `idAnalyzerResult` | `username/{username}` | `-` | | | `userDisableDatingDate` | `{userDisableDatingDate}` | | | `user/{subscriptionLevel}` | `{subscriptionExpiresAt}` or `~` |
+| `user/{userId}` | `profile` | `11` | `userId`, `username`, `email`, `phoneNumber`, `fullName`, `displayName`, `dateOfBirth`, `gender`, `bio`, `photoPostId`, `userStatus`, `privacyStatus`, `subscriptionLevel`, `subscriptionGrantedAt`, `subscriptionExpiresAt`, `subscriptionGrantCode`, `height`, `currentLocation:Map`, `matchAgeRange:Map`, `matchGenders:List`, `matchLocationRadius:Number`, `matchHeightRange:Map`, `datingStatus`, `albumCount`, `chatMessagesCreationCount`, `chatMessagesDeletionCount`, `chatMessagesForcedDeletionCount`, `chatCount`, `chatsWithUnviewedMessagesCount`, `cardCount`, `commentCount`, `commentDeletedCount`, `commentForcedDeletionCount`, `followedCount`, `followerCount`, `followersRequestedCount`, `postCount`, `postArchivedCount`, `postDeletedCount`, `postForcedArchivingCount`, `lastManuallyReindexedAt`, `lastPostViewAt`, `lastClient`, `languageCode`, `themeCode`, `placeholderPhotoCode`, `signedUpAt`, `lastDisabedAt`, `acceptedEULAVersion`, `postViewedByCount`, `usernameLastValue`, `usernameLastChangedAt`, `lastFoundContactsAt`, `userDisableDatingDate`, `followCountsHidden:Boolean`, `commentsDisabled:Boolean`, `likesDisabled:Boolean`, `sharingDisabled:Boolean`, `verificationHidden:Boolean`, `paidRealSoFar`, `wallet`, `idVerificationStatus`, `jumioResponse`, `idAnalyzerResult`, `adsDisabled` | `username/{username}` | `-` | | | `userDisableDatingDate` | `{userDisableDatingDate}` | | | `user/{subscriptionLevel}` | `{subscriptionExpiresAt}` or `~` | `userBirthday/{MM-DD}` | `-` | | | `user` | `{userStatus}` |
 | `user/{userId}` | `blocker/{userId}`| `0` | `blockerUserId`, `blockedUserId`, `blockedAt` | `block/{blockerUserId}` | `{blockedAt}` | `block/{blockedUserId}` | `{blockedAt}` |
 | `user/{userId}` | `deleted`| `0` | `userId`, `deletedAt` | `userDeleted` | `{deletedAt}` |
 | `user/{userId}` | `follower/{userId}` | `1` | `followedAt`, `followStatus`, `followerUserId`, `followedUserId`  | `follower/{followerUserId}` | `{followStatus}/{followedAt}` | `followed/{followedUserId}` | `{followStatus}/{followedAt}` |
@@ -88,13 +89,29 @@ We have no local secondary indexes.
 
 ### Feed Table
 
-#### Indexes
+Holds only one type of item, a `Feed` item. Unless otherwise noted, all types are `String`.
 
-- The table's primary key is (`postId`, `feedUserId`).
-- GSI-A1: (`feedUserId`, `postedAt`) with keys and all attributes.
-- GSI-A2: (`feedUserId`, `postedByUserId`) with keys and all attributes.
+#### Schema
 
-#### Notes
 
-- All types are strings.
-- There are no attributes beyond those listed in the indexes above.
+| Attribute        | Table Partition Key | Table Sort Key   | GSI-A1 Partition Key | GSI-A1 Sort Key  | GSI-A2 Partition Key | GSI-A2 Sort Key  |
+|:---------------- |:-------------------:|:----------------:|:--------------------:|:----------------:|:--------------------:|:----------------:|
+| `postId`         | :heavy_check_mark:  |                  |                      |                  |                      |                  |
+| `feedUserId`     |                     |:heavy_check_mark:| :heavy_check_mark:   |                  | :heavy_check_mark:   |                  |
+| `postedAt`       |                     |                  |                      |:heavy_check_mark:|                      |                  |
+| `postedByUserId` |                     |                  |                      |                  |                      |:heavy_check_mark:|
+
+### Ad Feed Table
+
+Holds only one type of item, an `AdFeed` item. Unless otherwise noted, all types are `String`.
+
+#### Schema
+
+| Attribute      | Table Partition Key | Table Sort Key   | GSI-A1 Partition Key | GSI-A1 Sort Key  |
+|:-------------- |:-------------------:|:----------------:|:--------------------:|:----------------:|
+| `postId`       | :heavy_check_mark:  |                  |                      |                  |
+| `userId`       |                     |:heavy_check_mark:| :heavy_check_mark:   |                  |
+| `lastViewedAt` |                     |                  |                      |:heavy_check_mark:|
+| `paymentCount:Number` |
+| `lastPaymentForViewAt` |
+| `lastPaymentFinishedAt` |

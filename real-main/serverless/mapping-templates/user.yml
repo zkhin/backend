@@ -114,6 +114,11 @@
   response: PassThru.response.vtl
 
 - type: User
+  field: adsDisabled
+  dataSource: NoneDataSource
+  response: PassThru.response.vtl
+
+- type: User
   field: commentsDisabled
   dataSource: NoneDataSource
   response: PassThru.response.vtl
@@ -148,13 +153,14 @@
 
 - type: User
   field: feed
-  dataSource: DynamodbFeedDataSource
-  caching:
-    keys:
-      - $context.args.limit
-      - $context.args.nextToken
-      - $context.identity.cognitoIdentityId
-      - $context.source.userId
+  request: User.feed/before.request.vtl
+  response: PassThru.response.vtl
+  kind: PIPELINE
+  functions:
+    - User.feed.getAdsDisabled
+    - User.feed.getFeed
+    - User.feed.getPosts
+    - User.feed.getAdFeed
 
 - type: User
   field: stories

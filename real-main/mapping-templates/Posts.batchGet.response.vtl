@@ -1,11 +1,11 @@
 #if ($ctx.error)
   $util.error($ctx.error.message, $ctx.error.type)
 #end
+#set ($callerUserId = $ctx.identity.cognitoIdentityId)
 
 ## remove missing posts from result set (in process of being deleted?)
 #set ($posts = [])
 #foreach ($item in $ctx.prev.result)
-
   #if (! $util.isString($item))
     ## item is an already-resolved post object
     $util.qr($posts.add($item))
@@ -17,7 +17,14 @@
       $util.qr($posts.add($post))
     #end
   #end
-
 #end
 
-$util.toJson($posts)
+## filter out posts not in COMPLETED that viewer does not own
+#set ($filteredPosts = [])
+#foreach ($post in $posts)
+  #if ($post.postedByUserId == $callerUserId || $post.postStatus == 'COMPLETED')
+    $util.qr($filteredPosts.add($post))
+  #end
+#end
+
+$util.toJson($filteredPosts)

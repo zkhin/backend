@@ -139,6 +139,7 @@ type Mutation {
     privacyStatus: PrivacyStatus,
     followCountsHidden: Boolean,
     viewCountsHidden: Boolean,
+    adsDisabled: Boolean,
     commentsDisabled: Boolean,
     likesDisabled: Boolean,
     sharingDisabled: Boolean,
@@ -189,6 +190,8 @@ type Mutation {
   #   - setAsUserPhoto:
   #     - may only be used with IMAGE posts
   #     - if set to True, the post will be set as user profile photo if/when it reaches COMPLETED status
+  #   - adPayment and adPaymentPeriod may only be set if isAd is set to True
+  #   - adPaymentPeriod follows the same semantics as `lifetime`
   addPost(
     postId: ID!,
     postType: PostType,  # defaults to IMAGE if not supplied
@@ -202,6 +205,9 @@ type Mutation {
     verificationHidden: Boolean,
     setAsUserPhoto: Boolean,
     keywords: [String!],
+    isAd: Boolean,
+    adPayment: Float,
+    adPaymentPeriod: String,
   ): Post
 
   # Edit a Post
@@ -247,6 +253,11 @@ type Mutation {
 
   # Restore an archived post
   restoreArchivedPost(postId: ID!): Post
+
+  # Approve an ad post
+  #   - may only be called by an admin
+  #   - may only target posts with adStatus of PENDING
+  approveAdPost(postId: ID!): Post
 
   # Post likes
   #   - trying to like a post we do not have access to is an error
@@ -450,6 +461,7 @@ type User {
   acceptedEULAVersion: String
   followCountsHidden: Boolean
   viewCountsHidden: Boolean
+  adsDisabled: Boolean
   commentsDisabled: Boolean
   likesDisabled: Boolean
   sharingDisabled: Boolean
@@ -740,6 +752,13 @@ enum LikeStatus {
   NOT_LIKED
 }
 
+enum AdStatus {
+  NOT_AD
+  PENDING
+  ACTIVE
+  INACTIVE
+}
+
 enum FlagStatus {
   FLAGGED
   NOT_FLAGGED
@@ -832,6 +851,10 @@ type Post {
   verificationHidden: Boolean
   isVerified: Boolean
   keywords: [String!]
+
+  adStatus: AdStatus!
+  adPayment: Float
+  adPaymentPeriod: String
 
   image: Image
   imageUploadUrl: AWSURL

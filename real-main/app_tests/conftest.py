@@ -9,7 +9,7 @@ import pytest
 from app import clients, models
 from app.models.card.templates import CardTemplate
 
-from .dynamodb.table_schema import feed_table_schema, main_table_schema
+from .dynamodb.table_schema import ad_feed_table_schema, feed_table_schema, main_table_schema
 
 heic_path = path.join(path.dirname(__file__), 'fixtures', 'IMG_0265.HEIC')
 grant_path = path.join(path.dirname(__file__), 'fixtures', 'grant.jpg')
@@ -111,10 +111,18 @@ def cognito_client():
 
 @pytest.fixture
 def dynamo_clients():
+    def get_kwargs(table_schema):
+        pk, sk = [k['AttributeName'] for k in sorted(table_schema['KeySchema'], key=lambda k: k['KeyType'])]
+        return {'partition_key': pk, 'sort_key': sk, 'create_table_schema': table_schema}
+
+    main_kwargs = get_kwargs(main_table_schema)
+    feed_kwargs = get_kwargs(feed_table_schema)
+    ad_feed_kwargs = get_kwargs(ad_feed_table_schema)
     with moto.mock_dynamodb2():
         yield (
-            clients.DynamoClient(table_name='main-table', create_table_schema=main_table_schema),
-            clients.DynamoClient(table_name='feed-table', create_table_schema=feed_table_schema),
+            clients.DynamoClient(table_name='main-table', **main_kwargs),
+            clients.DynamoClient(table_name='feed-table', **feed_kwargs),
+            clients.DynamoClient(table_name='ad-feed-table', **ad_feed_kwargs),
         )
 
 
@@ -126,6 +134,11 @@ def dynamo_client(dynamo_clients):
 @pytest.fixture
 def dynamo_feed_client(dynamo_clients):
     yield dynamo_clients[1]
+
+
+@pytest.fixture
+def dynamo_ad_feed_client(dynamo_clients):
+    yield dynamo_clients[2]
 
 
 @pytest.fixture
@@ -174,6 +187,11 @@ def id_analyzer_client():
 @pytest.fixture
 def real_dating_client():
     yield mock.Mock(clients.RealDatingClient())
+
+
+@pytest.fixture
+def real_transactions_client():
+    yield mock.Mock(clients.RealTransactionsClient(api_host='testing.host', api_stage='testing-stage'))
 
 
 @pytest.fixture
@@ -264,6 +282,17 @@ def comment_manager(dynamo_client, user_manager, appsync_client):
 def feed_manager(appsync_client, dynamo_client, dynamo_feed_client):
     yield models.FeedManager(
         {'appsync': appsync_client, 'dynamo': dynamo_client, 'dynamo_feed': dynamo_feed_client}
+    )
+
+
+@pytest.fixture
+def ad_feed_manager(dynamo_client, dynamo_ad_feed_client, real_transactions_client):
+    yield models.AdFeedManager(
+        {
+            'dynamo': dynamo_client,
+            'dynamo_ad_feed': dynamo_ad_feed_client,
+            'real_transactions': real_transactions_client,
+        }
     )
 
 

@@ -1,11 +1,12 @@
 import collections
 import functools
 import logging
+from decimal import BasicContext, Decimal
 
 import pendulum
 from boto3.dynamodb.conditions import Attr, Key
 
-from app.models.post.enums import PostStatus
+from app.models.post.enums import AdStatus, PostStatus
 
 from .. import enums
 
@@ -88,6 +89,9 @@ class PostDynamo:
         verification_hidden=None,
         keywords=None,
         set_as_user_photo=None,
+        ad_status=None,
+        ad_payment=None,
+        ad_payment_period=None,
     ):
         posted_at = posted_at or pendulum.now('utc')
         posted_at_str = posted_at.to_iso8601_string()
@@ -139,6 +143,14 @@ class PostDynamo:
             item['setAsUserPhoto'] = set_as_user_photo
         if keywords is not None:
             item['keywords'] = list(set(keywords))  # remove duplicates
+        if ad_status is not None and ad_status is not enums.AdStatus.NOT_AD:
+            item['adStatus'] = ad_status
+            item['gsiK4PartitionKey'] = f'postAdStatus/{ad_status}'
+            item['gsiK4SortKey'] = posted_at_str
+        if ad_payment is not None:
+            item['adPayment'] = Decimal(ad_payment).normalize(context=BasicContext)
+        if ad_payment_period is not None:
+            item['adPaymentPeriod'] = ad_payment_period
         return self.client.add_item({'Item': item})
 
     def increment_flag_count(self, post_id):
@@ -211,11 +223,6 @@ class PostDynamo:
         verification_hidden=None,
         keywords=None,
     ):
-        assert any(
-            k is not None
-            for k in (text, comments_disabled, likes_disabled, sharing_disabled, verification_hidden, keywords)
-        ), 'Action-less post edit requested'
-
         exp_actions = collections.defaultdict(list)
         exp_names = {}
         exp_values = {}
@@ -255,6 +262,8 @@ class PostDynamo:
             exp_actions['SET'].append('keywords = :kw')
             exp_values[':kw'] = list(set(keywords))  # remove duplicates
 
+        assert exp_actions, 'Action-less post edit requested'
+
         update_query_kwargs = {
             'Key': self.pk(post_id),
             'UpdateExpression': ' '.join([f'{k} {", ".join(v)}' for k, v in exp_actions.items()]),
@@ -266,6 +275,25 @@ class PostDynamo:
             update_query_kwargs['ExpressionAttributeValues'] = exp_values
 
         return self.client.update_item(update_query_kwargs)
+
+    def set_ad_status(self, post_id, posted_at_str, ad_status, fail_softly=False):
+        if ad_status == enums.AdStatus.NOT_AD:
+            query_kwargs = {
+                'Key': self.pk(post_id),
+                'UpdateExpression': 'REMOVE adStatus, gsiK4PartitionKey, gsiK4SortKey',
+            }
+        else:
+            query_kwargs = {
+                'Key': self.pk(post_id),
+                'UpdateExpression': 'SET adStatus = :as, gsiK4PartitionKey = :pk, gsiK4SortKey = :sk',
+                'ExpressionAttributeValues': {
+                    ':as': ad_status,
+                    ':pk': f'postAdStatus/{ad_status}',
+                    ':sk': posted_at_str,
+                },
+            }
+        failure_warning = f'Post `{post_id}` does not exist' if fail_softly else None
+        return self.client.update_item(query_kwargs, failure_warning=failure_warning)
 
     def set_checksum(self, post_id, posted_at_str, checksum):
         assert checksum  # no deletes
@@ -443,3 +471,17 @@ class PostDynamo:
             'ProjectionExpression': 'partitionKey',
         }
         return map(lambda item: item['partitionKey'].split('/')[1], self.client.generate_all_query(query_kwargs))
+
+    def generate_post_ids_by_ad_status(self, ad_status, exclude_posted_by_user_id=None):
+        assert ad_status in AdStatus._ALL and ad_status != AdStatus.NOT_AD
+        query_kwargs = {
+            'IndexName': 'GSI-K4',
+            'KeyConditionExpression': 'gsiK4PartitionKey = :gsik4pk',
+            'ExpressionAttributeValues': {':gsik4pk': f'postAdStatus/{ad_status}'},
+            'ProjectionExpression': 'partitionKey, sortKey',
+        }
+        keys_gen = self.client.generate_all_query(query_kwargs)
+        if exclude_posted_by_user_id:
+            gen = self.client.batch_get_items(keys_gen, projection_expression='partitionKey, postedByUserId')
+            keys_gen = (i for i in gen if i['postedByUserId'] != exclude_posted_by_user_id)
+        return (k['partitionKey'].split('/')[1] for k in keys_gen)

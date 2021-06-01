@@ -84,13 +84,19 @@ def test_record_view_count_with_view_type(post, user2, user3):
     assert post.get_viewed_status(user3.id) == ViewedStatus.VIEWED
     view_item = post.view_dynamo.get_view(post.id, user3.id)
     assert view_item['viewCount'] == 3
-    assert view_item['focusViewCount'] == 3
+    assert view_item.get('focusViewCount', 0) == 3
     assert view_item.get('thumbnailViewCount', 0) == 0
+    assert 'lastViewedAt' in view_item
+    assert 'focusLastViewedAt' in view_item
+    assert 'thumbnailLastViewedAt' not in view_item
 
     # record views with thumbnail view type, verify
     post.record_view_count(user2.id, 3, None, ViewType.THUMBNAIL)
     assert post.get_viewed_status(user2.id) == ViewedStatus.VIEWED
     view_item = post.view_dynamo.get_view(post.id, user2.id)
     assert view_item['viewCount'] == 3
-    assert view_item['thumbnailViewCount'] == 3
     assert view_item.get('focusViewCount', 0) == 0
+    assert view_item.get('thumbnailViewCount', 0) == 3
+    assert 'lastViewedAt' in view_item
+    assert 'focusLastViewedAt' not in view_item
+    assert 'thumbnailLastViewedAt' in view_item

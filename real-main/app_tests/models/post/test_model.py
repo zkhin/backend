@@ -8,7 +8,7 @@ import pendulum
 import pytest
 
 from app.mixins.view.enums import ViewType
-from app.models.post.enums import PostStatus, PostType
+from app.models.post.enums import AdStatus, PostStatus, PostType
 from app.models.post.exceptions import PostException
 from app.models.post.model import Post
 from app.models.user.enums import UserSubscriptionLevel
@@ -864,3 +864,35 @@ def test_get_trending_multiplier(post):
     default = post.get_trending_multiplier()
     assert post.get_trending_multiplier(view_type=ViewType.THUMBNAIL) == default
     assert post.get_trending_multiplier(view_type=ViewType.FOCUS) == default * 2
+
+
+def test_approve(post):
+    # can't approve a post that isn't an ad
+    assert post.ad_status == AdStatus.NOT_AD
+    with pytest.raises(PostException, match='Cannot approve post .* with adStatus .*'):
+        post.approve()
+
+    # go directly to DB to change the post to PENDING
+    post.dynamo.set_ad_status(post.id, post.item['postedAt'], AdStatus.PENDING)
+    post.refresh_item()
+    assert post.ad_status == AdStatus.PENDING
+
+    # can approve the PENDING ad
+    post.approve()
+    assert post.ad_status == AdStatus.ACTIVE
+
+    # can't double approve a post
+    with pytest.raises(PostException, match='Cannot approve post .* with adStatus .*'):
+        post.approve()
+
+
+def test_approve_cant_approve_not_completed(pending_image_post):
+    # go directly to DB to change the adStatus to PENDING
+    post = pending_image_post
+    post.dynamo.set_ad_status(post.id, post.item['postedAt'], AdStatus.PENDING)
+    post.refresh_item()
+    assert post.ad_status == AdStatus.PENDING
+
+    # verify we can't approve the post
+    with pytest.raises(PostException, match='Cannot approve post .* with status .*'):
+        post.approve()

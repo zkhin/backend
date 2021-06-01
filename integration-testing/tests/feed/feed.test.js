@@ -1,7 +1,7 @@
 const {v4: uuidv4} = require('uuid')
 
-const {cognito, eventually, generateRandomJpeg, sleep} = require('../utils')
-const {mutations, queries, subscriptions} = require('../schema')
+const {cognito, eventually, generateRandomJpeg, sleep} = require('../../utils')
+const {mutations, queries, subscriptions} = require('../../schema')
 
 const imageBytes = generateRandomJpeg(8, 8)
 const imageData = new Buffer.from(imageBytes).toString('base64')

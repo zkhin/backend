@@ -293,6 +293,12 @@
   response: Lambda.response.vtl
 
 - type: Mutation
+  field: approveAdPost
+  dataSource: LambdaDataSource
+  request: false
+  response: Lambda.response.vtl
+
+- type: Mutation
   field: reportPostViews
   dataSource: LambdaDataSource
   request: false

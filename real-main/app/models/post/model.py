@@ -16,7 +16,7 @@ from app.models.user.exceptions import UserException
 from app.utils import image_size
 
 from .cached_image import CachedImage
-from .enums import PostStatus, PostType
+from .enums import AdStatus, PostStatus, PostType
 from .exceptions import PostException
 from .text_image import generate_text_image
 
@@ -181,6 +181,10 @@ class Post(FlagModelMixin, TrendingModelMixin, ViewModelMixin):
     @property
     def trending_score(self):
         return super().trending_score if super().trending_score else 0
+
+    @property
+    def ad_status(self):
+        return self.item.get('adStatus', AdStatus.NOT_AD)
 
     def refresh_item(self, strongly_consistent=False):
         self.item = self.dynamo.get_post(self.id, strongly_consistent=strongly_consistent)
@@ -454,6 +458,15 @@ class Post(FlagModelMixin, TrendingModelMixin, ViewModelMixin):
         self.original_metadata_dynamo.delete(self.id)
         self.dynamo.delete_post(self.id)
 
+        return self
+
+    def approve(self):
+        "Transition the ad post to APPROVED ad status"
+        if self.ad_status != AdStatus.PENDING:
+            raise PostException(f'Cannot approve post `{self.id}` with adStatus `{self.ad_status}`')
+        if self.status != PostStatus.COMPLETED:
+            raise PostException(f'Cannot approve post `{self.id}` with status `{self.status}`')
+        self.item = self.dynamo.set_ad_status(self.id, self.item['postedAt'], AdStatus.ACTIVE)
         return self
 
     def set(

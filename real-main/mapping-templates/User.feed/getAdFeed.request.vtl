@@ -1,0 +1,39 @@
+## if the user has ads disabled. don't inject any ads
+#if ($ctx.stash.adsDisabled)
+  #return ($ctx.prev.result)
+#end
+
+## if query was for less than three posts, don't injext ads
+#set ($limit = $util.defaultIfNull($ctx.args.limit, 20))
+#if ($limit < 3)
+  #return ($ctx.prev.result)
+#end
+
+## if the query is only returning one non-ad post, don't inject ads
+#if ($ctx.prev.result.items.size() < 2)
+  #return ($ctx.prev.result)
+#end
+
+## if there's already an ad in the result from the user's feed
+## don't inject another
+#foreach ($post in $ctx.prev.result.items)
+  #set ($adStatus = $util.defaultIfNull($post.adStatus, 'NOT_AD'))
+  #if ($adStatus == 'ACTIVE')
+    #return ($ctx.prev.result)
+  #end
+#end
+
+#set ($targetUserId = $ctx.source.userId)
+
+{
+    "version": "2018-05-29",
+    "operation": "Query",
+    "query": {
+        "expression": "userId = :uid",
+        "expressionValues": {
+            ":uid": { "S": "$targetUserId" }
+        }
+    },
+    "index": "GSI-A1",
+    "limit": 1
+}

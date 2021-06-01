@@ -16,7 +16,7 @@ from app.models.user.enums import SubscriptionGrantCode, UserPrivacyStatus, User
 from app.utils import GqlNotificationType
 
 from .dynamo import PostDynamo, PostImageDynamo, PostOriginalMetadataDynamo
-from .enums import PostStatus, PostType
+from .enums import AdStatus, PostStatus, PostType
 from .exceptions import PostException
 from .model import Post
 
@@ -95,6 +95,9 @@ class PostManager(FlagManagerMixin, TrendingManagerMixin, ViewManagerMixin, Mana
         verification_hidden=None,
         keywords=None,
         set_as_user_photo=None,
+        is_ad=None,
+        ad_payment=None,
+        ad_payment_period=None,
         now=None,
     ):
         now = now or pendulum.now('utc')
@@ -129,6 +132,17 @@ class PostManager(FlagManagerMixin, TrendingManagerMixin, ViewManagerMixin, Mana
                     raise PostException(f'Invalid rotate angle - {rotate}')
         else:
             raise Exception(f'Invalid PostType `{post_type}`')
+
+        if is_ad:
+            if ad_payment is None:
+                raise PostException('Cannot add advertisement post without setting adPayment')
+            ad_status = AdStatus.PENDING
+        else:
+            if ad_payment is not None:
+                raise PostException('Cannot add non-advertisement post with adPayment set')
+            if ad_payment_period is not None:
+                raise PostException('Cannot add non-advertisement post with adPaymentPeriod set')
+            ad_status = AdStatus.NOT_AD
 
         expires_at = now + lifetime_duration if lifetime_duration is not None else None
         if expires_at and expires_at <= now:
@@ -172,6 +186,9 @@ class PostManager(FlagManagerMixin, TrendingManagerMixin, ViewManagerMixin, Mana
             album_id=album_id,
             keywords=keywords,
             set_as_user_photo=set_as_user_photo,
+            ad_status=ad_status,
+            ad_payment=ad_payment,
+            ad_payment_period=ad_payment_period,
         )
         post = self.init_post(post_item)
 
@@ -483,6 +500,18 @@ class PostManager(FlagManagerMixin, TrendingManagerMixin, ViewManagerMixin, Mana
         keywords = old_item.get('keywords', [])
         for k in keywords:
             self.elasticsearch_client.delete_keyword(post_id, k)
+
+    def on_post_status_change_update_ad_status(self, post_id, new_item, old_item=None):
+        post_status = new_item.get('postStatus', None)
+        old_post_status = (old_item or {}).get('postStatus', None)
+        assert post_status != old_post_status, "Should only be called if postStatus changed"
+        ad_status = new_item.get('adStatus', AdStatus.NOT_AD)
+        posted_at = new_item['postedAt']
+        if post_status != PostStatus.COMPLETED and ad_status == AdStatus.ACTIVE:
+            fail_softly = post_status == PostStatus.DELETING
+            self.dynamo.set_ad_status(post_id, posted_at, AdStatus.INACTIVE, fail_softly=fail_softly)
+        if post_status == PostStatus.COMPLETED and ad_status == AdStatus.INACTIVE:
+            self.dynamo.set_ad_status(post_id, posted_at, AdStatus.ACTIVE)
 
     def sync_elasticsearch(self, post_id, new_item, old_item=None):
         self.elasticsearch_client.put_post(post_id, new_item['keywords'])

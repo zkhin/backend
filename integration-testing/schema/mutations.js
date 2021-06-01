@@ -192,19 +192,22 @@ module.exports.setThemeCode = gql`
 `
 
 module.exports.setUserMentalHealthSettings = gql`
-  mutation SetUserCommentsDisabled(
+  mutation SetUserMentalHealthSettings(
+    $adsDisabled: Boolean
     $commentsDisabled: Boolean
     $likesDisabled: Boolean
     $sharingDisabled: Boolean
     $verificationHidden: Boolean
   ) {
     setUserDetails(
+      adsDisabled: $adsDisabled
       commentsDisabled: $commentsDisabled
       likesDisabled: $likesDisabled
       sharingDisabled: $sharingDisabled
       verificationHidden: $verificationHidden
     ) {
       userId
+      adsDisabled
       commentsDisabled
       likesDisabled
       sharingDisabled
@@ -414,6 +417,9 @@ module.exports.addPost = gql`
     $crop: CropInput
     $rotate: Int
     $keywords: [String!]
+    $isAd: Boolean
+    $adPayment: Float
+    $adPaymentPeriod: String
   ) {
     addPost(
       postId: $postId
@@ -436,6 +442,9 @@ module.exports.addPost = gql`
       verificationHidden: $verificationHidden
       setAsUserPhoto: $setAsUserPhoto
       keywords: $keywords
+      isAd: $isAd
+      adPayment: $adPayment
+      adPaymentPeriod: $adPaymentPeriod
     ) {
       postId
       postedAt
@@ -617,6 +626,15 @@ module.exports.restoreArchivedPost = gql`
       image {
         url
       }
+    }
+  }
+`
+
+module.exports.approveAdPost = gql`
+  mutation ApproveAdPost($postId: ID!) {
+    approveAdPost(postId: $postId) {
+      postId
+      adStatus
     }
   }
 `

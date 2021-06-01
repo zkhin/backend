@@ -50,6 +50,7 @@ class UserDynamo:
     ):
         now = now or pendulum.now('utc')
         assert status is None or status in UserStatus._ALL, f'Invalid user status: `{status}`'
+        status = status or UserStatus.ACTIVE
         query_kwargs = {
             'Item': {
                 'schemaVersion': 11,
@@ -57,7 +58,10 @@ class UserDynamo:
                 'sortKey': 'profile',
                 'gsiA1PartitionKey': f'username/{username}',
                 'gsiA1SortKey': '-',
+                'gsiK4PartitionKey': 'user',
+                'gsiK4SortKey': status,
                 'userId': user_id,
+                'userStatus': status,
                 'username': username,
                 'privacyStatus': UserPrivacyStatus.PUBLIC,
                 'signedUpAt': now.to_iso8601_string(),
@@ -71,8 +75,6 @@ class UserDynamo:
             query_kwargs['Item']['email'] = email
         if phone:
             query_kwargs['Item']['phoneNumber'] = phone
-        if status:
-            query_kwargs['Item']['userStatus'] = status
         try:
             return self.client.add_item(query_kwargs)
         except self.client.exceptions.ConditionalCheckFailedException as err:
@@ -119,12 +121,9 @@ class UserDynamo:
         now = now or pendulum.now('utc')
         query_kwargs = {
             'Key': self.pk(user_id),
+            'UpdateExpression': 'SET userStatus = :s, gsiK4SortKey = :s',
+            'ExpressionAttributeValues': {':s': status},
         }
-        if status == UserStatus.ACTIVE:  # default value
-            query_kwargs['UpdateExpression'] = 'REMOVE userStatus'
-        else:
-            query_kwargs['UpdateExpression'] = 'SET userStatus = :s'
-            query_kwargs['ExpressionAttributeValues'] = {':s': status}
         if status == UserStatus.DISABLED:
             query_kwargs['UpdateExpression'] += ', lastDisabledAt = :lda'
             query_kwargs['ExpressionAttributeValues'][':lda'] = now.to_iso8601_string()
@@ -170,6 +169,7 @@ class UserDynamo:
         view_counts_hidden=None,
         email=None,
         phone=None,
+        ads_disabled=None,
         comments_disabled=None,
         likes_disabled=None,
         sharing_disabled=None,
@@ -210,6 +210,7 @@ class UserDynamo:
         process_attr('viewCountsHidden', view_counts_hidden)
         process_attr('email', email)
         process_attr('phoneNumber', phone)
+        process_attr('adsDisabled', ads_disabled)
         process_attr('commentsDisabled', comments_disabled)
         process_attr('likesDisabled', likes_disabled)
         process_attr('sharingDisabled', sharing_disabled)
@@ -394,6 +395,28 @@ class UserDynamo:
             query_kwargs['UpdateExpression'] = 'REMOVE idVerificationStatus'
 
         return self.client.update_item(query_kwargs)
+
+    def generate_user_ids(self, status=None):
+        assert status is None or status in UserStatus._ALL, f'Invalid user status: `{status}`'
+        query_kwargs = {
+            'KeyConditionExpression': 'gsiK4PartitionKey = :gsipk',
+            'ProjectionExpression': 'partitionKey',
+            'ExpressionAttributeValues': {':gsipk': 'user'},
+            'IndexName': 'GSI-K4',
+        }
+        if status:
+            query_kwargs['KeyConditionExpression'] += ' AND gsiK4SortKey = :gsisk'
+            query_kwargs['ExpressionAttributeValues'][':gsisk'] = status
+        return (key['partitionKey'].split('/')[1] for key in self.client.generate_all_query(query_kwargs))
+
+    def generate_user_ids_by_ads_disabled(self, ads_disabled, exclude_user_id=None):
+        assert ads_disabled is False or ads_disabled is True
+        user_key_gen = (self.pk(user_id) for user_id in self.generate_user_ids())
+        user_items_gen = self.client.batch_get_items(user_key_gen, projection_expression='userId, adsDisabled')
+        conditions = [lambda item: item.get('adsDisabled', False) is ads_disabled]
+        if exclude_user_id:
+            conditions.append(lambda item: item['userId'] != exclude_user_id)
+        return (item['userId'] for item in user_items_gen if all(c(item) for c in conditions))
 
     def generate_user_ids_by_birthday(self, birthday):
         "`birthday` should be a string in format MM-DD"
