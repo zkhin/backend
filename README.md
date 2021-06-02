@@ -7,7 +7,6 @@
 The backend is organized as a series of cloudformation stacks to speed up the standard deploy and to help protect stateful resources. The stacks so far are:
 
 - `real-main`
-- `real-auth`
 - `real-cloudfront`
 - `real-lambda-layers`
 
@@ -142,7 +141,6 @@ Resource dependencies between the stacks make initial deployment tricky. Stacks 
   - the `AWS::Logs::MetricFilter`s and `AWS::CloudWatch::Alarm` that depend on a AppSync GraphQL LogGroup
 - `real-cloudfront`
 - `real-main` again, with nothing commented out
-- `real-auth`
 
 ### Updates to an existing deployment
 
@@ -192,15 +190,6 @@ pytest --cov=app app_tests/
 This is the primary stack, it holds everything not explicitly relegated to one of the other stacks.
 
 Most development takes place here. To initialize the development environment, run `poetry install` in the stack root directory.
-
-#### `real-auth`
-
-Holds:
-
-- Api endpoints to asist in sign up / sign in process
-- Planned: Cognito resources will be moved in here (they are still in `real-main` at the moment)
-
-Please see the [real-auth README](./real-auth/README.md) for further details.
 
 #### `real-cloudfront`
 
