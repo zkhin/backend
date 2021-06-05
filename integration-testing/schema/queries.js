@@ -294,6 +294,7 @@ export const post = gql`
         }
       }
       keywords
+      payment
       adStatus
       adPayment
       adPaymentPeriod

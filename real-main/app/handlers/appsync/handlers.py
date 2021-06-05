@@ -756,6 +756,7 @@ def add_post(caller_user, arguments, **kwargs):
     sharing_disabled = arguments.get('sharingDisabled')
     verification_hidden = arguments.get('verificationHidden')
     keywords = arguments.get('keywords')
+    payment = arguments.get('payment')
     is_ad = arguments.get('isAd')
     ad_payment = arguments.get('adPayment')
 
@@ -790,6 +791,7 @@ def add_post(caller_user, arguments, **kwargs):
             verification_hidden=verification_hidden,
             keywords=keywords,
             set_as_user_photo=set_as_user_photo,
+            payment=payment,
             is_ad=is_ad,
             ad_payment=ad_payment,
             ad_payment_period=ad_payment_period,

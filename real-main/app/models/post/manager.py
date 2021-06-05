@@ -1,6 +1,7 @@
 import collections
 import itertools
 import logging
+import os
 from decimal import Decimal
 
 import pendulum
@@ -12,13 +13,15 @@ from app.mixins.trending.manager import TrendingManagerMixin
 from app.mixins.view.enums import ViewType
 from app.mixins.view.manager import ViewManagerMixin
 from app.models.like.enums import LikeStatus
-from app.models.user.enums import SubscriptionGrantCode, UserPrivacyStatus, UserSubscriptionLevel
-from app.utils import GqlNotificationType
+from app.models.user.enums import UserPrivacyStatus
+from app.utils import GqlNotificationType, to_decimal
 
 from .dynamo import PostDynamo, PostImageDynamo, PostOriginalMetadataDynamo
 from .enums import AdStatus, PostStatus, PostType
 from .exceptions import PostException
 from .model import Post
+
+POST_PAYMENT_DEFAULT = to_decimal(os.environ.get('POST_PAYMENT_DEFAULT'))
 
 logger = logging.getLogger()
 
@@ -29,7 +32,7 @@ class PostManager(FlagManagerMixin, TrendingManagerMixin, ViewManagerMixin, Mana
     app_store_fee_percent = Decimal('0.15')
     real_fee_percent = Decimal('0.1')
 
-    def __init__(self, clients, managers=None):
+    def __init__(self, clients, managers=None, post_payment_default=POST_PAYMENT_DEFAULT):
         super().__init__(clients, managers=managers)
         managers = managers or {}
         managers['post'] = self
@@ -50,6 +53,9 @@ class PostManager(FlagManagerMixin, TrendingManagerMixin, ViewManagerMixin, Mana
             self.dynamo = PostDynamo(clients['dynamo'])
             self.image_dynamo = PostImageDynamo(clients['dynamo'])
             self.original_metadata_dynamo = PostOriginalMetadataDynamo(clients['dynamo'])
+        if 'real_transactions' in clients:
+            self.real_transactions_client = clients['real_transactions']
+        self.post_payment_default = post_payment_default
 
     def get_model(self, item_id, strongly_consistent=False):
         return self.get_post(item_id, strongly_consistent=strongly_consistent)
@@ -95,6 +101,7 @@ class PostManager(FlagManagerMixin, TrendingManagerMixin, ViewManagerMixin, Mana
         verification_hidden=None,
         keywords=None,
         set_as_user_photo=None,
+        payment=None,
         is_ad=None,
         ad_payment=None,
         ad_payment_period=None,
@@ -134,8 +141,12 @@ class PostManager(FlagManagerMixin, TrendingManagerMixin, ViewManagerMixin, Mana
             raise Exception(f'Invalid PostType `{post_type}`')
 
         if is_ad:
+            if payment is not None:
+                raise PostException('Cannot add advertisement post with payment set')
             if ad_payment is None:
                 raise PostException('Cannot add advertisement post without setting adPayment')
+            if ad_payment < 0:
+                raise PostException('Cannot add advertisement post with negative adPayment')
             ad_status = AdStatus.PENDING
         else:
             if ad_payment is not None:
@@ -143,6 +154,9 @@ class PostManager(FlagManagerMixin, TrendingManagerMixin, ViewManagerMixin, Mana
             if ad_payment_period is not None:
                 raise PostException('Cannot add non-advertisement post with adPaymentPeriod set')
             ad_status = AdStatus.NOT_AD
+
+        if payment is not None and payment < 0:
+            raise PostException('Cannot add post with negative payment')
 
         expires_at = now + lifetime_duration if lifetime_duration is not None else None
         if expires_at and expires_at <= now:
@@ -186,6 +200,7 @@ class PostManager(FlagManagerMixin, TrendingManagerMixin, ViewManagerMixin, Mana
             album_id=album_id,
             keywords=keywords,
             set_as_user_photo=set_as_user_photo,
+            payment=payment,
             ad_status=ad_status,
             ad_payment=ad_payment,
             ad_payment_period=ad_payment_period,
@@ -494,6 +509,19 @@ class PostManager(FlagManagerMixin, TrendingManagerMixin, ViewManagerMixin, Mana
             if recorded:
                 post.user.trending_increment_score(**trending_kwargs)
 
+    def on_post_view_focus_last_viewed_at_change(self, post_id, new_item, old_item=None):
+        old_lva = (old_item or {}).get('focusLastViewedAt')
+        new_lva = new_item.get('focusLastViewedAt')
+        assert old_lva != new_lva, 'Should only be called when focusLastViewedAt changes'
+        # only pay for the first FOCUS view
+        if old_lva is not None:
+            return
+        user_id = new_item['sortKey'].split('/')[1]
+        post = self.get_post(post_id)
+        if post.ad_status != AdStatus.NOT_AD or post.user_id == user_id or not post.payment:
+            return
+        self.real_transactions_client.pay_for_post_view(user_id, post.user_id, post_id, post.payment)
+
     def on_post_delete(self, post_id, old_item):
         self.elasticsearch_client.delete_post(post_id)
         # remove old keywords
@@ -523,63 +551,3 @@ class PostManager(FlagManagerMixin, TrendingManagerMixin, ViewManagerMixin, Mana
         keywords = new_item.get('keywords', [])
         for k in keywords:
             self.elasticsearch_client.put_keyword(post_id, k)
-
-    def get_royalty_paid_and_posts_viewed_past_30_days(self, user_id):
-        now = pendulum.now('utc')
-        royalty_paid = Decimal('0')
-        posts_viewed_count = 0
-
-        for key in self.view_dynamo.generate_keys_by_user_past_30_days(user_id, now=now):
-            item_id = key['partitionKey'].split('/')[1]
-
-            post_view_item = self.view_dynamo.get_view(item_id, user_id)
-            royalty_paid += post_view_item.get('royaltyFee', Decimal('0'))
-            posts_viewed_count += post_view_item.get('viewCount', 0)
-
-        return [royalty_paid, posts_viewed_count]
-
-    def on_post_view_calculate_royalty_fee(self, post_id, new_item):
-        # only COMPLETED posts should run royalty payout alg
-        post = self.get_post(post_id)
-        if not post or post.status != PostStatus.COMPLETED:
-            return
-
-        item_id = new_item['partitionKey'].split('/')[1]
-        user_id = new_item['sortKey'].split('/')[1]
-        if post.user_id == user_id:
-            return
-
-        # that should be the first view
-        new_view_count = new_item.get('viewCount', 0)
-        if new_view_count != 1:
-            return
-
-        # both users(poster and viewer) should be diamond members
-        poster = post.user
-        viewer = self.user_manager.get_user(user_id)
-        if (
-            poster.subscription_level != UserSubscriptionLevel.DIAMOND
-            or viewer.subscription_level != UserSubscriptionLevel.DIAMOND
-        ):
-            return
-
-        # both users(poster and viewer) should not be FREE_FOR_LIFE diamond user
-        if (
-            poster.item.get('subscriptionGrantCode') == SubscriptionGrantCode.FREE_FOR_LIFE
-            or viewer.item.get('subscriptionGrantCode') == SubscriptionGrantCode.FREE_FOR_LIFE
-        ):
-            return
-
-        (
-            royalty_paid_past_30_days,
-            posts_viewed_past_30_days,
-        ) = self.get_royalty_paid_and_posts_viewed_past_30_days(user_id)
-        paid_real_past_30_days = self.appstore_manager.get_paid_real_past_30_days(user_id)
-
-        if royalty_paid_past_30_days < paid_real_past_30_days:
-            fees = self.app_store_fee_percent + self.real_fee_percent
-            amount_to_pay = paid_real_past_30_days / posts_viewed_past_30_days * (Decimal('1.00') - fees)
-            # set amount_to_pay to this post view
-            self.view_dynamo.set_royalty_fee(item_id, user_id, amount_to_pay)
-            # add amount_to_pay to poster's wallet
-            poster.dynamo.increment_wallet(poster.id, amount_to_pay)

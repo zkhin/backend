@@ -48,6 +48,11 @@
       - $context.source.postId
 
 - type: Post
+  field: payment
+  dataSource: NoneDataSource
+  response: PassThru.response.vtl
+
+- type: Post
   field: viewedByCount
   dataSource: NoneDataSource
   response: PassThru.response.vtl

@@ -41,6 +41,7 @@ describe('Adding ad posts', () => {
     [{adPaymentPeriod: 'P1D'}, 'Cannot add non-advertisement post with adPaymentPeriod set'],
     [{isAd: false, adPayment: 1.1}, 'Cannot add non-advertisement post with adPayment set'],
     [{isAd: true, adPayment: 1.1, adPaymentPeriod: 'bleh'}, 'Unable to parse adPaymentPeriod'],
+    [{isAd: true, adPayment: -1.1}, 'Cannot add advertisement post with negative adPayment'],
   ])('Cannot add post with ad params: %p', async ({isAd, adPayment, adPaymentPeriod}, errorMsg) => {
     const postId = uuidv4()
     await client

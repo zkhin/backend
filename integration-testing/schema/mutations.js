@@ -417,6 +417,7 @@ export const addPost = gql`
     $crop: CropInput
     $rotate: Int
     $keywords: [String!]
+    $payment: Float
     $isAd: Boolean
     $adPayment: Float
     $adPaymentPeriod: String
@@ -442,6 +443,7 @@ export const addPost = gql`
       verificationHidden: $verificationHidden
       setAsUserPhoto: $setAsUserPhoto
       keywords: $keywords
+      payment: $payment
       isAd: $isAd
       adPayment: $adPayment
       adPaymentPeriod: $adPaymentPeriod

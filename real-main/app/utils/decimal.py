@@ -1,5 +1,9 @@
-from decimal import Decimal
+from decimal import BasicContext, Decimal
 from json import JSONEncoder
+
+
+def to_decimal(value):
+    return Decimal(value).normalize(context=BasicContext) if value is not None else None
 
 
 class DecimalJsonEncoder(JSONEncoder):

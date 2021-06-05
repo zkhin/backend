@@ -140,7 +140,7 @@ def test_on_post_view_focus_last_viewed_at_change_throws_if_no_change(ad_feed_ma
     item = {'postId': post_id}
     with pytest.raises(AssertionError, match=' focusLastViewedAt '):
         ad_feed_manager.on_post_view_focus_last_viewed_at_change(post_id, new_item=item)
-    item = {'postId': post_id, 'focusLastViewsAt': 'any-string'}
+    item = {'postId': post_id, 'focusLastViewedAt': 'any-string'}
     with pytest.raises(AssertionError, match=' focusLastViewedAt '):
         ad_feed_manager.on_post_view_focus_last_viewed_at_change(post_id, new_item=item, old_item=item)
 

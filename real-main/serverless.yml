@@ -24,6 +24,7 @@ provider:
     ELASTICSEARCH_DOMAIN: !GetAtt ElasticSearchDomain.DomainEndpoint
     MEDIACONVERT_ROLE_ARN: !GetAtt MediaCovertRole.Arn
     PINPOINT_APPLICATION_ID: !Ref PinpointApp
+    POST_PAYMENT_DEFAULT: 0.00001
     REAL_USER_ID: ${env:REAL_USER_ID, 'us-east-1:8a4d7c3b-809e-4182-859c-a2bdafa1a8ae'}  # default is correct value for production
 
     DYNAMO_TABLE: real-${self:provider.stage}-main
@@ -203,6 +204,7 @@ custom:
       level: ALL
     substitutions:
       dynamoTable: ${self:provider.environment.DYNAMO_TABLE}
+      postPaymentDefault: ${self:provider.environment.POST_PAYMENT_DEFAULT}
       realUserId: ${self:provider.environment.REAL_USER_ID}
     xrayEnabled: true
 
@@ -746,21 +748,6 @@ functions:
     alarms:
       - functionErrors
       - functionThrottles
-
-  handleAppstoreServerNotification:
-    name: ${self:provider.stackName}-handleAppstoreServerNotification
-    handler: app.handlers.api.handle_appstore_server_notification
-    layers:
-      - ${cf:real-${self:provider.stage}-lambda-layers.PythonRequirementsLambdaLayer}
-    events:
-      - http:
-          path: appstore-server-notification
-          method: post
-          private: false
-    alarms:
-      - functionErrors
-      - functionThrottles
-    tracing: PassThrough
 
   sendAmplitudeEvent:
     name: ${self:provider.stackName}-sendAmplitudeEvent

@@ -88,7 +88,6 @@ register(
     user_manager.on_appstore_sub_status_change_update_subscription,
     {'status': None},
 )
-register('transaction', '-', ['INSERT'], user_manager.on_appstore_transaction_add)
 register('card', '-', ['INSERT'], card_manager.on_card_add)
 register('card', '-', ['INSERT'], user_manager.on_card_add_increment_count)
 register('card', '-', ['MODIFY'], card_manager.on_card_edit)
@@ -226,6 +225,13 @@ register(
     'post',
     'view',
     ['INSERT', 'MODIFY'],
+    post_manager.on_post_view_focus_last_viewed_at_change,
+    {'focusLastViewedAt': None},
+)
+register(
+    'post',
+    'view',
+    ['INSERT', 'MODIFY'],
     ad_feed_manager.on_post_view_last_viewed_at_change,
     {'lastViewedAt': None},
 )
@@ -245,7 +251,6 @@ register(
 )
 register('post', 'view', ['INSERT', 'REMOVE'], post_manager.on_post_view_add_delete_sync_viewed_by_counts)
 register('post', 'view', ['INSERT', 'MODIFY'], post_manager.on_post_view_change_update_trending)
-register('post', 'view', ['INSERT'], post_manager.on_post_view_calculate_royalty_fee)
 register('user', 'blocker', ['INSERT'], block_manager.on_user_blocked_sync_user_status)
 register(
     'user',

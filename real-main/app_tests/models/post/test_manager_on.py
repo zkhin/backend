@@ -565,35 +565,69 @@ def test_on_post_status_change_update_ad_status_does_nothing_to_other_adstatuses
     assert post.item == post.refresh_item().item
 
 
-def test_get_royalty_paid_and_posts_viewed_past_30_days(post_manager, user):
-    item_id1, item_id2, item_id3 = [str(uuid4()), str(uuid4()), str(uuid4())]
-    post_manager.view_dynamo.add_view(item_id1, user.id, 1, pendulum.now('utc'))
-    post_manager.view_dynamo.add_view(item_id2, user.id, 1, pendulum.now('utc'))
-    post_manager.view_dynamo.add_view(item_id3, user.id, 1, pendulum.now('utc') - pendulum.duration(days=31))
-    assert post_manager.get_royalty_paid_and_posts_viewed_past_30_days(user.id) == [Decimal('0'), 2]
-
-    post_manager.view_dynamo.set_royalty_fee(item_id1, user.id, Decimal('0.99'))
-    assert post_manager.get_royalty_paid_and_posts_viewed_past_30_days(user.id) == [Decimal('0.99'), 2]
-    post_manager.view_dynamo.set_royalty_fee(item_id2, user.id, Decimal('0.99'))
-    assert post_manager.get_royalty_paid_and_posts_viewed_past_30_days(user.id) == [2 * Decimal('0.99'), 2]
-
-    post_manager.view_dynamo.set_royalty_fee(item_id3, user.id, Decimal('0.99'))
-    assert post_manager.get_royalty_paid_and_posts_viewed_past_30_days(user.id) == [2 * Decimal('0.99'), 2]
+def test_on_post_view_focus_last_viewed_at_change_throws_if_no_change(post_manager):
+    post_id = str(uuid4())
+    item = {'postId': post_id}
+    with pytest.raises(AssertionError, match=' focusLastViewedAt '):
+        post_manager.on_post_view_focus_last_viewed_at_change(post_id, new_item=item)
+    item = {'postId': post_id, 'focusLastViewedAt': 'any-string'}
+    with pytest.raises(AssertionError, match=' focusLastViewedAt '):
+        post_manager.on_post_view_focus_last_viewed_at_change(post_id, new_item=item, old_item=item)
 
 
-def test_on_post_view_calculate_royalty_fee(post_manager, post, user, user2):
-    item_id1, item_id2, item_id3 = [str(uuid4()), str(uuid4()), str(uuid4())]
-    post_manager.view_dynamo.add_view(item_id1, user2.id, 1, pendulum.now('utc'))
-    post_manager.view_dynamo.add_view(item_id2, user2.id, 2, pendulum.now('utc'))
-    post_manager.view_dynamo.add_view(post.id, user2.id, 1, pendulum.now('utc'))
-    post_manager.view_dynamo.add_view(item_id3, user2.id, 1, pendulum.now('utc') - pendulum.duration(days=31))
+@pytest.mark.parametrize(
+    'adStatus, owner, payment, oldLastFocusViewedAt',
+    [
+        ['anything-but-NOT_AD', False, None, None],
+        [AdStatus.NOT_AD, False, Decimal(0), None],
+        [AdStatus.NOT_AD, True, Decimal('0.1'), None],
+        [AdStatus.NOT_AD, False, Decimal('0.1'), 'any-string-not-none'],
+    ],
+)
+def test_on_post_view_focus_last_viewed_at_change_does_nothing(
+    post_manager, adStatus, owner, payment, oldLastFocusViewedAt
+):
+    post_id, user_id = str(uuid4()), str(uuid4())
+    old_item = {'partitionKey': f'post/{post_id}', 'sortKey': f'view/{user_id}'}
+    if oldLastFocusViewedAt is not None:
+        old_item['focusLastViewedAt'] = oldLastFocusViewedAt
+    new_item = {**old_item, 'focusLastViewedAt': pendulum.now('utc').to_iso8601_string()}
+    post_item = {
+        'postId': post_id,
+        'postType': 'pt',
+        'postedByUserId': user_id if owner else str(uuid4()),
+        'adStatus': adStatus,
+        'payment': payment,
+    }
+    post = post_manager.init_post(post_item)
+    with patch.object(post_manager, 'get_post', return_value=post):
+        post_manager.on_post_view_focus_last_viewed_at_change(post_id, new_item=new_item, old_item=old_item)
+    assert post_manager.real_transactions_client.mock_calls == []
 
-    item_other_user = {'partitionKey': f'post/{post.id}', 'sortKey': f'view/{user2.id}', 'viewCount': 1}
-    user.grant_subscription_bonus()
-    user2.grant_subscription_bonus()
 
-    with patch.object(post_manager.appstore_manager, 'get_paid_real_past_30_days', return_value=Decimal('0.5')):
-        post_manager.on_post_view_calculate_royalty_fee(post.id, item_other_user)
-        post_view_item = post_manager.view_dynamo.get_view(post.id, user2.id)
-        assert post_view_item['royaltyFee'] == Decimal('0.09375')
-        assert user.refresh_item().item['wallet'] == Decimal('0.09375')
+@pytest.mark.parametrize(
+    'payment, post_payment_default',
+    [[Decimal('0.1'), None], [None, Decimal('0.2')]],
+)
+def test_on_post_view_focus_last_viewed_at_change_calls_real_transactions_client(
+    post_manager, payment, post_payment_default
+):
+    post_id, user_id, post_owner_id = str(uuid4()), str(uuid4()), str(uuid4())
+    old_item = {'partitionKey': f'post/{post_id}', 'sortKey': f'view/{user_id}'}
+    new_item = {**old_item, 'focusLastViewedAt': 'anything'}
+    post_item = {
+        'postId': post_id,
+        'postType': 'pt',
+        'postedByUserId': post_owner_id,
+    }
+    if payment is not None:
+        post_item['payment'] = payment
+    if post_payment_default is not None:
+        post_manager.post_payment_default = post_payment_default
+    expected_payment = payment if payment is not None else post_payment_default
+    post = post_manager.init_post(post_item)
+    with patch.object(post_manager, 'get_post', return_value=post):
+        post_manager.on_post_view_focus_last_viewed_at_change(post_id, new_item=new_item, old_item=old_item)
+    assert post_manager.real_transactions_client.mock_calls == [
+        call.pay_for_post_view(user_id, post_owner_id, post_id, expected_payment)
+    ]

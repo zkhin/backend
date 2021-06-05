@@ -1,9 +1,10 @@
 import collections
 import logging
-from decimal import BasicContext, Decimal
 
 import pendulum
 from boto3.dynamodb.conditions import Key
+
+from app.utils import to_decimal
 
 from ..enums import UserDatingStatus, UserPrivacyStatus, UserStatus, UserSubscriptionLevel
 from ..exceptions import UserAlreadyExists, UserAlreadyGrantedSubscription
@@ -199,7 +200,7 @@ class UserDynamo:
 
         if location is not None:
             for key in ('latitude', 'longitude'):
-                location[key] = BasicContext.create_decimal(location[key]).normalize()
+                location[key] = to_decimal(location[key])
 
         process_attr('fullName', full_name)
         process_attr('displayName', display_name)
@@ -562,34 +563,6 @@ class UserDynamo:
 
     def decrement_post_viewed_by_count(self, user_id):
         return self.client.decrement_count(self.pk(user_id), 'postViewedByCount')
-
-    def increment_paid_real_so_far(self, user_id, price):
-        assert isinstance(price, Decimal), 'Price should be Decimal type'
-        attribute_name = 'paidRealSoFar'
-        query_kwargs = {
-            'Key': self.pk(user_id),
-            'UpdateExpression': 'ADD #attrName :price',
-            'ExpressionAttributeNames': {'#attrName': attribute_name},
-            'ExpressionAttributeValues': {':price': price},
-            'ConditionExpression': 'attribute_exists(partitionKey)',
-        }
-
-        failure_warning = f'Failed to increment {attribute_name} for key `{self.pk(user_id)}`'
-        return self.client.update_item(query_kwargs, failure_warning=failure_warning)
-
-    def increment_wallet(self, user_id, amount_to_pay):
-        assert isinstance(amount_to_pay, Decimal), 'amount_to_pay should be Decimal type'
-        attribute_name = 'wallet'
-        query_kwargs = {
-            'Key': self.pk(user_id),
-            'UpdateExpression': 'ADD #attrName :amount_to_pay',
-            'ExpressionAttributeNames': {'#attrName': attribute_name},
-            'ExpressionAttributeValues': {':amount_to_pay': amount_to_pay},
-            'ConditionExpression': 'attribute_exists(partitionKey)',
-        }
-
-        failure_warning = f'Failed to increment {attribute_name} for key `{self.pk(user_id)}`'
-        return self.client.update_item(query_kwargs, failure_warning=failure_warning)
 
     def add_user_deleted(self, user_id, now=None):
         now = now or pendulum.now('utc')

@@ -1,5 +1,4 @@
 import logging
-from decimal import Decimal
 from unittest.mock import Mock, call, patch
 from uuid import uuid4
 
@@ -452,24 +451,6 @@ def test_on_appstore_sub_status_change_update_subscription(user_manager, user):
         str(uuid4()), new_item=new_item, old_item=old_item
     )
     assert user.refresh_item().subscription_level == UserSubscriptionLevel.BASIC
-
-
-def test_on_appstore_transaction_add(user_manager, user):
-    new_item = {'userId': user.id, 'status': 0}
-    user_manager.on_appstore_transaction_add(str(uuid4()), new_item=new_item)
-    assert user.refresh_item().item['paidRealSoFar'] == Decimal('0')
-
-    new_item = {
-        'userId': user.id,
-        'status': 0,
-        'price': Decimal('0.99'),
-    }
-    user_manager.on_appstore_transaction_add(str(uuid4()), new_item=new_item)
-    assert user.refresh_item().item['paidRealSoFar'] == Decimal('0.99')
-
-    # 2nd call, verify it's doubled
-    user_manager.on_appstore_transaction_add(str(uuid4()), new_item=new_item)
-    assert user.refresh_item().item['paidRealSoFar'] == Decimal('0.99') * 2
 
 
 def test_on_user_date_of_birth_change_update_age(user_manager, user):

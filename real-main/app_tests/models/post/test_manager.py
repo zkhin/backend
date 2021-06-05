@@ -88,11 +88,23 @@ def test_add_post_errors(post_manager, user):
     with pytest.raises(Exception, match='Invalid PostType'):
         post_manager.add_post(user, 'pid', 'notaposttype')
 
+    # try to add post with negative payment
+    with pytest.raises(Exception, match='with negative payment'):
+        post_manager.add_post(user, 'pid', PostType.IMAGE, payment=-0.1)
+
 
 def test_add_post_as_ad_errors(post_manager, user):
+    # try to add an ad with a payment
+    with pytest.raises(PostException, match='Cannot add advertisement post with payment set'):
+        post_manager.add_post(user, 'pid', PostType.IMAGE, is_ad=True, payment=0.1)
+
     # try to add an ad without setting ad_payment
     with pytest.raises(PostException, match='Cannot add advertisement post without setting adPayment'):
         post_manager.add_post(user, 'pid', PostType.IMAGE, is_ad=True)
+
+    # try to add an ad with a negative ad_payment
+    with pytest.raises(PostException, match='Cannot add advertisement post with negative adPayment'):
+        post_manager.add_post(user, 'pid', PostType.IMAGE, is_ad=True, ad_payment=-0.1)
 
     # try to add a non-ad while setting ad_payment
     with pytest.raises(PostException, match='Cannot add non-advertisement post with adPayment set'):

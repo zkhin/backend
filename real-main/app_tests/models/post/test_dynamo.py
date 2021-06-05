@@ -70,6 +70,7 @@ def test_add_pending_post_with_options(post_dynamo):
     text = 'lore @ipsum'
     text_tags = [{'tag': '@ipsum', 'userId': 'uid'}]
     keywords = ['bird', 'mine', 'tea', 'bird']
+    paymentFlt = 0.125
 
     post_item = post_dynamo.add_pending_post(
         user_id,
@@ -86,6 +87,7 @@ def test_add_pending_post_with_options(post_dynamo):
         album_id=album_id,
         set_as_user_photo=True,
         keywords=keywords,
+        payment=paymentFlt,
     )
 
     # retrieve post, check format
@@ -119,6 +121,7 @@ def test_add_pending_post_with_options(post_dynamo):
         'verificationHidden': True,
         'setAsUserPhoto': True,
         'keywords': list(set(keywords)),
+        'payment': Decimal(paymentFlt),
     }
 
 

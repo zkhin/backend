@@ -1,5 +1,6 @@
 import base64
 import uuid
+from decimal import Decimal
 from os import path
 from unittest import mock
 
@@ -314,6 +315,7 @@ def post_manager(
     cloudfront_client,
     post_verification_client,
     elasticsearch_client,
+    real_transactions_client,
 ):
     yield models.PostManager(
         {
@@ -323,7 +325,9 @@ def post_manager(
             'cloudfront': cloudfront_client,
             'post_verification': post_verification_client,
             'elasticsearch': elasticsearch_client,
-        }
+            'real_transactions': real_transactions_client,
+        },
+        post_payment_default=Decimal(0.125),
     )
 
 

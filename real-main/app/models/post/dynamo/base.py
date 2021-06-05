@@ -1,12 +1,12 @@
 import collections
 import functools
 import logging
-from decimal import BasicContext, Decimal
 
 import pendulum
 from boto3.dynamodb.conditions import Attr, Key
 
 from app.models.post.enums import AdStatus, PostStatus
+from app.utils import to_decimal
 
 from .. import enums
 
@@ -89,6 +89,7 @@ class PostDynamo:
         verification_hidden=None,
         keywords=None,
         set_as_user_photo=None,
+        payment=None,
         ad_status=None,
         ad_payment=None,
         ad_payment_period=None,
@@ -143,12 +144,14 @@ class PostDynamo:
             item['setAsUserPhoto'] = set_as_user_photo
         if keywords is not None:
             item['keywords'] = list(set(keywords))  # remove duplicates
+        if payment is not None:
+            item['payment'] = to_decimal(payment)
         if ad_status is not None and ad_status is not enums.AdStatus.NOT_AD:
             item['adStatus'] = ad_status
             item['gsiK4PartitionKey'] = f'postAdStatus/{ad_status}'
             item['gsiK4SortKey'] = posted_at_str
         if ad_payment is not None:
-            item['adPayment'] = Decimal(ad_payment).normalize(context=BasicContext)
+            item['adPayment'] = to_decimal(ad_payment)
         if ad_payment_period is not None:
             item['adPaymentPeriod'] = ad_payment_period
         return self.client.add_item({'Item': item})

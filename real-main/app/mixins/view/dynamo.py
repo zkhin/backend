@@ -1,5 +1,4 @@
 import logging
-from decimal import Decimal
 
 import pendulum
 
@@ -102,19 +101,6 @@ class ViewDynamo:
             'UpdateExpression': 'ADD ' + ', '.join(add_exps) + ' SET ' + ', '.join(set_exps),
             'ExpressionAttributeValues': {':vc': view_count, ':lva': viewed_at.to_iso8601_string()},
         }
-        try:
-            return self.client.update_item(query_kwargs)
-        except self.client.exceptions.ConditionalCheckFailedException as err:
-            raise exceptions.ViewDoesNotExist(self.item_type, item_id, user_id) from err
-
-    def set_royalty_fee(self, item_id, user_id, royalty_fee):
-        assert isinstance(royalty_fee, Decimal), 'royalty_fee should be Decimal type'
-        query_kwargs = {
-            'Key': self.key(item_id, user_id),
-            'UpdateExpression': 'SET royaltyFee = :fee',
-            'ExpressionAttributeValues': {':fee': royalty_fee},
-        }
-
         try:
             return self.client.update_item(query_kwargs)
         except self.client.exceptions.ConditionalCheckFailedException as err:

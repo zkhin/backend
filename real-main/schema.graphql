@@ -205,6 +205,7 @@ type Mutation {
     verificationHidden: Boolean,
     setAsUserPhoto: Boolean,
     keywords: [String!],
+    payment: Float,
     isAd: Boolean,
     adPayment: Float,
     adPaymentPeriod: String,
@@ -851,6 +852,7 @@ type Post {
   verificationHidden: Boolean
   isVerified: Boolean
   keywords: [String!]
+  payment: Float!
 
   adStatus: AdStatus!
   adPayment: Float

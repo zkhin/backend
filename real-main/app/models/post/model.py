@@ -186,6 +186,11 @@ class Post(FlagModelMixin, TrendingModelMixin, ViewModelMixin):
     def ad_status(self):
         return self.item.get('adStatus', AdStatus.NOT_AD)
 
+    @property
+    def payment(self):
+        assert self.post_manager.post_payment_default is not None
+        return self.item.get('payment', self.post_manager.post_payment_default)
+
     def refresh_item(self, strongly_consistent=False):
         self.item = self.dynamo.get_post(self.id, strongly_consistent=strongly_consistent)
         return self
