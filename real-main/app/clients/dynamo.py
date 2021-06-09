@@ -13,18 +13,6 @@ DYNAMO_PARTITION_KEY = os.environ.get('DYNAMO_PARTITION_KEY')
 DYNAMO_SORT_KEY = os.environ.get('DYNAMO_SORT_KEY')
 logger = logging.getLogger()
 
-# https://stackoverflow.com/a/46738251
-deserialize = TypeDeserializer().deserialize
-serialize = TypeSerializer().serialize
-
-
-def serialize_item(item):
-    return {k: serialize(v) for k, v in item.items()}
-
-
-def deserialize_item(item):
-    return {k: deserialize(v) for k, v in item.items()}
-
 
 class DynamoClient:
     def __init__(
@@ -55,6 +43,12 @@ class DynamoClient:
         self.boto3_client = boto3.client('dynamodb')
         self.exceptions = self.boto3_client.exceptions
 
+        # https://stackoverflow.com/a/46738251
+        deserializer = TypeDeserializer()
+        serializer = TypeSerializer()
+        self.serialize = lambda item: {k: serializer.serialize(v) for k, v in item.items()}
+        self.deserialize = lambda item: {k: deserializer.deserialize(v) for k, v in item.items()}
+
     def add_item(self, query_kwargs):
         "Put an item and return what was putted"
         assert self.partition_key
@@ -78,10 +72,10 @@ class DynamoClient:
         """
         base_table_request = {'ProjectionExpression': projection_expression} if projection_expression else {}
         for keys in chunked(key_generator, self.batch_get_items_max):
-            request_items = {self.table_name: {**base_table_request, 'Keys': [serialize_item(k) for k in keys]}}
+            request_items = {self.table_name: {**base_table_request, 'Keys': [self.serialize(k) for k in keys]}}
             items = self.boto3_client.batch_get_item(RequestItems=request_items)['Responses'][self.table_name]
             for item in items:
-                yield deserialize_item(item)
+                yield self.deserialize(item)
 
     def update_item(self, query_kwargs, failure_warning=None):
         """
