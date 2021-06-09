@@ -57,12 +57,13 @@ class DynamoClient:
 
     def add_item(self, query_kwargs):
         "Put an item and return what was putted"
-        # ensure query fails if the item already exists
-        cond_exp = f'attribute_not_exists({self.partition_key})'
-        if 'ConditionExpression' in query_kwargs:
-            cond_exp += ' and (' + query_kwargs['ConditionExpression'] + ')'
-        query_kwargs['ConditionExpression'] = cond_exp
-        self.table.put_item(**query_kwargs)
+        assert self.partition_key
+        kwargs = {
+            **query_kwargs,
+            'ConditionExpression': f'attribute_not_exists({self.partition_key})'
+            + (f' and ({query_kwargs["ConditionExpression"]})' if 'ConditionExpression' in query_kwargs else ''),
+        }
+        self.table.put_item(**kwargs)
         return query_kwargs.get('Item')
 
     def get_item(self, pk, **kwargs):
@@ -87,14 +88,15 @@ class DynamoClient:
         Update an item and return the new item.
         Set `failure_warning` fail softly with a logged warning rather than raise an exception.
         """
-        # ensure query fails if the item does not exist
-        cond_exp = f'attribute_exists({self.partition_key})'
-        if 'ConditionExpression' in query_kwargs:
-            cond_exp += ' and (' + query_kwargs['ConditionExpression'] + ')'
-        query_kwargs['ConditionExpression'] = cond_exp
-        query_kwargs['ReturnValues'] = 'ALL_NEW'
+        assert self.partition_key
+        kwargs = {
+            **query_kwargs,
+            'ConditionExpression': f'attribute_exists({self.partition_key})'
+            + (f' and ({query_kwargs["ConditionExpression"]})' if 'ConditionExpression' in query_kwargs else ''),
+            'ReturnValues': 'ALL_NEW',
+        }
         try:
-            return self.table.update_item(**query_kwargs).get('Attributes')
+            return self.table.update_item(**kwargs).get('Attributes')
         except self.exceptions.ConditionalCheckFailedException:
             if failure_warning is None:
                 raise
@@ -116,6 +118,7 @@ class DynamoClient:
 
     def increment_count(self, key, attribute_name):
         "Best-effort attempt to increment a counter. Logs a WARNING upon failure."
+        assert self.partition_key
         query_kwargs = {
             'Key': key,
             'UpdateExpression': 'ADD #attrName :one',
@@ -128,6 +131,7 @@ class DynamoClient:
 
     def decrement_count(self, key, attribute_name):
         "Best-effort attempt to decrement a counter. Logs a WARNING upon failure."
+        assert self.partition_key
         query_kwargs = {
             'Key': key,
             'UpdateExpression': 'ADD #attrName :neg_one',
@@ -155,6 +159,8 @@ class DynamoClient:
 
     def batch_delete_items(self, generator):
         "Batch delete the items or keys yielded by `generator`. Returns count of how many deletes requested."
+        assert self.partition_key
+        assert self.sort_key
         key_generator = ({k: item[k] for k in (self.partition_key, self.sort_key)} for item in generator)
         return self.batch_delete(key_generator)
 
@@ -178,11 +184,12 @@ class DynamoClient:
 
     def query(self, query_kwargs, limit=None, next_token=None):
         "Query the table and return items & pagination token from the result"
-        if limit:
-            query_kwargs['Limit'] = limit
-        if next_token:
-            query_kwargs['ExclusiveStartKey'] = self.decode_pagination_token(next_token)
-        resp = self.table.query(**query_kwargs)
+        kwargs = {
+            **query_kwargs,
+            **({'Limit': limit} if limit else {}),
+            **({'ExclusiveStartKey': self.decode_pagination_token(next_token)} if next_token else {}),
+        }
+        resp = self.table.query(**kwargs)
         last_key = resp.get('LastEvaluatedKey')
         return {
             'items': resp['Items'],
@@ -194,8 +201,8 @@ class DynamoClient:
         # Note that supporting a filter expression is possible, but requires a separate codepath
         # if you want to avoid causing negative performance impacts for the common case
         assert 'FilterExpression' not in query_kwargs
-        query_kwargs['Limit'] = 1
-        resp = self.table.query(**query_kwargs)
+        kwargs = {**query_kwargs, 'Limit': 1}
+        resp = self.table.query(**kwargs)
         return resp['Items'][0] if resp['Items'] else None
 
     def generate_all_query(self, query_kwargs):
