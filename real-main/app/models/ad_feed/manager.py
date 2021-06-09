@@ -67,13 +67,12 @@ class AdFeedManager:
         self.real_transactions_client.pay_for_ad_view(user_id, post.user_id, post.id, ad_payment)
         self.dynamo.record_payment_finish(post_id, user_id)
 
-    def on_user_ads_disabled_change(self, user_id, new_item, old_item=None):
-        old_ads_disabled = (old_item or {}).get('adsDisabled', False)
-        new_ads_disabled = new_item.get('adsDisabled', False)
-        assert old_ads_disabled != new_ads_disabled, 'Should only be called when adsDisabled changes'
-        if not old_ads_disabled and new_ads_disabled:
+    def on_user_add_or_change(self, user_id, new_item, old_item=None):
+        previously_had_ads = old_item and not old_item.get('adsDisabled')
+        should_have_ads = not new_item.get('adsDisabled')
+        if previously_had_ads and not should_have_ads:
             self.dynamo.delete_by_user(user_id)
-        if old_ads_disabled and not new_ads_disabled:
+        if not previously_had_ads and should_have_ads:
             post_id_generator = self.post_manager.dynamo.generate_post_ids_by_ad_status(
                 AdStatus.ACTIVE, exclude_posted_by_user_id=user_id
             )

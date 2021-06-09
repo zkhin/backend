@@ -299,8 +299,7 @@ register(
     'user',
     'profile',
     ['INSERT', 'MODIFY'],
-    ad_feed_manager.on_user_ads_disabled_change,
-    {'adsDisabled': False},
+    ad_feed_manager.on_user_add_or_change,
 )
 register(
     'user',

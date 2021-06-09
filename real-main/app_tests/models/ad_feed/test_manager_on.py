@@ -87,32 +87,37 @@ def test_on_post_view_last_viewed_at_change_records_for_active_ads(ad_feed_manag
     assert dynamo_mock.mock_calls == [call.set_last_viewed_at(post_id, user_id, lva)]
 
 
-def test_on_user_ads_disabled_change_throws_if_not_changed(ad_feed_manager):
+@pytest.mark.parametrize('ads_disabled', [None, False])
+def test_on_user_add_or_change_creates_ads_when_user_created_with_ads_enabled(ad_feed_manager, ads_disabled):
     user_id = str(uuid4())
-    item = {'userId': user_id, 'adsDisabled': True}
-    with pytest.raises(AssertionError, match=' adsDisabled '):
-        ad_feed_manager.on_user_ads_disabled_change(user_id, new_item=item, old_item=item)
-
-    old_item = {'userId': user_id}
-    new_item = {**old_item, 'adsDisabled': False}
-    with pytest.raises(AssertionError, match=' adsDisabled '):
-        ad_feed_manager.on_user_ads_disabled_change(user_id, new_item=new_item, old_item=old_item)
-
-
-@pytest.mark.parametrize('old_ads_disabled', [None, False])
-def test_on_user_ads_disabled_change_to_true(ad_feed_manager, old_ads_disabled):
-    user_id = str(uuid4())
-    new_item = {'userId': user_id, 'adsDisabled': str(uuid4())}
-    old_item = {'userId': user_id}
-    if old_ads_disabled is not None:
-        old_item['adsDisabled'] = old_ads_disabled
+    new_item = {
+        'userId': user_id,
+        **({'adsDisabled': ads_disabled} if ads_disabled is not None else {}),
+    }
     with patch.object(ad_feed_manager, 'dynamo') as dynamo_mock:
-        ad_feed_manager.on_user_ads_disabled_change(user_id, new_item=new_item, old_item=old_item)
-    assert dynamo_mock.mock_calls == [call.delete_by_user(user_id)]
+        with patch.object(ad_feed_manager, 'post_manager') as post_manager_mock:
+            ad_feed_manager.on_user_add_or_change(user_id, new_item=new_item)
+    assert post_manager_mock.mock_calls == [
+        call.dynamo.generate_post_ids_by_ad_status(AdStatus.ACTIVE, exclude_posted_by_user_id=user_id)
+    ]
+    post_id_gen = post_manager_mock.dynamo.generate_post_ids_by_ad_status.return_value
+    assert dynamo_mock.mock_calls == [call.add_ad_posts_for_user(user_id, post_id_gen)]
+
+
+def test_on_user_add_or_change_does_not_create_or_deleted_ads_when_user_created_with_ads_disabled(
+    ad_feed_manager,
+):
+    user_id = str(uuid4())
+    new_item = {'userId': user_id, 'adsDisabled': True}
+    with patch.object(ad_feed_manager, 'dynamo') as dynamo_mock:
+        with patch.object(ad_feed_manager, 'post_manager') as post_manager_mock:
+            ad_feed_manager.on_user_add_or_change(user_id, new_item=new_item)
+    assert post_manager_mock.mock_calls == []
+    assert dynamo_mock.mock_calls == []
 
 
 @pytest.mark.parametrize('new_ads_disabled', [None, False])
-def test_on_user_ads_disabled_change_from_true(ad_feed_manager, new_ads_disabled):
+def test_on_user_add_or_change_creates_ads_when_user_enables_ads(ad_feed_manager, new_ads_disabled):
     user_id = str(uuid4())
     old_item = {'userId': user_id, 'adsDisabled': str(uuid4())}
     new_item = {'userId': user_id}
@@ -120,12 +125,24 @@ def test_on_user_ads_disabled_change_from_true(ad_feed_manager, new_ads_disabled
         new_item['adsDisabled'] = new_ads_disabled
     with patch.object(ad_feed_manager, 'dynamo') as dynamo_mock:
         with patch.object(ad_feed_manager, 'post_manager') as post_manager_mock:
-            ad_feed_manager.on_user_ads_disabled_change(user_id, new_item=new_item, old_item=old_item)
+            ad_feed_manager.on_user_add_or_change(user_id, new_item=new_item, old_item=old_item)
     assert post_manager_mock.mock_calls == [
         call.dynamo.generate_post_ids_by_ad_status(AdStatus.ACTIVE, exclude_posted_by_user_id=user_id)
     ]
     post_id_gen = post_manager_mock.dynamo.generate_post_ids_by_ad_status.return_value
     assert dynamo_mock.mock_calls == [call.add_ad_posts_for_user(user_id, post_id_gen)]
+
+
+@pytest.mark.parametrize('old_ads_disabled', [None, False])
+def test_on_user_add_or_change_deletes_ads_when_user_disables_ads(ad_feed_manager, old_ads_disabled):
+    user_id = str(uuid4())
+    new_item = {'userId': user_id, 'adsDisabled': str(uuid4())}
+    old_item = {'userId': user_id}
+    if old_ads_disabled is not None:
+        old_item['adsDisabled'] = old_ads_disabled
+    with patch.object(ad_feed_manager, 'dynamo') as dynamo_mock:
+        ad_feed_manager.on_user_add_or_change(user_id, new_item=new_item, old_item=old_item)
+    assert dynamo_mock.mock_calls == [call.delete_by_user(user_id)]
 
 
 def test_on_user_delete(ad_feed_manager):

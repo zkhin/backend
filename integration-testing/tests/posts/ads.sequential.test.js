@@ -199,3 +199,64 @@ describe('An ad post', () => {
     })
   })
 })
+
+describe('A new user', () => {
+  let postId = uuidv4()
+  let client, realClient, newClient
+
+  beforeAll(async () => {
+    // users, excluding the one that will be newly created
+    await loginCache.clean()
+    await realUser.cleanLogin()
+    ;({client: realClient} = await realLogin)
+    ;({client} = await loginCache.getCleanLogin())
+
+    // client adds an ad post
+    await client.mutate({
+      mutation: mutations.addPost,
+      variables: {postId, imageData, isAd: true, adPayment: 0.01},
+    })
+    await eventually(async () => {
+      const {data} = await client.query({query: queries.post, variables: {postId}})
+      expect(data.post.postId).toBe(postId)
+      expect(data.post.postStatus).toBe('COMPLETED')
+      expect(data.post.adStatus).toBe('PENDING')
+    })
+
+    // real user approves the ad post
+    await realClient.mutate({mutation: mutations.approveAdPost, variables: {postId}})
+    await eventually(async () => {
+      const {data} = await client.query({query: queries.post, variables: {postId}})
+      expect(data.post.postId).toBe(postId)
+      expect(data.post.adStatus).toBe('ACTIVE')
+    })
+  })
+
+  afterAll(async () => {
+    if (newClient) await newClient.mutate({mutation: mutations.deleteUser})
+  })
+
+  test('Gets existing ads', async () => {
+    ;({client: newClient} = await cognito.getAppSyncLogin())
+
+    // newClient adds two posts so their feed has enough posts to support ads
+    const [postId1, postId2] = [uuidv4(), uuidv4()]
+    await newClient.mutate({mutation: mutations.addPost, variables: {postId: postId1, imageData}})
+    await newClient.mutate({mutation: mutations.addPost, variables: {postId: postId2, imageData}})
+    await eventually(async () => {
+      const {data} = await newClient.query({query: queries.post, variables: {postId: postId1}})
+      expect(data).toMatchObject({post: {postId: postId1, postStatus: 'COMPLETED'}})
+    })
+    await eventually(async () => {
+      const {data} = await newClient.query({query: queries.post, variables: {postId: postId2}})
+      expect(data).toMatchObject({post: {postId: postId2, postStatus: 'COMPLETED'}})
+    })
+
+    // newClient's feed should contain an ad
+    await eventually(async () => {
+      const {data} = await newClient.query({query: queries.selfFeed})
+      expect(data.self.feed.items).toHaveLength(3)
+      expect(data.self.feed.items[1].postId).toBe(postId)
+    })
+  })
+})
