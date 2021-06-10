@@ -20,6 +20,7 @@ clients = {
     'dynamo': clients.DynamoClient(),
     'cognito': clients.CognitoClient(),
     'pinpoint': clients.PinpointClient(),
+    'real_dating': clients.RealDatingClient(),
 }
 
 managers = {}

@@ -1,7 +1,6 @@
 from uuid import uuid4
 
 import pytest
-from mock import patch
 
 from app.mixins.view.enums import ViewedStatus, ViewType
 from app.models.post.enums import PostType
@@ -25,8 +24,7 @@ def post(post_manager, user):
 
 @pytest.fixture
 def chat(chat_manager, user, user2):
-    with patch.object(chat_manager, 'validate_dating_match_chat', return_value=True):
-        yield chat_manager.add_direct_chat(str(uuid4()), user.id, user2.id)
+    yield chat_manager.add_direct_chat(str(uuid4()), user.id, user2.id)
 
 
 @pytest.fixture

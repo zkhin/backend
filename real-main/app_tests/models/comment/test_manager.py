@@ -105,9 +105,7 @@ def test_cant_comment_if_block_exists_with_post_owner(comment_manager, user, pos
 
 def test_can_comment_if_dating_is_matched(comment_manager, user, user2, post_image):
     comment_id = 'cid'
-
-    with patch.object(comment_manager, 'validate_dating_match_comment', return_value=True):
-        comment = comment_manager.add_comment(comment_id, post_image.id, user2.id, 't')
+    comment = comment_manager.add_comment(comment_id, post_image.id, user2.id, 't')
     assert comment.id == comment_id
     assert comment.item['postId'] == post_image.id
     assert comment.item['userId'] == user2.id
@@ -117,7 +115,7 @@ def test_can_comment_if_dating_is_matched(comment_manager, user, user2, post_ima
 def test_cant_comment_if_dating_is_not_matched(comment_manager, user, user2, post_image):
     comment_id = 'cid'
 
-    with patch.object(comment_manager, 'validate_dating_match_comment', return_value=False):
+    with patch.object(comment_manager.real_dating_client, 'can_contact', return_value=False):
         with pytest.raises(CommentException):
             comment_manager.add_comment(comment_id, post_image.id, user2.id, 't')
 

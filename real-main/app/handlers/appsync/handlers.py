@@ -60,6 +60,7 @@ clients = {
     'id_analyzer': clients.IdAnalyzerClient(secrets_manager_client.get_id_analyzer_api_key),
     'pinpoint': clients.PinpointClient(),
     'post_verification': clients.PostVerificationClient(secrets_manager_client.get_post_verification_api_creds),
+    'real_dating': clients.RealDatingClient(),
     's3_uploads': clients.S3Client(S3_UPLOADS_BUCKET),
     's3_placeholder_photos': clients.S3Client(S3_PLACEHOLDER_PHOTOS_BUCKET),
 }

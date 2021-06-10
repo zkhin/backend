@@ -2,7 +2,6 @@ import uuid
 
 import pendulum
 import pytest
-from mock import patch
 
 
 @pytest.fixture
@@ -18,8 +17,7 @@ user3 = user
 
 @pytest.fixture
 def chat(chat_manager, user2, user3):
-    with patch.object(chat_manager, 'validate_dating_match_chat', return_value=True):
-        yield chat_manager.add_direct_chat(str(uuid.uuid4()), user2.id, user3.id)
+    yield chat_manager.add_direct_chat(str(uuid.uuid4()), user2.id, user3.id)
 
 
 def test_add_chat_message(chat_message_manager, chat, user, user2, user3):

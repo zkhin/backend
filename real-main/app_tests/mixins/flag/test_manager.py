@@ -2,7 +2,6 @@ import logging
 from uuid import uuid4
 
 import pytest
-from mock import patch
 
 from app.models.post.enums import PostType
 
@@ -27,8 +26,7 @@ def comment(comment_manager, user, post):
 @pytest.fixture
 def chat(chat_manager, user, user2, user3):
     group_chat = chat_manager.add_group_chat(str(uuid4()), user)
-    with patch.object(chat_manager, 'validate_dating_match_chat', return_value=True):
-        group_chat.add(user, [user2.id, user3.id])
+    group_chat.add(user, [user2.id, user3.id])
     yield group_chat
 
 

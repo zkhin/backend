@@ -27,8 +27,7 @@ def comment(comment_manager, post, user):
 @pytest.fixture
 def chat(chat_manager, user, user2):
     group_chat = chat_manager.add_group_chat(str(uuid4()), user)
-    with patch.object(chat_manager, 'validate_dating_match_chat', return_value=True):
-        group_chat.add(user, [user2.id])
+    group_chat.add(user, [user2.id])
     yield group_chat
 
 

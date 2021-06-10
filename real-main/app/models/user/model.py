@@ -1,4 +1,3 @@
-import json
 import logging
 import os
 
@@ -6,7 +5,7 @@ import botocore
 import pendulum
 import stringcase
 
-from app.clients import RealDatingClient, RedeemPromotionClient
+from app.clients import RedeemPromotionClient
 from app.clients.cognito import InvalidEncryption
 from app.mixins.trending.model import TrendingModelMixin
 from app.models.post.enums import PostStatus, PostType
@@ -63,6 +62,7 @@ class User(TrendingModelMixin):
         'jumio',
         'id_analyzer',
         'pinpoint',
+        'real_dating',
         's3_uploads',
     ]
     item_type = 'user'
@@ -118,7 +118,6 @@ class User(TrendingModelMixin):
         self.id = user_item['userId']
         self.placeholder_photos_directory = placeholder_photos_directory
         self.frontend_resources_domain = frontend_resources_domain
-        self.real_dating_client = RealDatingClient()
         self.redeem_promotion_client = RedeemPromotionClient()
 
     @property
@@ -671,9 +670,7 @@ class User(TrendingModelMixin):
         # only diamond users can get swiped right users
         if self.subscription_level != UserSubscriptionLevel.DIAMOND:
             raise UserException('User subscription level is not diamond')
-
-        user_ids = json.loads(self.real_dating_client.swiped_right_users(self.id)['Payload'].read().decode())
-        return user_ids
+        return self.real_dating_client.swiped_right_users(self.id)
 
     def verify_id_document_with_jumio(self, frontside_image, country, id_type, image_type):
         self.jumio_client.verify_id(

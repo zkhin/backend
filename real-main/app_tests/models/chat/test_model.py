@@ -4,7 +4,6 @@ from unittest import mock
 
 import pendulum
 import pytest
-from mock import patch
 
 from app.models.chat.exceptions import ChatException
 from app.models.user.enums import UserStatus
@@ -26,14 +25,12 @@ user6 = user1
 
 @pytest.fixture
 def direct_chat(chat_manager, user1, user2):
-    with patch.object(chat_manager, 'validate_dating_match_chat', return_value=True):
-        yield chat_manager.add_direct_chat('cid', user1.id, user2.id)
+    yield chat_manager.add_direct_chat('cid', user1.id, user2.id)
 
 
 @pytest.fixture
 def group_chat(chat_manager, user1):
-    with patch.object(chat_manager, 'validate_dating_match_chat', return_value=True):
-        yield chat_manager.add_group_chat('cid2', user1)
+    yield chat_manager.add_group_chat('cid2', user1)
 
 
 def test_is_member(direct_chat, user1, user2, user3):

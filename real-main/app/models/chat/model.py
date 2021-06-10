@@ -25,6 +25,7 @@ class Chat(ViewModelMixin, FlagModelMixin):
         chat_manager=None,
         chat_message_manager=None,
         user_manager=None,
+        real_dating_client=None,
         **kwargs,
     ):
         super().__init__(**kwargs)
@@ -40,6 +41,8 @@ class Chat(ViewModelMixin, FlagModelMixin):
             self.chat_message_manager = chat_message_manager
         if user_manager:
             self.user_manager = user_manager
+        if real_dating_client:
+            self.real_dating_client = real_dating_client
 
         self.item = item
         # immutables
@@ -95,7 +98,7 @@ class Chat(ViewModelMixin, FlagModelMixin):
                 if self.block_manager.is_blocked(user_id, added_by_user.id):
                     continue  # can't add a user who is blocking you
 
-                if not self.chat_manager.validate_dating_match_chat(user_id, added_by_user.id):
+                if not self.real_dating_client.can_contact(user_id, added_by_user.id):
                     continue
 
             transacts = [

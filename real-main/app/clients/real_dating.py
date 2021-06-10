@@ -3,6 +3,7 @@ import logging
 import os
 
 import boto3
+import pendulum
 
 from app.utils import DecimalJsonEncoder
 
@@ -50,23 +51,42 @@ class RealDatingClient:
                 raise err
             logger.warning(f'Unable to remove user from real dating: {err}')
 
-    def match_status(self, user_id, match_user_id):
-        return self.boto3_client.invoke(
-            FunctionName=self.match_status_arn,
-            # InvocationType='Event',  # async
-            Payload=json.dumps({'userId': user_id, 'matchUserId': match_user_id}),
+    def can_contact(self, user_id, match_user_id):
+        # TODO: this logic should be moved to the dating service
+        response_1 = json.loads(
+            self.boto3_client.invoke(
+                FunctionName=self.match_status_arn,
+                Payload=json.dumps({'userId': user_id, 'matchUserId': match_user_id}),
+            )['Payload']
+            .read()
+            .decode()
         )
+        response_2 = json.loads(
+            self.boto3_client.invoke(
+                FunctionName=self.match_status_arn,
+                Payload=json.dumps({'userId': match_user_id, 'matchUserId': user_id}),
+            )['Payload']
+            .read()
+            .decode()
+        )
+        match_status_1 = response_1['status']
+        match_status_2 = response_2['status']
+        blockChatExpiredAt = response_1['blockChatExpiredAt']
+        if match_status_1 != 'CONFIRMED' or match_status_2 != 'CONFIRMED':
+            if (
+                blockChatExpiredAt is not None and pendulum.parse(blockChatExpiredAt) > pendulum.now()
+            ):  # 30 days blocking comment
+                return False
+        return True
 
     def swiped_right_users(self, user_id):
-        return self.boto3_client.invoke(
-            FunctionName=self.swiped_right_users_arn,
-            # InvocationType='Event',  # async
-            Payload=json.dumps({'userId': user_id}),
-        )
+        "A list of the user_ids of users the given user has swipped right on"
+        payload = json.dumps({'userId': user_id})
+        resp = self.boto3_client.invoke(FunctionName=self.swiped_right_users_arn, Payload=payload)
+        return json.loads(resp['Payload'].read().decode())
 
     def get_user_matches_count(self, user_id):
-        return self.boto3_client.invoke(
-            FunctionName=self.get_user_matches_count_arn,
-            # InvocationType='Event',  # async
-            Payload=json.dumps({'userId': user_id}),
-        )
+        "The number of matches the user has"
+        payload = json.dumps({'userId': user_id})
+        resp = self.boto3_client.invoke(FunctionName=self.get_user_matches_count_arn, Payload=payload)
+        return json.loads(resp['Payload'].read().decode())['count']

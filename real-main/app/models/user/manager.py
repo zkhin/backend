@@ -1,4 +1,3 @@
-import json
 import logging
 import os
 import random
@@ -623,10 +622,8 @@ class UserManager(TrendingManagerMixin, ManagerBase):
         """
         total_cnt = 0
         for user_id in self.dynamo.generate_dating_enabled_user_ids():
-            response = json.loads(
-                self.real_dating_client.get_user_matches_count(user_id=user_id)['Payload'].read().decode()
-            )
-            if response['count'] > 0:
+            count = self.real_dating_client.get_user_matches_count(user_id=user_id)
+            if count > 0:
                 # send push notification
                 card_template = UserNewDatingMatchesTemplate(user_id)
                 self.card_manager.add_or_update_card(card_template)

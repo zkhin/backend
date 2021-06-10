@@ -261,8 +261,10 @@ def TestCardTemplate():
 
 
 @pytest.fixture
-def chat_manager(dynamo_client, appsync_client):
-    yield models.ChatManager({'appsync': appsync_client, 'dynamo': dynamo_client})
+def chat_manager(dynamo_client, appsync_client, real_dating_client):
+    yield models.ChatManager(
+        {'appsync': appsync_client, 'dynamo': dynamo_client, 'real_dating': real_dating_client}
+    )
 
 
 @pytest.fixture
@@ -273,9 +275,9 @@ def chat_message_manager(dynamo_client, appsync_client, cloudfront_client):
 
 
 @pytest.fixture
-def comment_manager(dynamo_client, user_manager, appsync_client):
+def comment_manager(dynamo_client, appsync_client, real_dating_client):
     yield models.CommentManager(
-        {'appsync': appsync_client, 'dynamo': dynamo_client}, managers={'user': user_manager}
+        {'appsync': appsync_client, 'dynamo': dynamo_client, 'real_dating': real_dating_client}
     )
 
 
