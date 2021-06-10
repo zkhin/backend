@@ -7,6 +7,7 @@ from decimal import Decimal
 import pendulum
 
 from app import models
+from app.clients.real_transactions import InsufficientFundsException
 from app.mixins.base import ManagerBase
 from app.mixins.flag.manager import FlagManagerMixin
 from app.mixins.trending.manager import TrendingManagerMixin
@@ -520,7 +521,13 @@ class PostManager(FlagManagerMixin, TrendingManagerMixin, ViewManagerMixin, Mana
         post = self.get_post(post_id)
         if post.ad_status != AdStatus.NOT_AD or post.user_id == user_id or not post.payment:
             return
-        self.real_transactions_client.pay_for_post_view(user_id, post.user_id, post_id, post.payment)
+        try:
+            self.real_transactions_client.pay_for_post_view(user_id, post.user_id, post_id, post.payment)
+        except InsufficientFundsException:
+            user = self.user_manager.get_user(user_id)
+            if user and user.item.get('adsDisabled', False):
+                logger.warning(f'Force enabling ads for user `{user_id}`')
+                user.update_details(ads_disabled=False)
 
     def on_post_delete(self, post_id, old_item):
         self.elasticsearch_client.delete_post(post_id)

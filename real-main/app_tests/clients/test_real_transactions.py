@@ -7,6 +7,7 @@ import requests
 import requests_mock
 
 from app.clients import RealTransactionsClient
+from app.clients.real_transactions import InsufficientFundsException
 
 api_host = 'the.api.host'
 api_stage = 'the-stage'
@@ -26,7 +27,7 @@ def client():
         api_host=api_host,
         api_stage=api_stage,
         api_region=api_region,
-        transactions_service_ready=True,
+        enabled=True,
     )
 
 
@@ -44,6 +45,15 @@ def test_amount_must_be_a_decimal(client, func_name, amount):
     target = getattr(client, func_name)
     with pytest.raises(AssertionError, match="'amount' must be a Decimal"):
         target(uid1, uid2, pid, amount)
+
+
+@pytest.mark.parametrize('func_name', ['pay_for_ad_view', 'pay_for_post_view'])
+def test_init_with_enabled_false(func_name):
+    client = RealTransactionsClient(api_host=api_host, api_stage=api_stage, api_region=api_region)
+    target = getattr(client, func_name)
+    with requests_mock.Mocker() as m:
+        target(str(uuid4()), str(uuid4()), str(uuid4()), Decimal(random()).normalize(context=BasicContext))
+    assert len(m.request_history) == 0
 
 
 def test_pay_for_ad_view_sends_correct_request(client, mock_env_aws_auth):
@@ -87,9 +97,7 @@ def test_pay_for_post_view_sends_correct_request(client, mock_env_aws_auth):
 @pytest.mark.parametrize('func_name', ['pay_for_ad_view', 'pay_for_post_view'])
 def test_handles_error_response(client, mock_env_aws_auth, func_name):
     url = endpoint_urls[func_name]
-    # https://github.com/real-social-media/transactions/blob/83bd05b/transactions/app/api.py#L337
-    # https://github.com/real-social-media/transactions/blob/83bd05b/transactions/app/api.py#L378
-    failure_status = 401
+    failure_status = 400
     failure_response = {'message': 'Failed to process request', 'status': -2}
     uid1, uid2, pid, amount = str(uuid4()), str(uuid4()), str(uuid4()), Decimal('0.01')
     target = getattr(client, func_name)
@@ -100,10 +108,21 @@ def test_handles_error_response(client, mock_env_aws_auth, func_name):
 
 
 @pytest.mark.parametrize('func_name', ['pay_for_ad_view', 'pay_for_post_view'])
+def test_handles_notenoughfunds_error_response(client, mock_env_aws_auth, func_name):
+    url = endpoint_urls[func_name]
+    failure_status = 400
+    failure_response = {'exception': 'NotEnoughFundsException'}
+    uid1, uid2, pid, amount = str(uuid4()), str(uuid4()), str(uuid4()), Decimal('0.01')
+    target = getattr(client, func_name)
+    with requests_mock.Mocker() as m:
+        m.post(url, status_code=failure_status, json=failure_response)
+        with pytest.raises(InsufficientFundsException):
+            target(uid1, uid2, pid, amount)
+
+
+@pytest.mark.parametrize('func_name', ['pay_for_ad_view', 'pay_for_post_view'])
 def test_handles_success_response(client, mock_env_aws_auth, func_name):
     url = endpoint_urls[func_name]
-    # https://github.com/real-social-media/transactions/blob/83bd05b/transactions/app/api.py#L342
-    # https://github.com/real-social-media/transactions/blob/83bd05b/transactions/app/api.py#L383
     success_status = 200
     success_response = {'message': 'ok', 'status': 0}
     uid1, uid2, pid, amount = str(uuid4()), str(uuid4()), str(uuid4()), Decimal('0.01')

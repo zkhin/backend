@@ -1,11 +1,12 @@
 import logging
 from decimal import Decimal
-from unittest.mock import call, patch
+from unittest.mock import MagicMock, call, patch
 from uuid import uuid4
 
 import pendulum
 import pytest
 
+from app.clients.real_transactions import InsufficientFundsException
 from app.models.like.enums import LikeStatus
 from app.models.post.enums import AdStatus, PostStatus, PostType
 from app.utils import GqlNotificationType
@@ -631,3 +632,33 @@ def test_on_post_view_focus_last_viewed_at_change_calls_real_transactions_client
     assert post_manager.real_transactions_client.mock_calls == [
         call.pay_for_post_view(user_id, post_owner_id, post_id, expected_payment)
     ]
+
+
+def test_on_post_view_focus_last_viewed_at_change_handles_insufficient_funds_exception(post_manager, caplog):
+    post_id, user_id, post_owner_id = str(uuid4()), str(uuid4()), str(uuid4())
+    old_item = {'partitionKey': f'post/{post_id}', 'sortKey': f'view/{user_id}'}
+    new_item = {**old_item, 'focusLastViewedAt': 'anything'}
+    post_item = {
+        'postId': post_id,
+        'postType': 'pt',
+        'postedByUserId': post_owner_id,
+        'payment': Decimal('0.1'),
+    }
+    post = post_manager.init_post(post_item)
+    user = MagicMock()
+    with patch.object(post_manager, 'get_post', return_value=post):
+        with patch.object(
+            post_manager.real_transactions_client, 'pay_for_post_view', side_effect=InsufficientFundsException
+        ):
+            with patch.object(post_manager.user_manager, 'get_user', return_value=user):
+                post_manager.on_post_view_focus_last_viewed_at_change(
+                    post_id, new_item=new_item, old_item=old_item
+                )
+    assert user.mock_calls == [
+        call.__bool__(),
+        call.item.get('adsDisabled', False),
+        call.item.get('adsDisabled', False).__bool__(),
+        call.update_details(ads_disabled=False),
+    ]
+    assert len(caplog.records) == 1
+    assert 'Force enabling ads for user' in caplog.records[0].msg
