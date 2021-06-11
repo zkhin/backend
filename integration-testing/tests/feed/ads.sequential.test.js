@@ -343,11 +343,13 @@ describe('Targeting of injected ads', () => {
       })
 
       test('user does get ads of other users injected', async () => {
-        const {data} = await client1.query({query: queries.selfFeed, variables: {limit: 3}})
-        expect(data.self.feed.items).toHaveLength(3)
-        expect(data.self.feed.items[0].postId).toBe(pid3)
-        expect(data.self.feed.items[1].postId).toBe(adid2)
-        expect(data.self.feed.items[2].postId).toBe(pid2)
+        await eventually(async () => {
+          const {data} = await client1.query({query: queries.selfFeed, variables: {limit: 3}})
+          expect(data.self.feed.items).toHaveLength(3)
+          expect(data.self.feed.items[0].postId).toBe(pid3)
+          expect(data.self.feed.items[1].postId).toBe(adid2)
+          expect(data.self.feed.items[2].postId).toBe(pid2)
+        })
       })
     })
   })

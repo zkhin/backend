@@ -27,7 +27,6 @@ def client():
         api_host=api_host,
         api_stage=api_stage,
         api_region=api_region,
-        enabled=True,
     )
 
 
@@ -48,8 +47,8 @@ def test_amount_must_be_a_decimal(client, func_name, amount):
 
 
 @pytest.mark.parametrize('func_name', ['pay_for_ad_view', 'pay_for_post_view'])
-def test_init_with_enabled_false(func_name):
-    client = RealTransactionsClient(api_host=api_host, api_stage=api_stage, api_region=api_region)
+def test_with_disabled_true(func_name):
+    client = RealTransactionsClient(api_host=api_host, api_stage=api_stage, api_region=api_region, disabled=True)
     target = getattr(client, func_name)
     with requests_mock.Mocker() as m:
         target(str(uuid4()), str(uuid4()), str(uuid4()), Decimal(random()).normalize(context=BasicContext))

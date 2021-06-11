@@ -187,6 +187,10 @@ class Post(FlagModelMixin, TrendingModelMixin, ViewModelMixin):
         return self.item.get('adStatus', AdStatus.NOT_AD)
 
     @property
+    def ad_payment(self):
+        return self.item.get('adPayment')
+
+    @property
     def payment(self):
         assert self.post_manager.post_payment_default is not None
         return self.item.get('payment', self.post_manager.post_payment_default)

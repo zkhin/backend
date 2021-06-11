@@ -64,11 +64,31 @@ def test_on_post_view_last_viewed_at_change_throws_if_not_changed(ad_feed_manage
         ad_feed_manager.on_post_view_last_viewed_at_change(post_id, new_item=new_item, old_item=old_item)
 
 
+def test_on_post_view_last_viewed_at_change_does_nothing_if_post_dne(ad_feed_manager):
+    post_id, user_id, lva = str(uuid4()), str(uuid4()), str(uuid4())
+    post_view_item = {'postId': post_id, 'sortKey': f'view/{user_id}', 'lastViewedAt': lva}
+    with patch.object(ad_feed_manager.post_manager, 'get_post', return_value=None):
+        with patch.object(ad_feed_manager, 'dynamo') as dynamo_mock:
+            ad_feed_manager.on_post_view_last_viewed_at_change(post_id, new_item=post_view_item)
+    assert dynamo_mock.mock_calls == []
+
+
 @pytest.mark.parametrize('ad_status', [None, AdStatus.NOT_AD, AdStatus.PENDING, AdStatus.INACTIVE])
 def test_on_post_view_last_viewed_at_change_does_nothing_for_non_active_ads(ad_feed_manager, ad_status):
     post_id, user_id, lva = str(uuid4()), str(uuid4()), str(uuid4())
     post_view_item = {'postId': post_id, 'sortKey': f'view/{user_id}', 'lastViewedAt': lva}
     post_item = {'postId': post_id, 'postType': 'pt', 'postedByUserId': 'pduid', 'adStatus': ad_status}
+    post = ad_feed_manager.post_manager.init_post(post_item)
+    with patch.object(ad_feed_manager.post_manager, 'get_post', return_value=post):
+        with patch.object(ad_feed_manager, 'dynamo') as dynamo_mock:
+            ad_feed_manager.on_post_view_last_viewed_at_change(post_id, new_item=post_view_item)
+    assert dynamo_mock.mock_calls == []
+
+
+def test_on_post_view_last_viewed_at_change_does_nothing_for_post_owner(ad_feed_manager):
+    post_id, user_id, lva = str(uuid4()), str(uuid4()), str(uuid4())
+    post_view_item = {'postId': post_id, 'sortKey': f'view/{user_id}', 'lastViewedAt': lva}
+    post_item = {'postId': post_id, 'postType': 'pt', 'postedByUserId': user_id, 'adStatus': 'ACTIVE'}
     post = ad_feed_manager.post_manager.init_post(post_item)
     with patch.object(ad_feed_manager.post_manager, 'get_post', return_value=post):
         with patch.object(ad_feed_manager, 'dynamo') as dynamo_mock:
@@ -162,8 +182,21 @@ def test_on_post_view_focus_last_viewed_at_change_throws_if_no_change(ad_feed_ma
         ad_feed_manager.on_post_view_focus_last_viewed_at_change(post_id, new_item=item, old_item=item)
 
 
+def test_on_post_view_focus_last_viewed_at_change_does_nothing_if_post_dne(ad_feed_manager):
+    post_id, user_id = str(uuid4()), str(uuid4())
+    old_item = {'partitionKey': f'post/{post_id}', 'sortKey': f'view/{user_id}'}
+    new_item = {**old_item, 'focusLastViewedAt': pendulum.now('utc').to_iso8601_string()}
+    with patch.object(ad_feed_manager.post_manager, 'get_post', return_value=None):
+        with patch.object(ad_feed_manager, 'dynamo') as dynamo_mock:
+            ad_feed_manager.on_post_view_focus_last_viewed_at_change(
+                post_id, new_item=new_item, old_item=old_item
+            )
+    assert dynamo_mock.mock_calls == []
+    assert ad_feed_manager.real_transactions_client.mock_calls == []
+
+
 @pytest.mark.parametrize(
-    'adStatus, owner, adPayment',
+    'ad_status, owner, ad_payment',
     [
         ['anything-but-ACTIVE', False, 1],
         [AdStatus.ACTIVE, True, 1],
@@ -172,7 +205,7 @@ def test_on_post_view_focus_last_viewed_at_change_throws_if_no_change(ad_feed_ma
     ],
 )
 def test_on_post_view_focus_last_viewed_at_change_does_nothing_if_not_active_ad(
-    ad_feed_manager, adStatus, owner, adPayment
+    ad_feed_manager, ad_status, owner, ad_payment
 ):
     post_id, user_id = str(uuid4()), str(uuid4())
     old_item = {'partitionKey': f'post/{post_id}', 'sortKey': f'view/{user_id}'}
@@ -181,8 +214,8 @@ def test_on_post_view_focus_last_viewed_at_change_does_nothing_if_not_active_ad(
         'postId': post_id,
         'postType': 'pt',
         'postedByUserId': user_id if owner else str(uuid4()),
-        'adStatus': adStatus,
-        'adPayment': adPayment,
+        'adStatus': ad_status,
+        'adPayment': ad_payment,
     }
     post = ad_feed_manager.post_manager.init_post(post_item)
     with patch.object(ad_feed_manager.post_manager, 'get_post', return_value=post):

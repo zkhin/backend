@@ -40,8 +40,8 @@ class AdFeedManager:
         new_lva = new_item.get('lastViewedAt')
         assert old_lva != new_lva, 'Should only be called when lastViewedAt changes'
         post = self.post_manager.get_post(post_id)
-        if post.ad_status == AdStatus.ACTIVE:
-            user_id = new_item['sortKey'].split('/')[1]
+        user_id = new_item['sortKey'].split('/')[1]
+        if post and post.ad_status == AdStatus.ACTIVE and post.user_id != user_id:
             self.dynamo.set_last_viewed_at(post_id, user_id, new_lva)
 
     def on_post_view_focus_last_viewed_at_change(self, post_id, new_item, old_item=None):
@@ -50,8 +50,7 @@ class AdFeedManager:
         assert old_lva_str != new_lva_str, 'Should only be called when focusLastViewedAt changes'
         user_id = new_item['sortKey'].split('/')[1]
         post = self.post_manager.get_post(post_id)
-        ad_payment = post.item.get('adPayment')
-        if post.ad_status != AdStatus.ACTIVE or post.user_id == user_id or not ad_payment:
+        if not post or post.ad_status != AdStatus.ACTIVE or post.user_id == user_id or not post.ad_payment:
             return
         new_lva = pendulum.parse(new_lva_str)
         ad_feed_item = self.dynamo.get(post_id, user_id)
@@ -64,7 +63,7 @@ class AdFeedManager:
         # upon losing a race condition, first dynamo write will throw an error, upon which the dynamo
         # tream processor will re-run us, and we should see the updated data in dynamo
         self.dynamo.record_payment_start(post_id, user_id, new_lva, prev_lva)
-        self.real_transactions_client.pay_for_ad_view(user_id, post.user_id, post.id, ad_payment)
+        self.real_transactions_client.pay_for_ad_view(user_id, post.user_id, post.id, post.ad_payment)
         self.dynamo.record_payment_finish(post_id, user_id)
 
     def on_user_add_or_change(self, user_id, new_item, old_item=None):

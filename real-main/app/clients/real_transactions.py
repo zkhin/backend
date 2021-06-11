@@ -13,7 +13,7 @@ logger = logging.getLogger()
 API_HOST = os.environ.get('REAL_TRANSACTIONS_API_HOST')
 API_STAGE = os.environ.get('REAL_TRANSACTIONS_API_STAGE')
 API_REGION = os.environ.get('REAL_TRANSACTIONS_API_REGION')
-ENABLED = os.environ.get('REAL_TRANSACTIONS_ENABLED')
+DISABLED = os.environ.get('REAL_TRANSACTIONS_DISABLED')
 
 
 class InsufficientFundsException(Exception):
@@ -26,12 +26,12 @@ class RealTransactionsClient:
         api_host=API_HOST,
         api_stage=API_STAGE,
         api_region=API_REGION,
-        enabled=ENABLED,
+        disabled=DISABLED,
     ):
         self.api_root = f'https://{api_host}/{api_stage}'
         self.auth = BotoAWSRequestsAuth(aws_host=api_host, aws_region=api_region, aws_service='execute-api')
         self.session = requests.Session()
-        self.enabled = enabled
+        self.disabled = disabled
 
         def response_hook(resp, *args, **kwargs):
             if resp.status_code == 400 and resp.json().get('exception') == 'NotEnoughFundsException':
@@ -43,7 +43,7 @@ class RealTransactionsClient:
     def pay_for_ad_view(self, viewer_id, ad_post_owner_id, ad_post_id, amount):
         "Raises InsufficientFundsException() if payment fails due to insufficient funds"
         assert isinstance(amount, Decimal), "'amount' must be a Decimal"
-        if not self.enabled:
+        if self.disabled:
             return
         url = f'{self.api_root}/pay_user_for_advertisement'
         data = {
@@ -57,7 +57,7 @@ class RealTransactionsClient:
     def pay_for_post_view(self, viewer_id, post_owner_id, post_id, amount):
         "Raises InsufficientFundsException() if payment fails due to insufficient funds"
         assert isinstance(amount, Decimal), "'amount' must be a Decimal"
-        if not self.enabled:
+        if self.disabled:
             return
         url = f'{self.api_root}/pay_for_post_view'
         data = {
