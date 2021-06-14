@@ -767,3 +767,29 @@ test('USER_CHATS_WITH_UNVIEWED_MESSAGES_COUNT_CHANGED subscription notifications
   sub.unsubscribe()
   await subInitTimeout
 })
+
+test('Cant send message to deleted user', async () => {
+  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
+  const {client: theirClient} = await loginCache.getCleanLogin()
+  const [chatId, messageId] = [uuidv4(), uuidv4()]
+
+  // they open up a chat with us
+  let variables = {userId: ourUserId, chatId, messageId, messageText: 'lore'}
+  let resp = await theirClient.mutate({mutation: mutations.createDirectChat, variables})
+  expect(resp.data.createDirectChat.chatId).toBe(chatId)
+
+  // delete our user
+  await ourClient
+    .mutate({mutation: mutations.deleteUser})
+    .then(({data: {deleteUser: user}}) => expect(user.userStatus).toBe('DELETING'))
+
+  // verify the they can't add a message to our chat
+  variables = {chatId, messageId: uuidv4(), text: 'lore'}
+  await theirClient
+    .mutate({mutation: mutations.addChatMessage, variables, errorPolicy: 'all'})
+    .then(({errors}) => {
+      expect(errors).toHaveLength(1)
+      expect(errors[0].message).toMatch(/ClientError: Chat .* does not exist/)
+      expect(errors[0].errorInfo).toEqual(['CHAT_NOT_FOUND'])
+    })
+})

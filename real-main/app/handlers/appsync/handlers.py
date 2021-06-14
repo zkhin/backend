@@ -12,6 +12,7 @@ from app.models.appstore.exceptions import AppStoreException
 from app.models.block.enums import BlockStatus
 from app.models.block.exceptions import BlockException
 from app.models.card.exceptions import CardException
+from app.models.chat.error_codes import ChatErrorCode
 from app.models.chat.exceptions import ChatException
 from app.models.chat_message.enums import ChatMessageNotificationType
 from app.models.chat_message.exceptions import ChatMessageException
@@ -1485,7 +1486,16 @@ def add_chat_message(caller_user, arguments, **kwargs):
 
     chat = chat_manager.get_chat(chat_id)
     if not chat or not chat.is_member(caller_user.id):
-        raise ClientException(f'User `{caller_user.id}` is not a member of chat `{chat_id}`')
+        if not chat:
+            raise ClientException(
+                f'Chat `{chat.id}` does not exist',
+                [ChatErrorCode.CHAT_NOT_FOUND],
+            )
+        if not chat.is_member(caller_user.id):
+            raise ClientException(
+                f'User `{caller_user.id}` is not a member of chat `{chat_id}`',
+                [ChatErrorCode.NOT_A_MEMBER_OF_CHAT],
+            )
 
     try:
         message = chat_message_manager.add_chat_message(message_id, text, chat_id, caller_user.id)
