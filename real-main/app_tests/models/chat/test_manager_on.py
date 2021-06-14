@@ -19,22 +19,100 @@ user3 = user1
 
 @pytest.fixture
 def chat(chat_manager, user1, user2):
-    yield chat_manager.add_direct_chat(str(uuid4()), user1.id, user2.id)
+    chat_id = str(uuid4())
+    chat = chat_manager.add_direct_chat(chat_id, user1.id, user2.id)
+    for member_item in chat_manager.on_chat_add(chat_id, chat.item):
+        chat_manager.on_chat_member_add(chat_id, member_item)
+    yield chat
 
 
 @pytest.fixture
 def user1_message(chat_message_manager, chat, user1):
-    yield chat_message_manager.add_chat_message(str(uuid4()), 'lore', chat.id, user1.id)
+    yield chat_message_manager.add_chat_message(chat.id, 'lore', user_id=user1.id)
 
 
 @pytest.fixture
 def user2_message(chat_message_manager, chat, user2):
-    yield chat_message_manager.add_chat_message(str(uuid4()), 'lore', chat.id, user2.id)
+    yield chat_message_manager.add_chat_message(chat.id, 'lore', user_id=user2.id)
 
 
 @pytest.fixture
 def system_message(chat_message_manager, chat):
-    yield chat_message_manager.add_system_message(chat.id, 'system lore')
+    yield chat_message_manager.add_chat_message(chat.id, 'system lore')
+
+
+def test_on_chat_add_direct_chat_adds_member_items(chat_manager, user1, user3):
+    chat = chat_manager.add_direct_chat(str(uuid4()), user1.id, user3.id)
+    assert chat_manager.member_dynamo.get(chat.id, user1.id) is None
+    assert chat_manager.member_dynamo.get(chat.id, user3.id) is None
+    chat_manager.on_chat_add(chat.id, chat.item)
+    assert chat_manager.member_dynamo.get(chat.id, user1.id)
+    assert chat_manager.member_dynamo.get(chat.id, user3.id)
+
+
+def test_on_chat_add_group_chat_minimal_adds_member_items(chat_manager, user1):
+    chat = chat_manager.add_group_chat(str(uuid4()), user1.id, [])
+    assert chat_manager.member_dynamo.get(chat.id, user1.id) is None
+    chat_manager.on_chat_add(chat.id, chat.item)
+    assert chat_manager.member_dynamo.get(chat.id, user1.id)
+
+
+def test_on_chat_add_group_chat_with_user_ids_adds_member_items(chat_manager, user1, user2, user3):
+    chat = chat_manager.add_group_chat(str(uuid4()), user1.id, [user2.id, user3.id])
+    assert chat_manager.member_dynamo.get(chat.id, user1.id) is None
+    assert chat_manager.member_dynamo.get(chat.id, user2.id) is None
+    assert chat_manager.member_dynamo.get(chat.id, user3.id) is None
+    chat_manager.on_chat_add(chat.id, chat.item)
+    assert chat_manager.member_dynamo.get(chat.id, user1.id)
+    assert chat_manager.member_dynamo.get(chat.id, user2.id)
+    assert chat_manager.member_dynamo.get(chat.id, user3.id)
+
+
+def test_on_chat_add_preserves_created_at(chat_manager, user1, user3):
+    chat = chat_manager.add_direct_chat(str(uuid4()), user1.id, user3.id)
+    chat_manager.on_chat_add(chat.id, chat.item)
+    assert chat_manager.member_dynamo.get(chat.id, user1.id)['createdAt'] == chat.item['createdAt']
+    assert chat_manager.member_dynamo.get(chat.id, user3.id)['createdAt'] == chat.item['createdAt']
+
+
+def test_on_chat_user_count_change_throws_if_no_change(chat_manager, chat):
+    with pytest.raises(AssertionError):
+        chat_manager.on_chat_user_count_change(chat.id, chat.item, chat.item)
+    with pytest.raises(AssertionError):
+        chat_manager.on_chat_user_count_change(chat.id, chat.item, {**chat.item, 'userCount': 0})
+    item = {**chat.item, 'userCount': 1}
+    with pytest.raises(AssertionError):
+        chat_manager.on_chat_user_count_change(chat.id, item, item)
+
+
+def test_on_chat_user_count_change_does_not_hit_zero_so_no_delete(chat_manager, chat):
+    assert chat.refresh_item().item
+    chat_manager.on_chat_user_count_change(chat.id, {**chat.item, 'userCount': 1}, {**chat.item, 'userCount': 2})
+    assert chat.refresh_item().item
+    chat_manager.on_chat_user_count_change(chat.id, {**chat.item, 'userCount': 1}, {**chat.item, 'userCount': 0})
+    assert chat.refresh_item().item
+
+
+def test_on_chat_user_count_change_hits_zero_so_deletes(chat_manager, chat):
+    assert chat.refresh_item().item
+    chat_manager.on_chat_user_count_change(chat.id, {**chat.item, 'userCount': 0}, {**chat.item, 'userCount': 1})
+    assert chat.refresh_item().item is None
+
+
+def test_on_chat_member_add_increments_user_count(chat_manager, chat):
+    assert chat.refresh_item().user_count == 2
+    chat_manager.on_chat_member_add(chat.id, {})
+    assert chat.refresh_item().user_count == 3
+    chat_manager.on_chat_member_add(chat.id, {})
+    assert chat.refresh_item().user_count == 4
+
+
+def test_on_chat_member_delete_decrements_user_count(chat_manager, chat):
+    assert chat.refresh_item().user_count == 2
+    chat_manager.on_chat_member_delete(chat.id, {})
+    assert chat.refresh_item().user_count == 1
+    chat_manager.on_chat_member_delete(chat.id, {})
+    assert chat.refresh_item().user_count == 0
 
 
 def test_on_message_added(chat_manager, chat, user1, user2, caplog, user1_message, user2_message):
@@ -86,8 +164,9 @@ def test_on_message_added(chat_manager, chat, user1, user2, caplog, user1_messag
     assert all('Failed' in rec.msg for rec in caplog.records)
     assert all('last message activity' in rec.msg for rec in caplog.records)
     assert all(chat.id in rec.msg for rec in caplog.records)
-    assert user1.id in caplog.records[1].msg
-    assert user2.id in caplog.records[2].msg
+    uid1, uid2 = sorted([user1.id, user2.id])
+    assert uid1 in caplog.records[1].msg
+    assert uid2 in caplog.records[2].msg
 
     # verify final state
     chat.refresh_item()
@@ -155,8 +234,8 @@ def test_on_chat_message_delete(chat_manager, chat, user1, user2, caplog, user1_
 
 def test_on_message_delete_handles_chat_views_correctly(chat, user1, user2, chat_message_manager, chat_manager):
     # each user posts two messages, one of which is 'viewed' by both and the other is not
-    message1 = chat_message_manager.add_chat_message(str(uuid4()), 'lore ipsum', chat.id, user1.id)
-    message2 = chat_message_manager.add_chat_message(str(uuid4()), 'lore ipsum', chat.id, user2.id)
+    message1 = chat_message_manager.add_chat_message(chat.id, 'lore ipsum', user_id=user1.id)
+    message2 = chat_message_manager.add_chat_message(chat.id, 'lore ipsum', user_id=user2.id)
     chat_manager.on_chat_message_add(message1.id, new_item=message1.item)
     chat_manager.on_chat_message_add(message1.id, new_item=message1.item)
 
@@ -165,8 +244,8 @@ def test_on_message_delete_handles_chat_views_correctly(chat, user1, user2, chat
     chat_manager.member_dynamo.clear_messages_unviewed_count(chat.id, user1.id)
     chat_manager.member_dynamo.clear_messages_unviewed_count(chat.id, user2.id)
 
-    message3 = chat_message_manager.add_chat_message(str(uuid4()), 'lore ipsum', chat.id, user1.id)
-    message4 = chat_message_manager.add_chat_message(str(uuid4()), 'lore ipsum', chat.id, user2.id)
+    message3 = chat_message_manager.add_chat_message(chat.id, 'lore ipsum', user_id=user1.id)
+    message4 = chat_message_manager.add_chat_message(chat.id, 'lore ipsum', user_id=user2.id)
     chat_manager.on_chat_message_add(message3.id, new_item=message3.item)
     chat_manager.on_chat_message_add(message4.id, new_item=message4.item)
 
@@ -218,8 +297,8 @@ def test_on_flag_add_deletes_chat_if_crowdsourced_criteria_met(chat_manager, cha
 
 def test_on_chat_delete_delete_memberships(chat_manager, user1, user2, chat):
     # set up a group chat as well, add both users, verify starting state
-    group_chat = chat_manager.add_group_chat(str(uuid4()), user1)
-    group_chat.add(user1, [user2.id])
+    group_chat = chat_manager.add_group_chat(str(uuid4()), user1.id, [user2.id])
+    chat_manager.on_chat_add(group_chat.id, group_chat.item)
     assert sum(1 for _ in chat_manager.member_dynamo.generate_chat_ids_by_user(user1.id)) == 2
     assert sum(1 for _ in chat_manager.member_dynamo.generate_chat_ids_by_user(user2.id)) == 2
 
@@ -235,17 +314,24 @@ def test_on_chat_delete_delete_memberships(chat_manager, user1, user2, chat):
 
 
 def test_on_user_delete_leave_all_chats(chat_manager, user1, user2, user3):
-    # user1 opens up direct chats with both of the other two users
     chat_id_1 = 'cid1'
     chat_id_2 = 'cid2'
-    chat_manager.add_direct_chat(chat_id_1, user1.id, user2.id)
-    chat_manager.add_direct_chat(chat_id_2, user1.id, user3.id)
-
-    # user1 sets up a group chat with only themselves in it, and another with user2
     chat_id_3 = 'cid3'
     chat_id_4 = 'cid4'
-    chat_manager.add_group_chat(chat_id_3, user1)
-    chat_manager.add_group_chat(chat_id_4, user1).add(user1, [user2.id])
+    # user1 opens up direct chats with both of the other two users
+    # user1 sets up a group chat with only themselves in it, and another with user2
+    chat1 = chat_manager.add_direct_chat(chat_id_1, user1.id, user2.id)
+    chat2 = chat_manager.add_direct_chat(chat_id_2, user1.id, user3.id)
+    chat3 = chat_manager.add_group_chat(chat_id_3, user1.id, [])
+    chat4 = chat_manager.add_group_chat(chat_id_4, user1.id, [user2.id])
+    for member_item in chat_manager.on_chat_add(chat_id_1, chat1.item):
+        chat_manager.on_chat_member_add(chat_id_1, member_item)
+    for member_item in chat_manager.on_chat_add(chat_id_2, chat2.item):
+        chat_manager.on_chat_member_add(chat_id_2, member_item)
+    for member_item in chat_manager.on_chat_add(chat_id_3, chat3.item):
+        chat_manager.on_chat_member_add(chat_id_3, member_item)
+    for member_item in chat_manager.on_chat_add(chat_id_4, chat4.item):
+        chat_manager.on_chat_member_add(chat_id_4, member_item)
 
     # verify we see the chat and chat_memberships in the DB
     assert chat_manager.dynamo.get(chat_id_1)['userCount'] == 2
@@ -266,8 +352,5 @@ def test_on_user_delete_leave_all_chats(chat_manager, user1, user2, user3):
     # verify we see the chat and chat_memberships in the DB
     assert chat_manager.dynamo.get(chat_id_1) is None
     assert chat_manager.dynamo.get(chat_id_2) is None
-    assert chat_manager.dynamo.get(chat_id_3) is None
-    assert chat_manager.dynamo.get(chat_id_4)['userCount'] == 1
-    assert chat_manager.member_dynamo.get(chat_id_3, user1.id) is None
-    assert chat_manager.member_dynamo.get(chat_id_4, user1.id) is None
-    assert chat_manager.member_dynamo.get(chat_id_4, user2.id)
+    assert chat3.is_member(user1.id) is False
+    assert chat4.is_member(user1.id) is False

@@ -19,8 +19,9 @@ def post(post_manager, user):
 
 @pytest.fixture
 def chat(chat_manager, user, user2):
-    group_chat = chat_manager.add_group_chat(str(uuid4()), user)
-    group_chat.add(user, [user2.id])
+    chat_id = str(uuid4())
+    group_chat = chat_manager.add_group_chat(chat_id, user.id, [user2.id])
+    chat_manager.on_chat_add(chat_id, group_chat.item)
     yield group_chat
 
 

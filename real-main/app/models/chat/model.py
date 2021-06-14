@@ -4,7 +4,6 @@ import pendulum
 
 from app.mixins.flag.model import FlagModelMixin
 from app.mixins.view.model import ViewModelMixin
-from app.models.user.enums import UserStatus
 
 from .enums import ChatType
 from .exceptions import ChatException
@@ -25,7 +24,6 @@ class Chat(ViewModelMixin, FlagModelMixin):
         chat_manager=None,
         chat_message_manager=None,
         user_manager=None,
-        real_dating_client=None,
         **kwargs,
     ):
         super().__init__(**kwargs)
@@ -41,8 +39,6 @@ class Chat(ViewModelMixin, FlagModelMixin):
             self.chat_message_manager = chat_message_manager
         if user_manager:
             self.user_manager = user_manager
-        if real_dating_client:
-            self.real_dating_client = real_dating_client
 
         self.item = item
         # immutables
@@ -50,6 +46,28 @@ class Chat(ViewModelMixin, FlagModelMixin):
         self.user_id = None  # this model has no 'owner' (required by ViewModelMixin)
         self.type = self.item['chatType']
         self.created_by_user_id = item['createdByUserId']
+        self.created_at = pendulum.parse(item['createdAt'])
+        self.initial_member_user_ids = item.get('initialMemberUserIds', [])
+        self.initial_message_id = item.get('initialMessageId')
+        self.initial_message_text = item.get('initialMessageText')
+
+    @property
+    def created_by(self):
+        if not hasattr(self, '_created_by'):
+            self._created_by = self.user_manager.get_user(self.created_by_user_id)
+        return self._created_by
+
+    @property
+    def messages_count(self):
+        return self.item.get('messagesCount', 0)
+
+    @property
+    def name(self):
+        return self.item.get('name')
+
+    @property
+    def user_count(self):
+        return self.item.get('userCount', 0)
 
     def refresh_item(self, strongly_consistent=False):
         self.item = self.dynamo.get(self.id, strongly_consistent=strongly_consistent)
@@ -58,93 +76,35 @@ class Chat(ViewModelMixin, FlagModelMixin):
     def is_member(self, user_id):
         return bool(self.member_dynamo.get(self.id, user_id))
 
-    def edit(self, edited_by_user, name=None):
+    def edit(self, name=None):
         if self.type != ChatType.GROUP:
             raise ChatException(f'Cannot edit non-GROUP chat `{self.id}`')
-
-        if name is None:
-            return
-        self.item = self.dynamo.update_name(self.id, name)
-        self.chat_message_manager.add_system_message_group_name_edited(self.id, edited_by_user, name)
-        self.item['messagesCount'] = self.item.get('messagesCount', 0) + 1
+        if name is not None:
+            self.item = self.dynamo.update_name(self.id, name)
         return self
 
-    def add(self, added_by_user, user_ids, now=None):
+    def add(self, added_by_user_id, user_ids, now=None):
         now = now or pendulum.now('utc')
         if self.type != ChatType.GROUP:
             raise ChatException(f'Cannot add users to non-GROUP chat `{self.id}`')
-
-        users = []
         for user_id in set(user_ids):
-
-            # make sure the user exists, is ACTIVE
-            user = self.user_manager.get_user(user_id)
-            if not user:
-                logger.warning(f'Cannot add non-existent user `{user_id}` to group chat `{self.id}`')
-                continue
-            if user.status != UserStatus.ACTIVE:
-                logger.warning(
-                    f'Refusing to add user `{user.id}` with status `{user.status}` to group chat `{self.id}`'
-                )
-                continue
-
-            if added_by_user.id is not None:
-                if user_id == added_by_user.id:
-                    continue  # must already be in the chat
-
-                if self.block_manager.is_blocked(added_by_user.id, user_id):
-                    continue  # can't add a user you're blocking
-
-                if self.block_manager.is_blocked(user_id, added_by_user.id):
-                    continue  # can't add a user who is blocking you
-
-                if not self.real_dating_client.can_contact(user_id, added_by_user.id):
-                    continue
-
-            transacts = [
-                self.member_dynamo.transact_add(self.id, user_id, now=now),
-                self.dynamo.transact_increment_user_count(self.id),
-            ]
-            transact_exceptions = [
-                ChatException(f'Unable to add chat membership of user `{user_id} in chat `{self.id}`'),
-                Exception(f'Unable to increment Chat.userCount for chat `{self.id}`'),
-            ]
+            warning_prefix = f'User `{added_by_user_id}` cannot add target user `{user_id}` to chat `{self.id}`'
             try:
-                self.dynamo.client.transact_write_items(transacts, transact_exceptions)
-            except ChatException:
-                # user is already in the chat, nothing to do
-                pass
+                self.chat_manager.validate_can_chat(added_by_user_id, user_id)
+            except ChatException as err:
+                logger.warning(f'{warning_prefix}: {err}')
             else:
-                self.item['userCount'] = self.item.get('userCount', 0) + 1
-                users.append(user)
+                try:
+                    self.member_dynamo.add(self.id, user_id, now=now)
+                except self.member_dynamo.client.exceptions.ConditionalCheckFailedException:
+                    logger.warning(f'{warning_prefix}: target user is already in chat')
+        return self
 
-        if users:
-            self.chat_message_manager.add_system_message_added_to_group(self.id, added_by_user, users, now=now)
-            self.item['messagesCount'] = self.item.get('messagesCount', 0) + 1
-
-    def leave(self, user):
+    def leave(self, user_id):
         if self.type != ChatType.GROUP:
             raise ChatException(f'Cannot leave non-GROUP chat `{self.id}`')
-
-        # leave the chat
-        transacts = [
-            self.member_dynamo.transact_delete(self.id, user.id),
-            self.dynamo.transact_decrement_user_count(self.id),
-        ]
-        transact_exceptions = [
-            ChatException(f'Unable to delete chat membership of user `{user.id}` in chat `{self.id}`'),
-            Exception(f'Unable to decrement Chat.userCount for chat `{self.id}`'),
-        ]
-        self.dynamo.client.transact_write_items(transacts, transact_exceptions)
-        self.item['userCount'] -= 1
-
-        # were we the last user in the chat? If so, clean up
-        if self.item['userCount'] <= 0:
-            self.delete()
-        else:
-            self.chat_message_manager.add_system_message_left_group(self.id, user)
-            self.item['messagesCount'] = self.item.get('messagesCount', 0) + 1
-
+        if not self.member_dynamo.delete(self.id, user_id):
+            raise ChatException(f'User `{user_id}` is not a member of chat `{self.id}`')
         return self
 
     def flag(self, user):

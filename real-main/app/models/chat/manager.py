@@ -59,77 +59,73 @@ class ChatManager(FlagManagerMixin, ViewManagerMixin, ManagerBase):
             'chat_manager': self,
             'chat_message_manager': self.chat_message_manager,
             'user_manager': self.user_manager,
-            'real_dating_client': getattr(self, 'real_dating_client', None),
         }
         return Chat(chat_item, **kwargs) if chat_item else None
 
-    def add_direct_chat(self, chat_id, created_by_user_id, with_user_id, now=None):
+    def add_direct_chat(
+        self,
+        chat_id,
+        user_id,
+        with_user_id,
+        initial_message_id=None,
+        initial_message_text=None,
+        now=None,
+    ):
+        # initial_message_text will be treated as a system-generated message if there's no initial_message_id
+        if initial_message_id:
+            assert initial_message_text
         now = now or pendulum.now('utc')
 
-        # can't direct chat with ourselves
-        if created_by_user_id == with_user_id:
-            raise ChatException(f'User `{created_by_user_id}` cannot open direct chat with themselves')
+        self.validate_can_chat(user_id, with_user_id)
+        if self.get_direct_chat(user_id, with_user_id):
+            raise ChatException(f'Chat already exists between user `{user_id}` and user `{with_user_id}`')
 
-        # can't chat if there's a blocking relationship, either direction
-        if self.block_manager.is_blocked(created_by_user_id, with_user_id):
-            raise ChatException(f'User `{created_by_user_id}` has blocked user `{with_user_id}`')
-        if self.block_manager.is_blocked(with_user_id, created_by_user_id):
-            raise ChatException(f'User `{created_by_user_id}` has been blocked by `{with_user_id}`')
+        chat_item = self.dynamo.add(
+            chat_id,
+            ChatType.DIRECT,
+            user_id,
+            with_user_ids=[with_user_id],
+            initial_message_id=initial_message_id,
+            initial_message_text=initial_message_text,
+            now=now,
+        )
+        return self.init_chat(chat_item)
 
-        # can't add a chat if one already exists between the two users
-        if self.get_direct_chat(created_by_user_id, with_user_id):
-            raise ChatException(
-                f'Chat already exists between user `{created_by_user_id}` and user `{with_user_id}`',
-            )
-
-        # can't chat with non-ACTIVE users
-        with_user = self.user_manager.get_user(with_user_id)
-        if with_user.status != UserStatus.ACTIVE:
-            raise ChatException(f'Cannot open direct chat with user with status `{with_user.status}`')
-
-        # can't add a chat if the match status is rejected/approved
-        if not self.real_dating_client.can_contact(created_by_user_id, with_user_id):
-            raise ChatException('Cannot chat user viewed on dating unless it is a match')
-
-        transacts = [
-            self.dynamo.transact_add(
-                chat_id,
-                ChatType.DIRECT,
-                created_by_user_id,
-                with_user_id=with_user_id,
-                now=now,
-            ),
-            self.member_dynamo.transact_add(chat_id, created_by_user_id, now=now),
-            self.member_dynamo.transact_add(chat_id, with_user_id, now=now),
-        ]
-        transact_exceptions = [
-            ChatException(f'Unable to add chat with id `{chat_id}`... id already used?'),
-            ChatException(f'Unable to add user `{created_by_user_id}` to chat `{chat_id}`'),
-            ChatException(f'Unable to add user `{with_user_id}` to chat `{chat_id}`'),
-        ]
-        self.dynamo.client.transact_write_items(transacts, transact_exceptions)
-
-        return self.get_chat(chat_id, strongly_consistent=True)
-
-    def add_group_chat(self, chat_id, created_by_user, name=None, now=None):
+    def add_group_chat(
+        self,
+        chat_id,
+        user_id,
+        with_user_ids,
+        initial_message_id=None,
+        initial_message_text=None,
+        name=None,
+        now=None,
+    ):
+        # initial_message_text will be treated as a system-generated message if there's no initial_message_id
+        if initial_message_id:
+            assert initial_message_text
         now = now or pendulum.now('utc')
-
-        # create the group chat with just caller in it
-        transacts = [
-            self.dynamo.transact_add(chat_id, ChatType.GROUP, created_by_user.id, name=name, now=now),
-            self.member_dynamo.transact_add(chat_id, created_by_user.id, now=now),
-        ]
-        transact_exceptions = [
-            ChatException(f'Unable to add chat with id `{chat_id}`... id already used?'),
-            ChatException(f'Unable to add user `{created_by_user.id}` to chat `{chat_id}`'),
-        ]
-        self.dynamo.client.transact_write_items(transacts, transact_exceptions)
-
-        self.chat_message_manager.add_system_message_group_created(chat_id, created_by_user, name=name, now=now)
-        return self.get_chat(chat_id, strongly_consistent=True)
+        validated_with_user_ids = []
+        for with_user_id in with_user_ids:
+            try:
+                self.validate_can_chat(user_id, with_user_id)
+            except ChatException as err:
+                logger.warning(f'Not adding user `{with_user_id}` to chat `{chat_id}`: {err}')
+            else:
+                validated_with_user_ids.append(with_user_id)
+        chat_item = self.dynamo.add(
+            chat_id,
+            ChatType.GROUP,
+            user_id,
+            with_user_ids=validated_with_user_ids,
+            initial_message_id=initial_message_id,
+            initial_message_text=initial_message_text,
+            name=name,
+            now=now,
+        )
+        return self.init_chat(chat_item)
 
     def on_user_delete_leave_all_chats(self, user_id, old_item):
-        user = self.user_manager.init_user(old_item)
         for chat_id in self.member_dynamo.generate_chat_ids_by_user(user_id):
             chat = self.get_chat(chat_id)
             if not chat:
@@ -138,7 +134,7 @@ class ChatManager(FlagManagerMixin, ViewManagerMixin, ManagerBase):
             if chat.type == ChatType.DIRECT:
                 chat.delete()
             else:
-                chat.leave(user)
+                chat.leave(user_id)
 
     def record_views(self, chat_ids, user_id, viewed_at=None):
         for chat_id, view_count in dict(collections.Counter(chat_ids)).items():
@@ -149,6 +145,27 @@ class ChatManager(FlagManagerMixin, ViewManagerMixin, ManagerBase):
                 logger.warning(f'Cannot record view(s) by non-member user `{user_id}` on chat `{chat_id}`')
             else:
                 chat.record_view_count(user_id, view_count, viewed_at=viewed_at)
+
+    def on_chat_add(self, chat_id, new_item):
+        chat = self.init_chat(new_item)
+        # create chat/member items, return them so unit tests can more easily simulate dynamo stream processor
+        return [
+            self.member_dynamo.add(chat_id, user_id, now=chat.created_at)
+            for user_id in chat.initial_member_user_ids
+        ]
+
+    def on_chat_user_count_change(self, chat_id, new_item, old_item):
+        old_chat = self.init_chat(old_item)
+        new_chat = self.init_chat(new_item)
+        assert old_chat.user_count != new_chat.user_count, 'Should only be called when userCount changes'
+        if new_chat.user_count < 1:
+            new_chat.delete()
+
+    def on_chat_member_add(self, chat_id, new_item):
+        self.dynamo.increment_user_count(chat_id)
+
+    def on_chat_member_delete(self, chat_id, old_item):
+        self.dynamo.decrement_user_count(chat_id)
 
     def on_chat_message_add(self, message_id, new_item):
         message = self.chat_message_manager.init_chat_message(new_item)
@@ -199,3 +216,23 @@ class ChatManager(FlagManagerMixin, ViewManagerMixin, ManagerBase):
     def on_chat_delete_delete_memberships(self, chat_id, old_item):
         for user_id in self.member_dynamo.generate_user_ids_by_chat(chat_id):
             self.member_dynamo.delete(chat_id, user_id)
+
+    def validate_can_chat(self, user_id_1, user_id_2):
+        if user_id_1 == user_id_2:
+            raise ChatException(f'User `{user_id_1}` cannot chat with themselves')
+
+        if self.block_manager.is_blocked(user_id_1, user_id_2):
+            raise ChatException(f'User `{user_id_1}` has blocked user `{user_id_2}`')
+
+        if self.block_manager.is_blocked(user_id_2, user_id_1):
+            raise ChatException(f'User `{user_id_2}` has been blocked by `{user_id_1}`')
+
+        user2 = self.user_manager.get_user(user_id_2)
+        if not user2:
+            raise ChatException(f'User `{user_id_2}` does not exist')
+
+        if user2.status != UserStatus.ACTIVE:
+            raise ChatException(f'User `{user_id_2}` has non-active status `{user2.status}`')
+
+        if not self.real_dating_client.can_contact(user_id_1, user_id_2):
+            raise ChatException('Users `{user_id_1}` and `{user_id_2}` prohibited from chatting due to dating')

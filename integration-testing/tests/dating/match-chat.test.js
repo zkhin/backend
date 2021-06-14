@@ -76,10 +76,9 @@ test('Cannot create direct/group chat if the match_status is not confirmed', asy
 
   // try to create direct chat
   let [chatId, messageId] = [uuidv4(), uuidv4()]
-  const messageText = 'lore ipsum'
-  let variables = {userId: theirUserId, chatId, messageId, messageText}
+  let variables = {userId: theirUserId, chatId, messageId, messageText: 'lore ipsum'}
   await expect(ourClient.mutate({mutation: mutations.createDirectChat, variables})).rejects.toThrow(
-    /ClientError: Cannot chat user viewed on dating unless it is a match/,
+    /ClientError: Users .* and .* prohibited from chatting due to dating/,
   )
 
   // we approve them, check statues
@@ -95,21 +94,17 @@ test('Cannot create direct/group chat if the match_status is not confirmed', asy
 
   // try to create direct chat
   await expect(ourClient.mutate({mutation: mutations.createDirectChat, variables})).rejects.toThrow(
-    /ClientError: Cannot chat user viewed on dating unless it is a match/,
+    /ClientError: Users .* and .* prohibited from chatting due to dating/,
   )
 
-  variables = {
-    chatId,
-    name: 'x',
-    userIds: [theirUserId, otherUserId],
-    messageId: messageId,
-    messageText: 'm',
-  }
   // theirUser should be skipped in the group chat
-  await ourClient
-    .mutate({mutation: mutations.createGroupChat, variables})
-    .then(({data: {createGroupChat: chat}}) => {
-      expect(chat.usersCount).toBe(2)
-      expect(chat.users.items.map((u) => u.userId).sort()).toEqual([ourUserId, otherUserId].sort())
-    })
+  await ourClient.mutate({
+    mutation: mutations.createGroupChat,
+    variables: {chatId, userIds: [theirUserId, otherUserId], messageId, messageText: 'm'},
+  })
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.chat, variables: {chatId}})
+    expect(data).toMatchObject({chat: {chatId, usersCount: 2}})
+    expect(data.chat.users.items.map((u) => u.userId).sort()).toEqual([ourUserId, otherUserId].sort())
+  })
 })

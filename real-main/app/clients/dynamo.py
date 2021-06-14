@@ -2,7 +2,6 @@ import base64
 import json
 import logging
 import os
-import re
 
 import boto3
 from boto3.dynamodb.types import TypeDeserializer, TypeSerializer
@@ -218,36 +217,3 @@ class DynamoClient:
             for item in resp['Items']:
                 yield item
             last_key = resp.get('LastEvaluatedKey')
-
-    def transact_write_items(self, transact_items, transact_exceptions=None):
-        """
-        Apply the given write operations in a transaction.
-        https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/dynamodb.html#DynamoDB.Client.transact_write_items
-        Note that:
-            - since this uses the boto dynamo client, rather than the resource, the writes format is more verbose
-            - caller does not need to specify TableName
-
-        If one of the transact_item's conditional expressions fails, then the corresponding entry in
-        trasact_exceptions will be raised, if it was provided.
-        """
-        if transact_exceptions is None:
-            transact_exceptions = [None] * len(transact_items)
-        else:
-            assert len(transact_items) == len(transact_exceptions)
-
-        for ti in transact_items:
-            list(ti.values()).pop()['TableName'] = self.table_name
-
-        try:
-            self.boto3_client.transact_write_items(TransactItems=transact_items)
-        except self.boto3_client.exceptions.TransactionCanceledException as err:
-            # we want to raise a more specific error than 'the whole transaction failed'
-            # there is no way to get the CancellationReasons in boto3, so this is the best we can do
-            # https://github.com/aws/aws-sdk-go/issues/2318#issuecomment-443039745
-            reasons = re.search(r'\[(.*)\]$', err.response['Error']['Message']).group(1).split(', ')
-            for reason, transact_exception in zip(reasons, transact_exceptions):
-                if reason == 'ConditionalCheckFailed':
-                    # the transact_item with this transaction_exception failed
-                    if transact_exception is not None:
-                        raise transact_exception from err
-            raise err

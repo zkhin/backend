@@ -349,12 +349,11 @@ class UserManager(TrendingManagerMixin, ManagerBase):
 
     def on_user_delete(self, user_id, old_item):
         "Delete various user-related objects/items"
-        self.dynamo.add_user_deleted(user_id)
-        self.elasticsearch_client.delete_user(user_id)
-        self.pinpoint_client.delete_user_endpoints(user_id)
-        self.real_dating_client.remove_user(user_id, fail_soft=True)
-
         user = self.init_user(old_item)
+        self.dynamo.add_user_deleted(user.id, user.username)
+        self.elasticsearch_client.delete_user(user.id)
+        self.pinpoint_client.delete_user_endpoints(user.id)
+        self.real_dating_client.remove_user(user.id, fail_soft=True)
         user.clear_photo_s3_objects()
         user.trending_delete()
 

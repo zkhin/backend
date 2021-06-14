@@ -25,97 +25,107 @@ test('Create a direct chat', async () => {
   const {client: randoClient} = await loginCache.getCleanLogin()
 
   // check we have no direct chat between us
-  let resp = await ourClient.query({query: queries.self})
-  expect(resp.data.self.directChat).toBeNull()
-  expect(resp.data.self.chatCount).toBe(0)
-  expect(resp.data.self.chats.items).toHaveLength(0)
+  await ourClient.query({query: queries.self}).then(({data}) => {
+    expect(data.self.directChat).toBeNull()
+    expect(data.self.chatCount).toBe(0)
+    expect(data.self.chats.items).toHaveLength(0)
+  })
 
-  resp = await theirClient.query({query: queries.user, variables: {userId: ourUserId}})
-  expect(resp.data.user.directChat).toBeNull()
-  expect(resp.data.user.chatCount).toBeNull()
-  expect(resp.data.user.chats).toBeNull()
+  await theirClient.query({query: queries.user, variables: {userId: ourUserId}}).then(({data}) => {
+    expect(data.user.directChat).toBeNull()
+    expect(data.user.chatCount).toBeNull()
+    expect(data.user.chats).toBeNull()
+  })
 
-  resp = await ourClient.query({query: queries.user, variables: {userId: theirUserId}})
-  expect(resp.data.user.directChat).toBeNull()
-  expect(resp.data.user.chatCount).toBeNull()
-  expect(resp.data.user.chats).toBeNull()
+  await ourClient.query({query: queries.user, variables: {userId: theirUserId}}).then(({data}) => {
+    expect(data.user.directChat).toBeNull()
+    expect(data.user.chatCount).toBeNull()
+    expect(data.user.chats).toBeNull()
+  })
 
   // we open up a direct chat with them
   const [chatId, messageId] = [uuidv4(), uuidv4()]
   const messageText = 'lore ipsum'
-  let variables = {userId: theirUserId, chatId, messageId, messageText}
-  let before = dayjs().toISOString()
-  resp = await ourClient.mutate({mutation: mutations.createDirectChat, variables})
-  let after = dayjs().toISOString()
-  let chat = resp.data.createDirectChat
-  expect(chat.chatId).toBe(chatId)
-  expect(chat.chatType).toBe('DIRECT')
-  expect(chat.name).toBeNull()
-  expect(before <= chat.createdAt).toBe(true)
-  expect(after >= chat.createdAt).toBe(true)
-  const chatCreatedAt = chat.createdAt
-  expect(chat.usersCount).toBe(2)
-  expect(chat.users.items.map((u) => u.userId).sort()).toEqual([ourUserId, theirUserId].sort())
-  expect(chat.messages.items).toHaveLength(1)
-  expect(chat.messages.items[0].messageId).toBe(messageId)
-  expect(chat.messages.items[0].text).toBe(messageText)
-  expect(chat.messages.items[0].textTaggedUsers).toEqual([])
-  expect(chat.messages.items[0].createdAt).toBe(chatCreatedAt)
-  expect(chat.messages.items[0].lastEditedAt).toBeNull()
-  expect(chat.messages.items[0].chat.chatId).toBe(chatId)
-  expect(chat.messages.items[0].author.userId).toBe(ourUserId)
-  expect(chat.messages.items[0].viewedStatus).toBe('VIEWED')
+  const before = dayjs().toISOString()
+  await ourClient
+    .mutate({
+      mutation: mutations.createDirectChat,
+      variables: {userId: theirUserId, chatId, messageId, messageText},
+    })
+    .then(({data}) => expect(data.createDirectChat.chatId).toBe(chatId))
+  const after = dayjs().toISOString()
+
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.chat, variables: {chatId}})
+    expect(data).toMatchObject({chat: {chatId, chatType: 'DIRECT', name: null}})
+    expect(data.chat.createdAt > before).toBe(true)
+    expect(data.chat.createdAt < after).toBe(true)
+    expect(data.chat.createdAt < data.chat.lastMessageActivityAt).toBe(true)
+    expect(data.chat.usersCount).toBe(2)
+    expect(data.chat.users.items.map((u) => u.userId).sort()).toEqual([ourUserId, theirUserId].sort())
+    expect(data.chat.messages.items).toHaveLength(1)
+    expect(data.chat.messages.items[0].messageId).toBe(messageId)
+    expect(data.chat.messages.items[0].text).toBe(messageText)
+    expect(data.chat.messages.items[0].textTaggedUsers).toEqual([])
+    expect(data.chat.createdAt < data.chat.messages.items[0].createdAt).toBe(true)
+    expect(data.chat.messages.items[0].lastEditedAt).toBeNull()
+    expect(data.chat.messages.items[0].chat.chatId).toBe(chatId)
+    expect(data.chat.messages.items[0].author.userId).toBe(ourUserId)
+    expect(data.chat.messages.items[0].viewedStatus).toBe('VIEWED')
+  })
 
   // check we can see that direct chat when looking at their profile
   await eventually(async () => {
     const {data} = await ourClient.query({query: queries.user, variables: {userId: theirUserId}})
     expect(data.user.directChat.chatId).toBe(chatId)
-    expect(data.user.directChat.lastMessageActivityAt).toBe(chatCreatedAt)
-    expect(data.user.directChat.messagesCount).toBe(1)
     expect(data.user.chatCount).toBeNull()
     expect(data.user.chats).toBeNull()
   })
 
   // check they can see that direct chat when looking at our profile
-  resp = await theirClient.query({query: queries.user, variables: {userId: ourUserId}})
-  expect(resp.data.user.directChat.chatId).toBe(chatId)
-  expect(resp.data.user.chatCount).toBeNull()
-  expect(resp.data.user.chats).toBeNull()
+  await theirClient.query({query: queries.user, variables: {userId: ourUserId}}).then(({data}) => {
+    expect(data.user.directChat.chatId).toBe(chatId)
+    expect(data.user.chatCount).toBeNull()
+    expect(data.user.chats).toBeNull()
+  })
 
   // check we see the chat in our list of chats
-  resp = await ourClient.query({query: queries.user, variables: {userId: ourUserId}})
-  expect(resp.data.user.directChat).toBeNull()
-  expect(resp.data.user.chatCount).toBe(1)
-  expect(resp.data.user.chats.items).toHaveLength(1)
-  expect(resp.data.user.chats.items[0].chatId).toBe(chatId)
+  await ourClient.query({query: queries.user, variables: {userId: ourUserId}}).then(({data}) => {
+    expect(data.user.directChat).toBeNull()
+    expect(data.user.chatCount).toBe(1)
+    expect(data.user.chats.items).toHaveLength(1)
+    expect(data.user.chats.items[0].chatId).toBe(chatId)
+  })
 
   // check they see the chat in their list of chats
-  resp = await theirClient.query({query: queries.user, variables: {userId: theirUserId}})
-  expect(resp.data.user.directChat).toBeNull()
-  expect(resp.data.user.chatCount).toBe(1)
-  expect(resp.data.user.chats.items).toHaveLength(1)
-  expect(resp.data.user.chats.items[0].chatId).toBe(chatId)
+  await theirClient.query({query: queries.user, variables: {userId: theirUserId}}).then(({data}) => {
+    expect(data.user.directChat).toBeNull()
+    expect(data.user.chatCount).toBe(1)
+    expect(data.user.chats.items).toHaveLength(1)
+    expect(data.user.chats.items[0].chatId).toBe(chatId)
+  })
 
-  // check we can both see the chat directly
-  resp = await ourClient.query({query: queries.chat, variables: {chatId}})
-  expect(resp.data.chat.chatId).toBe(chatId)
-
-  resp = await theirClient.query({query: queries.chat, variables: {chatId}})
-  expect(resp.data.chat.chatId).toBe(chatId)
+  // check they can both see the chat directly
+  await theirClient
+    .query({query: queries.chat, variables: {chatId}})
+    .then(({data}) => expect(data).toMatchObject({chat: {chatId}}))
 
   // check that another rando can't see either the chat either by looking at either of us or direct access
-  resp = await randoClient.query({query: queries.user, variables: {userId: ourUserId}})
-  expect(resp.data.user.directChat).toBeNull()
-  expect(resp.data.user.chatCount).toBeNull()
-  expect(resp.data.user.chats).toBeNull()
+  await randoClient.query({query: queries.user, variables: {userId: ourUserId}}).then(({data}) => {
+    expect(data.user.directChat).toBeNull()
+    expect(data.user.chatCount).toBeNull()
+    expect(data.user.chats).toBeNull()
+  })
 
-  resp = await randoClient.query({query: queries.user, variables: {userId: theirUserId}})
-  expect(resp.data.user.directChat).toBeNull()
-  expect(resp.data.user.chatCount).toBeNull()
-  expect(resp.data.user.chats).toBeNull()
+  await randoClient.query({query: queries.user, variables: {userId: theirUserId}}).then(({data}) => {
+    expect(data.user.directChat).toBeNull()
+    expect(data.user.chatCount).toBeNull()
+    expect(data.user.chats).toBeNull()
+  })
 
-  resp = await randoClient.query({query: queries.chat, variables: {chatId}})
-  expect(resp.data.chat).toBeNull()
+  await randoClient
+    .query({query: queries.chat, variables: {chatId}})
+    .then(({data}) => expect(data.chat).toBeNull())
 })
 
 test('Cannot create a direct chat if one already exists', async () => {
@@ -175,7 +185,7 @@ test('Anonymous users cannot create direct chats nor be added to one', async () 
       mutation: mutations.createDirectChat,
       variables: {userId: anonUserId, chatId: uuidv4(), messageId: uuidv4(), messageText: 'lore ipsum'},
     }),
-  ).rejects.toThrow(/ClientError: Cannot open direct chat with user with status `ANONYMOUS`/)
+  ).rejects.toThrow(/ClientError: .* has non-active status/)
 })
 
 test('Cannot open direct chat with self', async () => {
@@ -184,7 +194,7 @@ test('Cannot open direct chat with self', async () => {
   const chatId = uuidv4()
   let variables = {userId: ourUserId, chatId, messageId: uuidv4(), messageText: 'lore ipsum'}
   await expect(ourClient.mutate({mutation: mutations.createDirectChat, variables})).rejects.toThrow(
-    /ClientError: .* cannot open direct chat with themselves/,
+    /ClientError: .* cannot chat with themselves/,
   )
 })
 
@@ -204,9 +214,6 @@ test('Create multiple direct chats', async () => {
   let variables = {userId: ourUserId, chatId: chatId1, messageId: messageId1, messageText: messageText1}
   resp = await other1Client.mutate({mutation: mutations.createDirectChat, variables})
   expect(resp.data.createDirectChat.chatId).toBe(chatId1)
-  expect(resp.data.createDirectChat.messages.items).toHaveLength(1)
-  expect(resp.data.createDirectChat.messages.items[0].messageId).toBe(messageId1)
-  expect(resp.data.createDirectChat.messages.items[0].text).toBe(messageText1)
 
   // other2 opens up a direct chat with us
   const [chatId2, messageId2] = [uuidv4(), uuidv4()]
@@ -214,9 +221,6 @@ test('Create multiple direct chats', async () => {
   variables = {userId: ourUserId, chatId: chatId2, messageId: messageId2, messageText: messageText2}
   resp = await other2Client.mutate({mutation: mutations.createDirectChat, variables})
   expect(resp.data.createDirectChat.chatId).toBe(chatId2)
-  expect(resp.data.createDirectChat.messages.items).toHaveLength(1)
-  expect(resp.data.createDirectChat.messages.items[0].messageId).toBe(messageId2)
-  expect(resp.data.createDirectChat.messages.items[0].text).toBe(messageText2)
 
   // check we see both chats
   await eventually(async () => {

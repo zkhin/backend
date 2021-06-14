@@ -879,20 +879,22 @@ def test_update_last_post_view_at_user_dne(user_dynamo, caplog):
 def test_add_delete_user_deleted(user_dynamo, caplog):
     # verify starting state
     user_id = str(uuid4())
+    username = str(uuid4())
     key = {'partitionKey': f'user/{user_id}', 'sortKey': 'deleted'}
     assert user_dynamo.client.get_item(key) is None
 
     # add the item, verify
     before = pendulum.now('utc')
-    user_deleted_item = user_dynamo.add_user_deleted(user_id)
+    user_deleted_item = user_dynamo.add_user_deleted(user_id, username)
     after = pendulum.now('utc')
-    assert user_dynamo.client.get_item(key) == user_deleted_item
+    assert user_dynamo.get_user_deleted(user_id) == user_deleted_item
     deleted_at = pendulum.parse(user_deleted_item['deletedAt'])
     assert user_deleted_item == {
         'partitionKey': f'user/{user_id}',
         'sortKey': 'deleted',
         'schemaVersion': 0,
         'userId': user_id,
+        'username': username,
         'deletedAt': deleted_at.to_iso8601_string(),
         'gsiA1PartitionKey': 'userDeleted',
         'gsiA1SortKey': deleted_at.to_iso8601_string(),
@@ -902,7 +904,7 @@ def test_add_delete_user_deleted(user_dynamo, caplog):
 
     # verify can't add same subitem a second time
     with caplog.at_level(logging.WARNING):
-        new_item = user_dynamo.add_user_deleted(user_id)
+        new_item = user_dynamo.add_user_deleted(user_id, str(uuid4()))
     assert new_item is None
     assert len(caplog.records) == 1
     assert caplog.records[0].levelname == 'WARNING'
@@ -911,16 +913,16 @@ def test_add_delete_user_deleted(user_dynamo, caplog):
     # delete the subitem
     new_item = user_dynamo.delete_user_deleted(user_id)
     assert new_item == user_deleted_item
-    assert user_dynamo.client.get_item(key) is None
+    assert user_dynamo.get_user_deleted(user_id) is None
 
     # verify deletes are idempotent
     new_item = user_dynamo.delete_user_deleted(user_id)
     assert new_item is None
-    assert user_dynamo.client.get_item(key) is None
+    assert user_dynamo.get_user_deleted(user_id) is None
 
     # verify we can now re-add the subitem
-    new_item = user_dynamo.add_user_deleted(user_id, now=deleted_at)
-    assert user_dynamo.client.get_item(key) == new_item
+    new_item = user_dynamo.add_user_deleted(user_id, username, now=deleted_at)
+    assert user_dynamo.get_user_deleted(user_id) == new_item
     assert new_item == user_deleted_item
 
 

@@ -405,24 +405,23 @@ test('resetUser causes us to leave group chats', async () => {
 
   // we create a group chat with them
   const [chatId, messageId] = [uuidv4(), uuidv4()]
-  let variables = {chatId, userIds: [theirUserId], messageId, messageText: 'm1'}
-  let resp = await ourClient.mutate({mutation: mutations.createGroupChat, variables})
-  expect(resp.data.createGroupChat.chatId).toBe(chatId)
+  await ourClient.mutate({
+    mutation: mutations.createGroupChat,
+    variables: {chatId, userIds: [theirUserId], messageId, messageText: 'm1'},
+  })
 
   // check they see us and our chat message in the second group chat
   await eventually(async () => {
     const {data} = await theirClient.query({query: queries.chat, variables: {chatId}})
-    expect(data.chat).toBeTruthy()
-    expect(data.chat.chatId).toBe(chatId)
-    expect(data.chat.usersCount).toBe(2)
+    expect(data).toMatchObject({chat: {chatId, usersCount: 2, messagesCount: 4}})
     expect(data.chat.users.items.map((u) => u.userId).sort()).toEqual([ourUserId, theirUserId].sort())
-    expect(data.chat.messagesCount).toBe(3)
-    expect(data.chat.messages.items).toHaveLength(3)
+    expect(data.chat.messages.items).toHaveLength(4)
     expect(data.chat.messages.items[0].authorUserId).toBeNull()
     expect(data.chat.messages.items[1].authorUserId).toBeNull()
-    expect(data.chat.messages.items[2].messageId).toBe(messageId)
-    expect(data.chat.messages.items[2].authorUserId).toBe(ourUserId)
-    expect(data.chat.messages.items[2].author.userId).toBe(ourUserId)
+    expect(data.chat.messages.items[2].authorUserId).toBeNull()
+    expect(data.chat.messages.items[3].messageId).toBe(messageId)
+    expect(data.chat.messages.items[3].authorUserId).toBe(ourUserId)
+    expect(data.chat.messages.items[3].author.userId).toBe(ourUserId)
   })
 
   // reset our user
@@ -432,17 +431,16 @@ test('resetUser causes us to leave group chats', async () => {
   // and another system message showed up
   await eventually(async () => {
     const {data} = await theirClient.query({query: queries.chat, variables: {chatId}})
-    expect(data.chat.chatId).toBe(chatId)
-    expect(data.chat.usersCount).toBe(1)
+    expect(data).toMatchObject({chat: {chatId, usersCount: 1, messagesCount: 5}})
     expect(data.chat.users.items.map((u) => u.userId)).toEqual([theirUserId])
-    expect(data.chat.messagesCount).toBe(4)
-    expect(data.chat.messages.items).toHaveLength(4)
+    expect(data.chat.messages.items).toHaveLength(5)
     expect(data.chat.messages.items[0].authorUserId).toBeNull()
     expect(data.chat.messages.items[1].authorUserId).toBeNull()
-    expect(data.chat.messages.items[2].messageId).toBe(messageId)
-    expect(data.chat.messages.items[2].authorUserId).toBe(ourUserId)
-    expect(data.chat.messages.items[2].author).toBeNull()
-    expect(data.chat.messages.items[3].authorUserId).toBeNull()
+    expect(data.chat.messages.items[2].authorUserId).toBeNull()
+    expect(data.chat.messages.items[3].messageId).toBe(messageId)
+    expect(data.chat.messages.items[3].authorUserId).toBe(ourUserId)
+    expect(data.chat.messages.items[3].author).toBeNull()
+    expect(data.chat.messages.items[4].authorUserId).toBeNull()
   })
 })
 

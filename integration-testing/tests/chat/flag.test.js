@@ -70,9 +70,9 @@ test('Flag chat success', async () => {
     })
 
   // check they see the chat as unflagged
-  await theirClient.query({query: queries.chat, variables: {chatId}}).then(({data: {chat}}) => {
-    expect(chat.chatId).toBe(chatId)
-    expect(chat.flagStatus).toBe('NOT_FLAGGED')
+  await eventually(async () => {
+    const {data} = await theirClient.query({query: queries.chat, variables: {chatId}})
+    expect(data).toMatchObject({chat: {chatId, flagStatus: 'NOT_FLAGGED'}})
   })
 
   // they flag the chat

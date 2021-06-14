@@ -13,7 +13,6 @@ from app.models.block.enums import BlockStatus
 from app.models.block.exceptions import BlockException
 from app.models.card.exceptions import CardException
 from app.models.chat.exceptions import ChatException
-from app.models.chat_message.enums import ChatMessageNotificationType
 from app.models.chat_message.exceptions import ChatMessageException
 from app.models.comment.exceptions import CommentException
 from app.models.follower.enums import FollowStatus
@@ -1346,19 +1345,17 @@ def create_direct_chat(caller_user, arguments, **kwargs):
     chat_id, user_id = arguments['chatId'], arguments['userId']
     message_id, message_text = arguments['messageId'], arguments['messageText']
 
-    user = user_manager.get_user(user_id)
-    if not user:
-        raise ClientException(f'User `{user_id}` does not exist')
-
-    now = pendulum.now('utc')
     try:
-        chat = chat_manager.add_direct_chat(chat_id, caller_user.id, user_id, now=now)
-        msg = chat_message_manager.add_chat_message(message_id, message_text, chat_id, caller_user.id, now=now)
+        chat = chat_manager.add_direct_chat(
+            chat_id,
+            caller_user.id,
+            user_id,
+            initial_message_id=message_id,
+            initial_message_text=message_text,
+        )
     except ChatException as err:
         raise ClientException(str(err)) from err
 
-    msg.trigger_notifications(ChatMessageNotificationType.ADDED, user_ids=[user_id])
-    chat.refresh_item(strongly_consistent=True)
     return chat.item
 
 
@@ -1371,14 +1368,17 @@ def create_group_chat(caller_user, arguments, **kwargs):
     message_id, message_text = arguments['messageId'], arguments['messageText']
 
     try:
-        chat = chat_manager.add_group_chat(chat_id, caller_user, name=name)
-        chat.add(caller_user, user_ids)
-        message = chat_message_manager.add_chat_message(message_id, message_text, chat_id, caller_user.id)
+        chat = chat_manager.add_group_chat(
+            chat_id,
+            caller_user.id,
+            with_user_ids=user_ids,
+            initial_message_id=message_id,
+            initial_message_text=message_text,
+            name=name,
+        )
     except ChatException as err:
         raise ClientException(str(err)) from err
 
-    message.trigger_notifications(ChatMessageNotificationType.ADDED, user_ids=user_ids)
-    chat.refresh_item(strongly_consistent=True)
     return chat.item
 
 
@@ -1395,7 +1395,7 @@ def edit_group_chat(caller_user, arguments, **kwargs):
         raise ClientException(f'User `{caller_user.id}` is not a member of chat `{chat_id}`')
 
     try:
-        chat.edit(caller_user, name=name)
+        chat.edit(name=name)
     except ChatException as err:
         raise ClientException(str(err)) from err
 
@@ -1414,7 +1414,7 @@ def add_to_group_chat(caller_user, arguments, **kwargs):
         raise ClientException(f'User `{caller_user.id}` is not a member of chat `{chat_id}`')
 
     try:
-        chat.add(caller_user, user_ids)
+        chat.add(caller_user.id, user_ids)
     except ChatException as err:
         raise ClientException(str(err)) from err
 
@@ -1433,7 +1433,7 @@ def leave_group_chat(caller_user, arguments, **kwargs):
         raise ClientException(f'User `{caller_user.id}` is not a member of chat `{chat_id}`')
 
     try:
-        chat.leave(caller_user)
+        chat.leave(caller_user.id)
     except ChatException as err:
         raise ClientException(str(err)) from err
 
@@ -1489,11 +1489,12 @@ def add_chat_message(caller_user, arguments, **kwargs):
         raise ClientException(f'User `{caller_user.id}` is not a member of chat `{chat_id}`')
 
     try:
-        message = chat_message_manager.add_chat_message(message_id, text, chat_id, caller_user.id)
+        message = chat_message_manager.add_chat_message(
+            chat_id, text, message_id=message_id, user_id=caller_user.id
+        )
     except ChatException as err:
         raise ClientException(str(err)) from err
 
-    message.trigger_notifications(ChatMessageNotificationType.ADDED)
     return message.serialize(caller_user.id)
 
 
@@ -1513,7 +1514,6 @@ def edit_chat_message(caller_user, arguments, **kwargs):
     except ChatException as err:
         raise ClientException(str(err)) from err
 
-    message.trigger_notifications(ChatMessageNotificationType.EDITED)
     return message.serialize(caller_user.id)
 
 
@@ -1533,7 +1533,6 @@ def delete_chat_message(caller_user, arguments, **kwargs):
     except ChatException as err:
         raise ClientException(str(err)) from err
 
-    message.trigger_notifications(ChatMessageNotificationType.DELETED)
     return message.serialize(caller_user.id)
 
 

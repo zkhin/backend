@@ -12,26 +12,27 @@ def cm_dynamo(dynamo_client):
     yield ChatMemberDynamo(dynamo_client)
 
 
-def test_transact_add(cm_dynamo):
-    chat_id = 'cid2'
-    user_id = 'uid'
-    now = pendulum.now('utc')
-
-    # add the chat membership to the DB
-    transact = cm_dynamo.transact_add(chat_id, user_id, now=now)
-    cm_dynamo.client.transact_write_items([transact])
-
-    # retrieve the chat membership and verify all good
-    item = cm_dynamo.get(chat_id, user_id)
-    joined_at_str = now.to_iso8601_string()
+@pytest.mark.parametrize('now', [None, pendulum.parse('2020-05-01T01:02:03Z')])
+def test_add(cm_dynamo, now):
+    chat_id, user_id = str(uuid4()), str(uuid4())
+    before = pendulum.now('utc')
+    item = cm_dynamo.add(chat_id, user_id, now=now)
+    after = pendulum.now('utc')
+    assert cm_dynamo.get(chat_id, user_id) == item
+    created_at = pendulum.parse(item['createdAt'])
+    if now:
+        assert now == created_at
+    else:
+        assert before <= created_at <= after
     assert item == {
-        'partitionKey': 'chat/cid2',
-        'sortKey': 'member/uid',
+        'partitionKey': f'chat/{chat_id}',
+        'sortKey': f'member/{user_id}',
         'schemaVersion': 1,
-        'gsiK1PartitionKey': 'chat/cid2',
-        'gsiK1SortKey': f'member/{joined_at_str}',
-        'gsiK2PartitionKey': 'member/uid',
-        'gsiK2SortKey': f'chat/{joined_at_str}',
+        'createdAt': item['createdAt'],
+        'gsiK1PartitionKey': f'chat/{chat_id}',
+        'gsiK1SortKey': f'member/{item["createdAt"]}',
+        'gsiK2PartitionKey': f'member/{user_id}',
+        'gsiK2SortKey': f'chat/{item["createdAt"]}',
     }
 
 
@@ -40,8 +41,7 @@ def test_delete(cm_dynamo):
     user_id = 'uid'
 
     # add the chat membership to the DB, verify it is in DB
-    transact = cm_dynamo.transact_add(chat_id, user_id)
-    cm_dynamo.client.transact_write_items([transact])
+    cm_dynamo.add(chat_id, user_id)
     assert cm_dynamo.get(chat_id, user_id)
 
     # delete it, verify it was removed from DB
@@ -55,8 +55,7 @@ def test_update_last_message_activity_at(cm_dynamo, caplog):
     # add a member to the chat
     user_id = 'uid1'
     now = pendulum.now('utc')
-    transact = cm_dynamo.transact_add(chat_id, user_id, now)
-    cm_dynamo.client.transact_write_items([transact])
+    cm_dynamo.add(chat_id, user_id, now)
 
     # verify starting state
     item = cm_dynamo.get(chat_id, user_id)
@@ -95,16 +94,14 @@ def test_generate_user_ids_by_chat(cm_dynamo):
 
     # add a member to the chat
     user_id_1 = 'uid1'
-    transact = cm_dynamo.transact_add(chat_id, user_id_1)
-    cm_dynamo.client.transact_write_items([transact])
+    cm_dynamo.add(chat_id, user_id_1)
 
     # verify we generate that user_id
     assert list(cm_dynamo.generate_user_ids_by_chat(chat_id)) == [user_id_1]
 
     # add another member to the chat
     user_id_2 = 'uid2'
-    transact = cm_dynamo.transact_add(chat_id, user_id_2)
-    cm_dynamo.client.transact_write_items([transact])
+    cm_dynamo.add(chat_id, user_id_2)
 
     # verify we generate both user_ids, in order
     assert list(cm_dynamo.generate_user_ids_by_chat(chat_id)) == [user_id_1, user_id_2]
@@ -118,16 +115,14 @@ def test_generate_chat_ids_by_chat(cm_dynamo):
 
     # add user to a chat
     chat_id_1 = 'cid1'
-    transact = cm_dynamo.transact_add(chat_id_1, user_id)
-    cm_dynamo.client.transact_write_items([transact])
+    cm_dynamo.add(chat_id_1, user_id)
 
     # verify we generate that chat_id
     assert list(cm_dynamo.generate_chat_ids_by_user(user_id)) == [chat_id_1]
 
     # add user to another chat
     chat_id_2 = 'cid2'
-    transact = cm_dynamo.transact_add(chat_id_2, user_id)
-    cm_dynamo.client.transact_write_items([transact])
+    cm_dynamo.add(chat_id_2, user_id)
 
     # verify we generate both chat_ids, in order
     assert list(cm_dynamo.generate_chat_ids_by_user(user_id)) == [chat_id_1, chat_id_2]
@@ -136,8 +131,7 @@ def test_generate_chat_ids_by_chat(cm_dynamo):
 def test_increment_clear_messages_unviewed_count(cm_dynamo, caplog):
     # add the chat to the DB, verify it is in DB
     chat_id, user_id = str(uuid4()), str(uuid4())
-    transact = cm_dynamo.transact_add(chat_id, user_id)
-    cm_dynamo.client.transact_write_items([transact])
+    cm_dynamo.add(chat_id, user_id)
     assert 'messagesUnviewedCount' not in cm_dynamo.get(chat_id, user_id)
 
     # increment
@@ -184,8 +178,7 @@ def test_increment_decrement_count(cm_dynamo, caplog, incrementor_name, decremen
         caplog.clear()
 
     # add the user to the DB, verify it is in DB
-    transact = cm_dynamo.transact_add(chat_id, user_id)
-    cm_dynamo.client.transact_write_items([transact])
+    cm_dynamo.add(chat_id, user_id)
     assert attribute_name not in cm_dynamo.get(chat_id, user_id)
 
     # increment twice, verify

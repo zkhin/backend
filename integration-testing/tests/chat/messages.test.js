@@ -20,46 +20,47 @@ test('Add messages to a direct chat', async () => {
 
   // they open up a chat with us
   const [chatId, messageId1, text1] = [uuidv4(), uuidv4(), 'hey this is msg 1']
-  let variables = {userId: ourUserId, chatId, messageId: messageId1, messageText: text1}
-  let resp = await theirClient.mutate({mutation: mutations.createDirectChat, variables})
-  expect(resp.data.createDirectChat.chatId).toBe(chatId)
-  expect(resp.data.createDirectChat.messages.items).toHaveLength(1)
-  expect(resp.data.createDirectChat.messages.items[0].messageId).toBe(messageId1)
-  expect(resp.data.createDirectChat.messages.items[0].text).toBe(text1)
+  await theirClient.mutate({
+    mutation: mutations.createDirectChat,
+    variables: {userId: ourUserId, chatId, messageId: messageId1, messageText: text1},
+  })
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.chat, variables: {chatId}})
+    expect(data).toMatchObject({chat: {chatId}})
+  })
 
   // we add two messages to the chat
   const [messageId2, text2] = [uuidv4(), 'msg 2']
-  variables = {chatId, messageId: messageId2, text: text2}
-  resp = await ourClient.mutate({mutation: mutations.addChatMessage, variables})
-  expect(resp.data.addChatMessage.messageId).toBe(messageId2)
-  expect(resp.data.addChatMessage.text).toBe(text2)
-  expect(resp.data.addChatMessage.chat.chatId).toBe(chatId)
-
   const [messageId3, text3] = [uuidv4(), 'msg 3']
-  variables = {chatId, messageId: messageId3, text: text3}
-  resp = await ourClient.mutate({mutation: mutations.addChatMessage, variables})
-  expect(resp.data.addChatMessage.messageId).toBe(messageId3)
-  expect(resp.data.addChatMessage.text).toBe(text3)
-  expect(resp.data.addChatMessage.chat.chatId).toBe(chatId)
+  await ourClient.mutate({
+    mutation: mutations.addChatMessage,
+    variables: {chatId, messageId: messageId2, text: text2},
+  })
+  await ourClient.mutate({
+    mutation: mutations.addChatMessage,
+    variables: {chatId, messageId: messageId3, text: text3},
+  })
 
   // they add another message to the chat, check the timestamp
   const [messageId4, text4] = [uuidv4(), 'msg 4']
-  variables = {chatId, messageId: messageId4, text: text4}
-  let before = dayjs().toISOString()
-  resp = await theirClient.mutate({mutation: mutations.addChatMessage, variables})
-  let after = dayjs().toISOString()
-  expect(resp.data.addChatMessage.messageId).toBe(messageId4)
-  expect(resp.data.addChatMessage.text).toBe(text4)
-  expect(resp.data.addChatMessage.chat.chatId).toBe(chatId)
-  const lastMessageCreatedAt = resp.data.addChatMessage.createdAt
-  expect(before <= lastMessageCreatedAt).toBe(true)
-  expect(after >= lastMessageCreatedAt).toBe(true)
+  const before = dayjs().toISOString()
+  await theirClient.mutate({
+    mutation: mutations.addChatMessage,
+    variables: {chatId, messageId: messageId4, text: text4},
+  })
+  const after = dayjs().toISOString()
+  await eventually(async () => {
+    const {data} = await theirClient.query({query: queries.chat, variables: {chatId}})
+    expect(data).toMatchObject({chat: {chatId, messagesCount: 4}})
+    expect(data.chat.messages.items[3].createdAt > before).toBe(true)
+    expect(data.chat.messages.items[3].createdAt < after).toBe(true)
+    expect(data.chat.lastMessageActivityAt).toBe(data.chat.messages.items[3].createdAt)
+  })
 
   // check we see all the messages are there in the expected order
   await eventually(async () => {
     const {data} = await ourClient.query({query: queries.chat, variables: {chatId}})
-    expect(data.chat.chatId).toBe(chatId)
-    expect(data.chat.lastMessageActivityAt).toBe(lastMessageCreatedAt)
+    expect(data).toMatchObject({chat: {chatId}})
     expect(data.chat.messagesCount).toBe(4)
     expect(data.chat.messagesViewedCount).toBe(2)
     expect(data.chat.messagesUnviewedCount).toBe(2)
@@ -87,21 +88,21 @@ test('Add messages to a direct chat', async () => {
   })
 
   // check they can also see them, and in reverse order if they want
-  resp = await theirClient.query({query: queries.chat, variables: {chatId, reverse: true}})
-  expect(resp.data.chat.chatId).toBe(chatId)
-  expect(resp.data.chat.lastMessageActivityAt).toBe(lastMessageCreatedAt)
-  expect(resp.data.chat.messagesCount).toBe(4)
-  expect(resp.data.chat.messagesViewedCount).toBe(2)
-  expect(resp.data.chat.messagesUnviewedCount).toBe(2)
-  expect(resp.data.chat.messages.items).toHaveLength(4)
-  expect(resp.data.chat.messages.items[0].messageId).toBe(messageId4)
-  expect(resp.data.chat.messages.items[1].messageId).toBe(messageId3)
-  expect(resp.data.chat.messages.items[2].messageId).toBe(messageId2)
-  expect(resp.data.chat.messages.items[3].messageId).toBe(messageId1)
-  expect(resp.data.chat.messages.items[0].viewedStatus).toBe('VIEWED')
-  expect(resp.data.chat.messages.items[1].viewedStatus).toBe('NOT_VIEWED')
-  expect(resp.data.chat.messages.items[2].viewedStatus).toBe('NOT_VIEWED')
-  expect(resp.data.chat.messages.items[3].viewedStatus).toBe('VIEWED')
+  await theirClient.query({query: queries.chat, variables: {chatId, reverse: true}}).then(({data}) => {
+    expect(data).toMatchObject({chat: {chatId}})
+    expect(data.chat.messagesCount).toBe(4)
+    expect(data.chat.messagesViewedCount).toBe(2)
+    expect(data.chat.messagesUnviewedCount).toBe(2)
+    expect(data.chat.messages.items).toHaveLength(4)
+    expect(data.chat.messages.items[0].messageId).toBe(messageId4)
+    expect(data.chat.messages.items[1].messageId).toBe(messageId3)
+    expect(data.chat.messages.items[2].messageId).toBe(messageId2)
+    expect(data.chat.messages.items[3].messageId).toBe(messageId1)
+    expect(data.chat.messages.items[0].viewedStatus).toBe('VIEWED')
+    expect(data.chat.messages.items[1].viewedStatus).toBe('NOT_VIEWED')
+    expect(data.chat.messages.items[2].viewedStatus).toBe('NOT_VIEWED')
+    expect(data.chat.messages.items[3].viewedStatus).toBe('VIEWED')
+  })
 })
 
 test('Report chat views', async () => {
@@ -110,23 +111,25 @@ test('Report chat views', async () => {
   const [chatId, messageId1, messageId2, messageId3] = [uuidv4(), uuidv4(), uuidv4(), uuidv4()]
 
   // they open up a chat with us
-  let variables = {userId: ourUserId, chatId, messageId: messageId1, messageText: 'lore'}
-  let resp = await theirClient.mutate({mutation: mutations.createDirectChat, variables})
-  expect(resp.data.createDirectChat.chatId).toBe(chatId)
-  expect(resp.data.createDirectChat.messages.items).toHaveLength(1)
-  expect(resp.data.createDirectChat.messages.items[0].messageId).toBe(messageId1)
-  expect(resp.data.createDirectChat.messages.items[0].viewedStatus).toBe('VIEWED')
+  await theirClient.mutate({
+    mutation: mutations.createDirectChat,
+    variables: {userId: ourUserId, chatId, messageId: messageId1, messageText: 'lore'},
+  })
+  await eventually(async () => {
+    const {data} = await theirClient.query({query: queries.chat, variables: {chatId}})
+    expect(data).toMatchObject({chat: {chatId, usersCount: 2, messagesCount: 1}})
+  })
 
   // they add a message to the chat
-  variables = {chatId, messageId: messageId2, text: 'lore'}
-  resp = await theirClient.mutate({mutation: mutations.addChatMessage, variables})
-  expect(resp.data.addChatMessage.messageId).toBe(messageId2)
-  expect(resp.data.addChatMessage.viewedStatus).toBe('VIEWED')
+  await theirClient.mutate({
+    mutation: mutations.addChatMessage,
+    variables: {chatId, messageId: messageId2, text: 'lore'},
+  })
 
   // check each message's viewedStatus is as expected for us
   await eventually(async () => {
     const {data} = await ourClient.query({query: queries.chat, variables: {chatId}})
-    expect(data.chat.chatId).toBe(chatId)
+    expect(data).toMatchObject({chat: {chatId}})
     expect(data.chat.messagesCount).toBe(2)
     expect(data.chat.messagesViewedCount).toBe(0)
     expect(data.chat.messagesUnviewedCount).toBe(2)
@@ -138,12 +141,12 @@ test('Report chat views', async () => {
   })
 
   // we report to have viewed the chat
-  resp = await ourClient.mutate({mutation: mutations.reportChatViews, variables: {chatIds: [chatId]}})
+  await ourClient.mutate({mutation: mutations.reportChatViews, variables: {chatIds: [chatId]}})
 
   // check all messages now appear viewed for us
   await eventually(async () => {
     const {data} = await ourClient.query({query: queries.chat, variables: {chatId}})
-    expect(data.chat.chatId).toBe(chatId)
+    expect(data).toMatchObject({chat: {chatId}})
     expect(data.chat.messagesCount).toBe(2)
     expect(data.chat.messagesViewedCount).toBe(2)
     expect(data.chat.messagesUnviewedCount).toBe(0)
@@ -155,15 +158,15 @@ test('Report chat views', async () => {
   })
 
   // they add another message to the chat
-  variables = {chatId, messageId: messageId3, text: 'lore'}
-  resp = await theirClient.mutate({mutation: mutations.addChatMessage, variables})
-  expect(resp.data.addChatMessage.messageId).toBe(messageId3)
-  expect(resp.data.addChatMessage.viewedStatus).toBe('VIEWED')
+  await theirClient.mutate({
+    mutation: mutations.addChatMessage,
+    variables: {chatId, messageId: messageId3, text: 'lore'},
+  })
 
   // check the new messages now appears unviewed for us
   await eventually(async () => {
     const {data} = await ourClient.query({query: queries.chat, variables: {chatId}})
-    expect(data.chat.chatId).toBe(chatId)
+    expect(data).toMatchObject({chat: {chatId}})
     expect(data.chat.messagesCount).toBe(3)
     expect(data.chat.messagesViewedCount).toBe(2)
     expect(data.chat.messagesUnviewedCount).toBe(1)
@@ -177,12 +180,12 @@ test('Report chat views', async () => {
   })
 
   // we report to have viewed the chat again
-  resp = await ourClient.mutate({mutation: mutations.reportChatViews, variables: {chatIds: [chatId]}})
+  await ourClient.mutate({mutation: mutations.reportChatViews, variables: {chatIds: [chatId]}})
 
   // check all messages now appear viewed for us
   await eventually(async () => {
     const {data} = await ourClient.query({query: queries.chat, variables: {chatId}})
-    expect(data.chat.chatId).toBe(chatId)
+    expect(data).toMatchObject({chat: {chatId}})
     expect(data.chat.messagesCount).toBe(3)
     expect(data.chat.messagesViewedCount).toBe(3)
     expect(data.chat.messagesUnviewedCount).toBe(0)
@@ -196,18 +199,19 @@ test('Report chat views', async () => {
   })
 
   // check all messages appear viewed for them, because they're athor of them all
-  resp = await theirClient.query({query: queries.chat, variables: {chatId}})
-  expect(resp.data.chat.chatId).toBe(chatId)
-  expect(resp.data.chat.messagesCount).toBe(3)
-  expect(resp.data.chat.messagesViewedCount).toBe(3)
-  expect(resp.data.chat.messagesUnviewedCount).toBe(0)
-  expect(resp.data.chat.messages.items).toHaveLength(3)
-  expect(resp.data.chat.messages.items[0].messageId).toBe(messageId1)
-  expect(resp.data.chat.messages.items[1].messageId).toBe(messageId2)
-  expect(resp.data.chat.messages.items[2].messageId).toBe(messageId3)
-  expect(resp.data.chat.messages.items[0].viewedStatus).toBe('VIEWED')
-  expect(resp.data.chat.messages.items[1].viewedStatus).toBe('VIEWED')
-  expect(resp.data.chat.messages.items[2].viewedStatus).toBe('VIEWED')
+  await theirClient.query({query: queries.chat, variables: {chatId}}).then(({data}) => {
+    expect(data).toMatchObject({chat: {chatId}})
+    expect(data.chat.messagesCount).toBe(3)
+    expect(data.chat.messagesViewedCount).toBe(3)
+    expect(data.chat.messagesUnviewedCount).toBe(0)
+    expect(data.chat.messages.items).toHaveLength(3)
+    expect(data.chat.messages.items[0].messageId).toBe(messageId1)
+    expect(data.chat.messages.items[1].messageId).toBe(messageId2)
+    expect(data.chat.messages.items[2].messageId).toBe(messageId3)
+    expect(data.chat.messages.items[0].viewedStatus).toBe('VIEWED')
+    expect(data.chat.messages.items[1].viewedStatus).toBe('VIEWED')
+    expect(data.chat.messages.items[2].viewedStatus).toBe('VIEWED')
+  })
 })
 
 test('Disabled user cannot add, edit, or delete chat messages', async () => {
@@ -256,7 +260,7 @@ test('Cant add a message to a chat we are not in', async () => {
   // verify chat initialization
   await eventually(async () => {
     const {data} = await ourClient.query({query: queries.chat, variables: {chatId}})
-    expect(data.chat.chatId).toBe(chatId)
+    expect(data).toMatchObject({chat: {chatId}})
     expect(data.chat.messagesCount).toBe(1)
     expect(data.chat.messages.items).toHaveLength(1)
     expect(data.chat.messages.items[0].messageId).toBe(messageId)
@@ -273,11 +277,12 @@ test('Cant add a message to a chat we are not in', async () => {
 
   // check the chat and verify the rando's message didn't get saved
   await sleep()
-  resp = await ourClient.query({query: queries.chat, variables: {chatId}})
-  expect(resp.data.chat.chatId).toBe(chatId)
-  expect(resp.data.chat.messagesCount).toBe(1)
-  expect(resp.data.chat.messages.items).toHaveLength(1)
-  expect(resp.data.chat.messages.items[0].messageId).toBe(messageId)
+  await ourClient.query({query: queries.chat, variables: {chatId}}).then(({data}) => {
+    expect(data).toMatchObject({chat: {chatId}})
+    expect(data.chat.messagesCount).toBe(1)
+    expect(data.chat.messages.items).toHaveLength(1)
+    expect(data.chat.messages.items[0].messageId).toBe(messageId)
+  })
 })
 
 test('Tag users in a chat message', async () => {
@@ -286,38 +291,36 @@ test('Tag users in a chat message', async () => {
   const [chatId, messageId1, messageId2, messageId3] = [uuidv4(), uuidv4(), uuidv4(), uuidv4()]
 
   // they open up a chat with us, with a tags in the message
-  let text = `hi @${theirUsername}! hi from @${ourUsername}`
-  let variables = {userId: ourUserId, chatId, messageId: messageId1, messageText: text}
-  let resp = await theirClient.mutate({mutation: mutations.createDirectChat, variables})
-  expect(resp.data.createDirectChat.chatId).toBe(chatId)
-  expect(resp.data.createDirectChat.messages.items).toHaveLength(1)
-  expect(resp.data.createDirectChat.messages.items[0].messageId).toBe(messageId1)
-  expect(resp.data.createDirectChat.messages.items[0].text).toBe(text)
-  expect(resp.data.createDirectChat.messages.items[0].textTaggedUsers).toHaveLength(2)
+  await theirClient.mutate({
+    mutation: mutations.createDirectChat,
+    variables: {
+      userId: ourUserId,
+      chatId,
+      messageId: messageId1,
+      messageText: `hi @${theirUsername}! hi from @${ourUsername}`,
+    },
+  })
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.chat, variables: {chatId}})
+    expect(data).toMatchObject({chat: {chatId}})
+  })
 
   // we add a message with one tag
-  text = `hi @${theirUsername}!`
-  variables = {chatId, messageId: messageId2, text}
-  resp = await ourClient.mutate({mutation: mutations.addChatMessage, variables})
-  expect(resp.data.addChatMessage.messageId).toBe(messageId2)
-  expect(resp.data.addChatMessage.text).toBe(text)
-  expect(resp.data.addChatMessage.textTaggedUsers).toHaveLength(1)
-  expect(resp.data.addChatMessage.textTaggedUsers[0].tag).toBe(`@${theirUsername}`)
-  expect(resp.data.addChatMessage.textTaggedUsers[0].user.userId).toBe(theirUserId)
+  await ourClient.mutate({
+    mutation: mutations.addChatMessage,
+    variables: {chatId, messageId: messageId2, text: `hi @${theirUsername}!`},
+  })
 
   // we add a message with no tags
-  text = 'not tagging anyone here'
-  variables = {chatId, messageId: messageId3, text}
-  resp = await ourClient.mutate({mutation: mutations.addChatMessage, variables})
-  expect(resp.data.addChatMessage.messageId).toBe(messageId3)
-  expect(resp.data.addChatMessage.text).toBe(text)
-  expect(resp.data.addChatMessage.textTaggedUsers).toHaveLength(0)
+  await ourClient.mutate({
+    mutation: mutations.addChatMessage,
+    variables: {chatId, messageId: messageId3, text: 'not tagging anyone here'},
+  })
 
   // check the chat, make sure the tags all look as expected
   await eventually(async () => {
     const {data} = await theirClient.query({query: queries.chat, variables: {chatId}})
-    expect(data.chat).toBeTruthy()
-    expect(data.chat.chatId).toBe(chatId)
+    expect(data).toMatchObject({chat: {chatId}})
     expect(data.chat.messagesCount).toBe(3)
     expect(data.chat.messages.items).toHaveLength(3)
     expect(data.chat.messages.items[0].messageId).toBe(messageId1)
@@ -338,12 +341,17 @@ test('Edit chat message', async () => {
 
   // they open up a chat with us
   const [chatId, messageId, orgText] = [uuidv4(), uuidv4(), 'lore org']
-  let variables = {userId: ourUserId, chatId, messageId, messageText: orgText}
-  let resp = await theirClient.mutate({mutation: mutations.createDirectChat, variables})
-  expect(resp.data.createDirectChat.chatId).toBe(chatId)
+  await theirClient.mutate({
+    mutation: mutations.createDirectChat,
+    variables: {userId: ourUserId, chatId, messageId, messageText: orgText},
+  })
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.chat, variables: {chatId}})
+    expect(data).toMatchObject({chat: {chatId, usersCount: 2, messagesCount: 1}})
+  })
 
   // verify neither rando nor us can edit the chat message
-  variables = {messageId, text: 'lore new'}
+  let variables = {messageId, text: 'lore new'}
   await expect(randoClient.mutate({mutation: mutations.editChatMessage, variables})).rejects.toThrow(
     /ClientError: User .* cannot edit message /,
   )
@@ -353,7 +361,7 @@ test('Edit chat message', async () => {
 
   // we report a view of the chat
   variables = {chatIds: [chatId]}
-  resp = await ourClient.mutate({mutation: mutations.reportChatViews, variables})
+  let resp = await ourClient.mutate({mutation: mutations.reportChatViews, variables})
 
   // check the message hasn't changed
   resp = await ourClient.query({query: queries.chat, variables: {chatId}})

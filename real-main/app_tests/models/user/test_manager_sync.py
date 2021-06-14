@@ -20,17 +20,20 @@ user2 = user
 
 @pytest.fixture
 def chat(chat_manager, user, user2):
-    yield chat_manager.add_direct_chat(str(uuid4()), user.id, user2.id)
+    chat_id = str(uuid4())
+    chat = chat_manager.add_direct_chat(chat_id, user.id, user2.id)
+    chat_manager.on_chat_add(chat_id, chat.item)
+    yield chat
 
 
 @pytest.fixture
 def message(chat_message_manager, chat, user2):
-    yield chat_message_manager.add_chat_message(str(uuid4()), 'lore ipsum', chat.id, user2.id)
+    yield chat_message_manager.add_chat_message(chat.id, 'lore ipsum', user_id=user2.id)
 
 
 @pytest.fixture
 def system_message(chat_message_manager, chat):
-    yield chat_message_manager.add_system_message(chat.id, 'system lore')
+    yield chat_message_manager.add_chat_message(chat.id, 'system lore')
 
 
 def test_sync_elasticsearch(user_manager, user):

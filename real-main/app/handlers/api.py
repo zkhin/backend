@@ -1,8 +1,6 @@
 import json
 import logging
 
-import pendulum
-
 from app import clients, models
 from app.logging import LogLevelContext, handler_logging
 from app.models.card import templates
@@ -40,10 +38,13 @@ def create_dating_chat(event, context):
     match_user_id = event['matchUserId']
     message_text = event['messageText']
 
-    # Create direct chat with system message
-    now = pendulum.now('utc')
-    chat = chat_manager.add_direct_chat(chat_id, user_id, match_user_id, now=now)
-    chat_message_manager.add_system_message(chat_id, message_text, user_ids=[user_id, match_user_id], now=now)
+    # Create group chat with system message
+    chat = chat_manager.add_group_chat(
+        chat_id,
+        user_id,
+        with_user_ids=[match_user_id],
+        initial_message_text=message_text,
+    )
 
     # Add dating matched card
     card_template_1 = templates.UserDatingMatchedCardTemplate(user_id)

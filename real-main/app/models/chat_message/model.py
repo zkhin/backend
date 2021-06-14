@@ -41,6 +41,7 @@ class ChatMessage(FlagModelMixin):
         self.chat_id = self.item['chatId']
         self.user_id = self.item.get('userId')  # system messages have no userId
         self.created_at = pendulum.parse(self.item['createdAt'])
+        self.is_initial = self.item.get('isInitial', False)
 
     @property
     def author(self):
@@ -53,6 +54,14 @@ class ChatMessage(FlagModelMixin):
         if not hasattr(self, '_chat'):
             self._chat = self.chat_manager.get_chat(self.chat_id) if self.chat_id else None
         return self._chat
+
+    @property
+    def text(self):
+        return self.item['text']
+
+    @property
+    def text_tags(self):
+        return self.item['textTags']
 
     def refresh_item(self, strongly_consistent=False):
         self.item = self.dynamo.get_chat_message(self.id, strongly_consistent=strongly_consistent)

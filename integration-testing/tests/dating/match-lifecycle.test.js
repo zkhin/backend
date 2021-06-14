@@ -183,8 +183,8 @@ test('POTENTIAL -> CONFIRMED', async () => {
     expect(secondCard.title).toBe("It's a match! Kick things off by saying hello!")
     expect(secondCard.action).toBe(`https://real.app/user/${ourUserId}/dating_matched`)
     const chat = data.self.chats.items[0]
-    expect(chat.chatType).toBe('DIRECT')
-    expect(chat.messagesCount).toBe(1)
+    expect(chat.chatType).toBe('GROUP')
+    expect(chat.messagesCount).toBe(4)
     expect(chat.usersCount).toBe(2)
     expect(chat.users.items.map((u) => u.userId).sort()).toEqual([ourUserId, theirUserId].sort())
   })

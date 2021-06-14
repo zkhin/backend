@@ -26,14 +26,15 @@ def comment(comment_manager, post, user):
 
 @pytest.fixture
 def chat(chat_manager, user, user2):
-    group_chat = chat_manager.add_group_chat(str(uuid4()), user)
-    group_chat.add(user, [user2.id])
+    chat_id = str(uuid4())
+    group_chat = chat_manager.add_group_chat(chat_id, user.id, [user2.id])
+    chat_manager.on_chat_add(chat_id, group_chat.item)
     yield group_chat
 
 
 @pytest.fixture
 def message(chat_message_manager, chat, user):
-    yield chat_message_manager.add_chat_message(str(uuid4()), 'lore ipsum', chat.id, user.id)
+    yield chat_message_manager.add_chat_message(chat.id, 'lore ipsum', user_id=user.id)
 
 
 user2 = user

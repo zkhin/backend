@@ -16,7 +16,10 @@ user2 = user1
 
 @pytest.fixture
 def chat(chat_manager, user1, user2):
-    yield chat_manager.add_direct_chat(str(uuid4()), user1.id, user2.id)
+    chat_id = str(uuid4())
+    chat = chat_manager.add_direct_chat(chat_id, user1.id, user2.id)
+    chat_manager.on_chat_add(chat_id, chat.item)
+    yield chat
 
 
 def test_sync_member_messages_unviewed_count(chat_manager, chat, user1, user2):

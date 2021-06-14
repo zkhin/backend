@@ -30,7 +30,10 @@ def card(user, card_manager, TestCardTemplate):
 
 @pytest.fixture
 def chat(user, chat_manager):
-    yield chat_manager.add_group_chat(str(uuid4()), user)
+    chat_id = str(uuid4())
+    chat = chat_manager.add_group_chat(chat_id, user.id, [])
+    chat_manager.on_chat_add(chat_id, chat.item)
+    yield chat
 
 
 @pytest.fixture
@@ -89,7 +92,7 @@ def test_on_comment_delete_adjusts_counts(user_manager, user, comment, caplog):
 def test_on_user_add_delete_user_deleted_subitem(user_manager, user):
     key = {'partitionKey': f'user/{user.id}', 'sortKey': 'deleted'}
     # add a deleted subitem, verify
-    user_manager.dynamo.add_user_deleted(user.id)
+    user_manager.dynamo.add_user_deleted(user.id, user.username)
     assert user_manager.dynamo.client.get_item(key)
 
     # run handler, verify
@@ -120,10 +123,9 @@ def test_on_user_delete_calls_dating_project(user_manager, user):
 
 
 def test_on_user_delete_adds_user_deleted_subitem(user_manager, user):
-    key = {'partitionKey': f'user/{user.id}', 'sortKey': 'deleted'}
-    assert user_manager.dynamo.client.get_item(key) is None
+    assert user_manager.dynamo.get_user_deleted(user.id) is None
     user_manager.on_user_delete(user.id, old_item=user.item)
-    assert user_manager.dynamo.client.get_item(key) is not None
+    assert user_manager.dynamo.get_user_deleted(user.id) is not None
 
 
 def test_on_user_delete_deletes_trending(user_manager, user):

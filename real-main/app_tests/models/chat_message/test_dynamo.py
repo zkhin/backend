@@ -12,18 +12,53 @@ def chat_message_dynamo(dynamo_client):
     yield ChatMessageDynamo(dynamo_client)
 
 
-@pytest.mark.parametrize('user_id', ['uid', None])
-def test_add_chat_message(chat_message_dynamo, user_id):
+def test_add_chat_message_minimal(chat_message_dynamo):
     message_id = 'mid'
     chat_id = 'cid'
+    user_id = None
+    text = 'message_text'
+    text_tags = []
+
+    # add the chat to the DB, verify correct form
+    before = pendulum.now('utc')
+    item = chat_message_dynamo.add_chat_message(message_id, chat_id, user_id, text, text_tags)
+    after = pendulum.now('utc')
+    assert chat_message_dynamo.get_chat_message(message_id) == item
+    assert before <= pendulum.parse(item['createdAt']) <= after
+    assert item == {
+        'partitionKey': 'chatMessage/mid',
+        'sortKey': '-',
+        'schemaVersion': 1,
+        'gsiA1PartitionKey': 'chatMessage/cid',
+        'gsiA1SortKey': item['createdAt'],
+        'messageId': 'mid',
+        'chatId': 'cid',
+        'createdAt': item['createdAt'],
+        'text': text,
+        'textTags': text_tags,
+    }
+
+    # verify we can't add the same message twice
+    with pytest.raises(chat_message_dynamo.client.exceptions.ConditionalCheckFailedException):
+        chat_message_dynamo.add_chat_message(message_id, chat_id, user_id, text, text_tags)
+
+
+def test_add_chat_message_maximal(chat_message_dynamo):
+    message_id = 'mid'
+    chat_id = 'cid'
+    user_id = 'uid'
     text = 'message_text'
     text_tags = [
         {'tag': '@1', 'userId': 'uidt1'},
         {'tag': '@2', 'userId': 'uidt2'},
     ]
-
     now = pendulum.now('utc')
-    expected_item = {
+
+    item = chat_message_dynamo.add_chat_message(
+        message_id, chat_id, user_id, text, text_tags, is_initial=True, now=now
+    )
+    assert chat_message_dynamo.get_chat_message(message_id) == item
+    assert item == {
         'partitionKey': 'chatMessage/mid',
         'sortKey': '-',
         'schemaVersion': 1,
@@ -32,20 +67,11 @@ def test_add_chat_message(chat_message_dynamo, user_id):
         'messageId': 'mid',
         'chatId': 'cid',
         'createdAt': now.to_iso8601_string(),
+        'isInitial': True,
         'text': text,
         'textTags': text_tags,
+        'userId': 'uid',
     }
-    if user_id:
-        expected_item['userId'] = user_id
-
-    # add the chat to the DB, verify correct form
-    item = chat_message_dynamo.add_chat_message(message_id, chat_id, user_id, text, text_tags, now)
-    assert item == expected_item
-    assert item == chat_message_dynamo.get_chat_message(message_id)
-
-    # verify we can't add the same message twice
-    with pytest.raises(chat_message_dynamo.client.exceptions.ConditionalCheckFailedException):
-        chat_message_dynamo.add_chat_message(message_id, chat_id, user_id, text, text_tags, now)
 
 
 def test_edit_chat_message(chat_message_dynamo):

@@ -46,21 +46,17 @@ test('Create a direct chat with bad word', async () => {
   const messageText = 'lore ipsum'
   let variables = {userId: theirUserId, chatId, messageId, messageText}
 
-  await ourClient
-    .mutate({mutation: mutations.createDirectChat, variables})
-    .then(({data: {createDirectChat: chat}}) => {
-      expect(chat.chatId).toBe(chatId)
-      expect(chat.chatType).toBe('DIRECT')
-      expect(chat.name).toBeNull()
-      expect(chat.usersCount).toBe(2)
-      expect(chat.users.items.map((u) => u.userId).sort()).toEqual([ourUserId, theirUserId].sort())
-      expect(chat.messages.items).toHaveLength(1)
-      expect(chat.messages.items[0].messageId).toBe(messageId)
-      expect(chat.messages.items[0].text).toBe(messageText)
-      expect(chat.messages.items[0].chat.chatId).toBe(chatId)
-      expect(chat.messages.items[0].author.userId).toBe(ourUserId)
-      expect(chat.messages.items[0].viewedStatus).toBe('VIEWED')
-    })
+  await ourClient.mutate({mutation: mutations.createDirectChat, variables})
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.chat, variables: {chatId}})
+    expect(data).toMatchObject({chat: {chatId}})
+    expect(data.chat.messages.items).toHaveLength(1)
+    expect(data.chat.messages.items[0].messageId).toBe(messageId)
+    expect(data.chat.messages.items[0].text).toBe(messageText)
+    expect(data.chat.messages.items[0].chat.chatId).toBe(chatId)
+    expect(data.chat.messages.items[0].author.userId).toBe(ourUserId)
+    expect(data.chat.messages.items[0].viewedStatus).toBe('VIEWED')
+  })
 
   // check we see the chat in our list of chats
   await eventually(async () => {
@@ -144,28 +140,25 @@ test('Two way follow, skip bad word detection - direct chat', async () => {
   const messageText = 'lore ipsum'
   let variables = {userId: theirUserId, chatId, messageId, messageText}
 
-  await ourClient
-    .mutate({mutation: mutations.createDirectChat, variables})
-    .then(({data: {createDirectChat: chat}}) => {
-      expect(chat.chatId).toBe(chatId)
-      expect(chat.chatType).toBe('DIRECT')
-      expect(chat.name).toBeNull()
-      expect(chat.usersCount).toBe(2)
-      expect(chat.users.items.map((u) => u.userId).sort()).toEqual([ourUserId, theirUserId].sort())
-      expect(chat.messages.items).toHaveLength(1)
-      expect(chat.messages.items[0].messageId).toBe(messageId)
-      expect(chat.messages.items[0].text).toBe(messageText)
-      expect(chat.messages.items[0].chat.chatId).toBe(chatId)
-      expect(chat.messages.items[0].author.userId).toBe(ourUserId)
-      expect(chat.messages.items[0].viewedStatus).toBe('VIEWED')
-    })
+  await ourClient.mutate({mutation: mutations.createDirectChat, variables})
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.chat, variables: {chatId}})
+    expect(data).toMatchObject({chat: {chatId}})
+    expect(data.chat.messages.items).toHaveLength(1)
+    expect(data.chat.messages.items[0].messageId).toBe(messageId)
+    expect(data.chat.messages.items[0].text).toBe(messageText)
+    expect(data.chat.messages.items[0].chat.chatId).toBe(chatId)
+    expect(data.chat.messages.items[0].author.userId).toBe(ourUserId)
+    expect(data.chat.messages.items[0].viewedStatus).toBe('VIEWED')
+  })
 
   // check we see the chat in our list of chats
-  await ourClient.query({query: queries.user, variables: {userId: ourUserId}}).then(({data: {user}}) => {
-    expect(user.directChat).toBeNull()
-    expect(user.chatCount).toBe(1)
-    expect(user.chats.items).toHaveLength(1)
-    expect(user.chats.items[0].chatId).toBe(chatId)
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.user, variables: {userId: ourUserId}})
+    expect(data.user.directChat).toBeNull()
+    expect(data.user.chatCount).toBe(1)
+    expect(data.user.chats.items).toHaveLength(1)
+    expect(data.user.chats.items[0].chatId).toBe(chatId)
   })
 
   // they follow us
@@ -209,12 +202,11 @@ test('Two way follow, skip bad word detection - direct chat', async () => {
 })
 
 test('Create a group chat with bad word', async () => {
-  const {client: ourClient, userId: ourUserId, username: ourUsername} = await loginCache.getCleanLogin()
-  const {client: theirClient, userId: theirUserId, username: theirUsername} = await loginCache.getCleanLogin()
-  const {client: otherClient, userId: otherUserId, username: otherUsername} = await loginCache.getCleanLogin()
+  const {client: ourClient} = await loginCache.getCleanLogin()
+  const {client: theirClient, userId: theirUserId} = await loginCache.getCleanLogin()
+  const {client: otherClient, userId: otherUserId} = await loginCache.getCleanLogin()
 
   const [chatId, messageId1] = [uuidv4(), uuidv4()]
-  let messageIdSystem0, messageIdSystem1
   let variables = {
     chatId,
     name: 'x',
@@ -222,39 +214,18 @@ test('Create a group chat with bad word', async () => {
     messageId: messageId1,
     messageText: 'm',
   }
-  await ourClient
-    .mutate({mutation: mutations.createGroupChat, variables})
-    .then(({data: {createGroupChat: chat}}) => {
-      expect(chat.chatId).toBe(chatId)
-      expect(chat.chatType).toBe('GROUP')
-      expect(chat.name).toBe('x')
-      expect(chat.usersCount).toBe(3)
-      expect(chat.users.items.map((u) => u.userId).sort()).toEqual([ourUserId, theirUserId, otherUserId].sort())
-      expect(chat.messages.items).toHaveLength(3)
-      expect(chat.messages.items[0].text).toContain(ourUsername)
-      expect(chat.messages.items[0].text).toContain('created the group')
-      expect(chat.messages.items[0].text).toContain('x')
-      expect(chat.messages.items[0].textTaggedUsers).toHaveLength(1)
-      expect(chat.messages.items[0].textTaggedUsers[0].tag).toBe(`@${ourUsername}`)
-      expect(chat.messages.items[0].textTaggedUsers[0].user.userId).toBe(ourUserId)
-      expect(chat.messages.items[1].text).toContain(ourUsername)
-      expect(chat.messages.items[1].text).toContain('added')
-      expect(chat.messages.items[1].text).toContain('to the group')
-      expect(chat.messages.items[1].text).toContain(theirUsername)
-      expect(chat.messages.items[1].text).toContain(otherUsername)
-      expect(chat.messages.items[1].textTaggedUsers).toHaveLength(3)
-      expect(chat.messages.items[1].textTaggedUsers.map((t) => t.tag).sort()).toEqual(
-        [`@${ourUsername}`, `@${theirUsername}`, `@${otherUsername}`].sort(),
-      )
-      expect(chat.messages.items[1].textTaggedUsers.map((t) => t.user.userId).sort()).toEqual(
-        [ourUserId, theirUserId, otherUserId].sort(),
-      )
-      expect(chat.messages.items[2].messageId).toBe(messageId1)
-      expect(chat.messages.items[2].text).toBe('m')
-
-      messageIdSystem0 = chat.messages.items[0].messageId
-      messageIdSystem1 = chat.messages.items[1].messageId
-    })
+  await ourClient.mutate({mutation: mutations.createGroupChat, variables})
+  const first5MessageIds = await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.chat, variables: {chatId}})
+    expect(data).toMatchObject({chat: {chatId}})
+    expect(data.chat.messages.items).toHaveLength(5)
+    expect(data.chat.messages.items[0].text).toContain('created the group')
+    expect(data.chat.messages.items[1].text).toContain('added to the group')
+    expect(data.chat.messages.items[2].text).toContain('added to the group')
+    expect(data.chat.messages.items[3].text).toContain('added to the group')
+    expect(data.chat.messages.items[4].messageId).toBe(messageId1)
+    return data.chat.messages.items.map((item) => item.messageId)
+  })
 
   // we add a message
   const messageId2 = uuidv4()
@@ -276,24 +247,21 @@ test('Create a group chat with bad word', async () => {
 
   // verify bad word chat message is removed
   await sleep()
-  await otherClient.query({query: queries.chat, variables: {chatId}}).then(({data: {chat}}) => {
-    expect(chat.chatId).toBe(chatId)
-    expect(chat.messagesCount).toBe(4)
-    expect(chat.messages.items).toHaveLength(4)
-    expect(chat.messages.items[0].messageId).toBe(messageIdSystem0)
-    expect(chat.messages.items[1].messageId).toBe(messageIdSystem1)
-    expect(chat.messages.items[2].messageId).toBe(messageId1)
-    expect(chat.messages.items[3].messageId).toBe(messageId2)
+  await otherClient.query({query: queries.chat, variables: {chatId}}).then(({data}) => {
+    expect(data).toMatchObject({chat: {chatId}})
+    expect(data.chat.messagesCount).toBe(6)
+    expect(data.chat.messages.items).toHaveLength(6)
+    expect(data.chat.messages.items.slice(0, 5).map((item) => item.messageId)).toEqual(first5MessageIds)
+    expect(data.chat.messages.items[5].messageId).toBe(messageId2)
   })
 })
 
 test('Create a group chat with bad word - skip if all users follow creator', async () => {
-  const {client: ourClient, userId: ourUserId, username: ourUsername} = await loginCache.getCleanLogin()
+  const {client: ourClient} = await loginCache.getCleanLogin()
   const {client: theirClient, userId: theirUserId} = await loginCache.getCleanLogin()
   const {client: otherClient, userId: otherUserId} = await loginCache.getCleanLogin()
 
   const [chatId, messageId1] = [uuidv4(), uuidv4()]
-  let messageIdSystem0, messageIdSystem1
   let variables = {
     chatId,
     name: 'x',
@@ -301,22 +269,18 @@ test('Create a group chat with bad word - skip if all users follow creator', asy
     messageId: messageId1,
     messageText: 'm',
   }
-  await ourClient
-    .mutate({mutation: mutations.createGroupChat, variables})
-    .then(({data: {createGroupChat: chat}}) => {
-      expect(chat.chatId).toBe(chatId)
-      expect(chat.chatType).toBe('GROUP')
-      expect(chat.name).toBe('x')
-      expect(chat.usersCount).toBe(3)
-      expect(chat.users.items.map((u) => u.userId).sort()).toEqual([ourUserId, theirUserId, otherUserId].sort())
-      expect(chat.messages.items).toHaveLength(3)
-      expect(chat.messages.items[0].text).toContain(ourUsername)
-      expect(chat.messages.items[0].text).toContain('created the group')
-      expect(chat.messages.items[0].text).toContain('x')
-
-      messageIdSystem0 = chat.messages.items[0].messageId
-      messageIdSystem1 = chat.messages.items[1].messageId
-    })
+  await ourClient.mutate({mutation: mutations.createGroupChat, variables})
+  const first5MessageIds = await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.chat, variables: {chatId}})
+    expect(data).toMatchObject({chat: {chatId}})
+    expect(data.chat.messages.items).toHaveLength(5)
+    expect(data.chat.messages.items[0].text).toContain('created the group')
+    expect(data.chat.messages.items[1].text).toContain('added to the group')
+    expect(data.chat.messages.items[2].text).toContain('added to the group')
+    expect(data.chat.messages.items[3].text).toContain('added to the group')
+    expect(data.chat.messages.items[4].messageId).toBe(messageId1)
+    return data.chat.messages.items.map((item) => item.messageId)
+  })
 
   // we add a message
   const messageId2 = uuidv4()
@@ -354,14 +318,12 @@ test('Create a group chat with bad word - skip if all users follow creator', asy
   // verify other can see all messages
   await eventually(async () => {
     const {data} = await otherClient.query({query: queries.chat, variables: {chatId}})
-    expect(data.chat.chatId).toBe(chatId)
-    expect(data.chat.messagesCount).toBe(5)
-    expect(data.chat.messages.items).toHaveLength(5)
-    expect(data.chat.messages.items[0].messageId).toBe(messageIdSystem0)
-    expect(data.chat.messages.items[1].messageId).toBe(messageIdSystem1)
-    expect(data.chat.messages.items[2].messageId).toBe(messageId1)
-    expect(data.chat.messages.items[3].messageId).toBe(messageId2)
-    expect(data.chat.messages.items[4].messageId).toBe(messageId3)
+    expect(data).toMatchObject({chat: {chatId}})
+    expect(data.chat.messagesCount).toBe(7)
+    expect(data.chat.messages.items).toHaveLength(7)
+    expect(data.chat.messages.items.slice(0, 5).map((item) => item.messageId)).toEqual(first5MessageIds)
+    expect(data.chat.messages.items[5].messageId).toBe(messageId2)
+    expect(data.chat.messages.items[6].messageId).toBe(messageId3)
   })
 
   // we add a message with bad word
@@ -375,14 +337,12 @@ test('Create a group chat with bad word - skip if all users follow creator', asy
 
   // verify our bad chat message is removed
   await sleep()
-  await ourClient.query({query: queries.chat, variables: {chatId}}).then(({data: {chat}}) => {
-    expect(chat.chatId).toBe(chatId)
-    expect(chat.messagesCount).toBe(5)
-    expect(chat.messages.items).toHaveLength(5)
-    expect(chat.messages.items[0].messageId).toBe(messageIdSystem0)
-    expect(chat.messages.items[1].messageId).toBe(messageIdSystem1)
-    expect(chat.messages.items[2].messageId).toBe(messageId1)
-    expect(chat.messages.items[3].messageId).toBe(messageId2)
-    expect(chat.messages.items[4].messageId).toBe(messageId3)
+  await ourClient.query({query: queries.chat, variables: {chatId}}).then(({data}) => {
+    expect(data).toMatchObject({chat: {chatId}})
+    expect(data.chat.messagesCount).toBe(7)
+    expect(data.chat.messages.items).toHaveLength(7)
+    expect(data.chat.messages.items.slice(0, 5).map((item) => item.messageId)).toEqual(first5MessageIds)
+    expect(data.chat.messages.items[5].messageId).toBe(messageId2)
+    expect(data.chat.messages.items[6].messageId).toBe(messageId3)
   })
 })

@@ -1,5 +1,6 @@
 import logging
 
+import pendulum
 from boto3.dynamodb.conditions import Key
 
 logger = logging.getLogger()
@@ -18,7 +19,8 @@ class ChatMessageDynamo:
     def get_chat_message(self, message_id, strongly_consistent=False):
         return self.client.get_item(self.pk(message_id), ConsistentRead=strongly_consistent)
 
-    def add_chat_message(self, message_id, chat_id, author_user_id, text, text_tags, now):
+    def add_chat_message(self, message_id, chat_id, author_user_id, text, text_tags, is_initial=False, now=None):
+        now = now or pendulum.now('utc')
         created_at_str = now.to_iso8601_string()
         query_kwargs = {
             'Item': {
@@ -32,6 +34,7 @@ class ChatMessageDynamo:
                 'createdAt': created_at_str,
                 'text': text,
                 'textTags': text_tags,
+                **({'isInitial': True} if is_initial else {}),
             },
             'ConditionExpression': 'attribute_not_exists(partitionKey)',  # no updates, just adds
         }

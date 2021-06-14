@@ -1,8 +1,8 @@
 import uuid
+from unittest.mock import patch
 
 import pendulum
 import pytest
-from mock import patch
 
 from app.models.comment.exceptions import CommentException
 from app.models.post.enums import PostType

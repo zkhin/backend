@@ -26,47 +26,58 @@ test('Create and edit a group chat', async () => {
 
   // we create a group chat with all of us in it, check details are correct
   const [chatId, messageId1] = [uuidv4(), uuidv4()]
-  let variables = {
-    chatId,
-    name: 'x',
-    userIds: [other1UserId, other2UserId],
-    messageId: messageId1,
-    messageText: 'm',
-  }
-  let before = dayjs().toISOString()
-  let resp = await ourClient.mutate({mutation: mutations.createGroupChat, variables})
-  let after = dayjs().toISOString()
-  let chat = resp.data.createGroupChat
-  expect(chat.chatId).toBe(chatId)
-  expect(chat.chatType).toBe('GROUP')
-  expect(chat.name).toBe('x')
-  expect(before <= chat.createdAt).toBe(true)
-  expect(after >= chat.createdAt).toBe(true)
-  expect(chat.usersCount).toBe(3)
-  expect(chat.users.items.map((u) => u.userId).sort()).toEqual([ourUserId, other1UserId, other2UserId].sort())
-  expect(chat.messages.items).toHaveLength(3)
-  expect(chat.messages.items[0].text).toContain(ourUsername)
-  expect(chat.messages.items[0].text).toContain('created the group')
-  expect(chat.messages.items[0].text).toContain('x')
-  expect(chat.messages.items[0].textTaggedUsers).toHaveLength(1)
-  expect(chat.messages.items[0].textTaggedUsers[0].tag).toBe(`@${ourUsername}`)
-  expect(chat.messages.items[0].textTaggedUsers[0].user.userId).toBe(ourUserId)
-  expect(chat.messages.items[1].text).toContain(ourUsername)
-  expect(chat.messages.items[1].text).toContain('added')
-  expect(chat.messages.items[1].text).toContain('to the group')
-  expect(chat.messages.items[1].text).toContain(other1Username)
-  expect(chat.messages.items[1].text).toContain(other2Username)
-  expect(chat.messages.items[1].textTaggedUsers).toHaveLength(3)
-  expect(chat.messages.items[1].textTaggedUsers.map((t) => t.tag).sort()).toEqual(
-    [`@${ourUsername}`, `@${other1Username}`, `@${other2Username}`].sort(),
-  )
-  expect(chat.messages.items[1].textTaggedUsers.map((t) => t.user.userId).sort()).toEqual(
-    [ourUserId, other1UserId, other2UserId].sort(),
-  )
-  expect(chat.messages.items[2].messageId).toBe(messageId1)
-  expect(chat.messages.items[2].text).toBe('m')
-  const messageIdSystem0 = chat.messages.items[0].messageId
-  const messageIdSystem1 = chat.messages.items[1].messageId
+  const before = dayjs().toISOString()
+  await ourClient
+    .mutate({
+      mutation: mutations.createGroupChat,
+      variables: {
+        chatId,
+        name: 'x',
+        userIds: [other1UserId, other2UserId],
+        messageId: messageId1,
+        messageText: 'm',
+      },
+    })
+    .then(({data}) => expect(data.createGroupChat.chatId).toBe(chatId))
+  const after = dayjs().toISOString()
+
+  const firstMessageIds = await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.chat, variables: {chatId}})
+    expect(data).toMatchObject({chat: {chatId, chatType: 'GROUP', name: 'x'}})
+    expect(data.chat.createdAt > before).toBe(true)
+    expect(data.chat.createdAt < after).toBe(true)
+    expect(data.chat.createdAt < data.chat.lastMessageActivityAt).toBe(true)
+    expect(data.chat.usersCount).toBe(3)
+    expect(data.chat.users.items.map((u) => u.userId).sort()).toEqual(
+      [ourUserId, other1UserId, other2UserId].sort(),
+    )
+    expect(data.chat.messagesCount).toBe(5)
+    expect(data.chat.messages.items).toHaveLength(5)
+    expect(data.chat.messages.items[0].authorUserId).toBeNull()
+    expect(data.chat.messages.items[0].text).toContain(ourUsername)
+    expect(data.chat.messages.items[0].text).toContain('created the group')
+    expect(data.chat.messages.items[0].text).toContain('x')
+    expect(data.chat.messages.items[0].textTaggedUsers).toHaveLength(1)
+    expect(data.chat.messages.items[0].textTaggedUsers[0].tag).toBe(`@${ourUsername}`)
+    expect(data.chat.messages.items[0].textTaggedUsers[0].user.userId).toBe(ourUserId)
+    expect(data.chat.messages.items[1].authorUserId).toBeNull()
+    expect(data.chat.messages.items[1].text).toContain('was added to the group')
+    expect(data.chat.messages.items[1].text).toContain(ourUsername)
+    // order of these two messages is undefined
+    const [o1Msg, o2Msg] = data.chat.messages.items
+      .slice(2, 4)
+      .sort((m) => (m.textTaggedUsers[0].user.userId == other1UserId ? -1 : 1))
+    expect(o1Msg.authorUserId).toBeNull()
+    expect(o1Msg.text).toContain('was added to the group')
+    expect(o1Msg.text).toContain(other1Username)
+    expect(o2Msg.authorUserId).toBeNull()
+    expect(o2Msg.text).toContain('was added to the group')
+    expect(o2Msg.text).toContain(other2Username)
+    expect(data.chat.messages.items[4].messageId).toBe(messageId1)
+    expect(data.chat.messages.items[4].authorUserId).toBe(ourUserId)
+    expect(data.chat.messages.items[4].text).toBe('m')
+    return data.chat.messages.items.map((item) => item.messageId)
+  })
 
   // check we have the chat
   await eventually(async () => {
@@ -75,93 +86,81 @@ test('Create and edit a group chat', async () => {
     expect(data.self.chatCount).toBe(1)
     expect(data.self.chats.items).toHaveLength(1)
     expect(data.self.chats.items[0].chatId).toBe(chatId)
-    expect(data.self.chats.items[0].messagesCount).toBe(3)
-    expect(data.self.chats.items[0].createdAt < data.self.chats.items[0].lastMessageActivityAt).toBe(true)
   })
 
   // check other1 has the chat
-  resp = await other1Client.query({query: queries.self})
-  expect(resp.data.self.userId).toBe(other1UserId)
-  expect(resp.data.self.chatCount).toBe(1)
-  expect(resp.data.self.chats.items).toHaveLength(1)
-  expect(resp.data.self.chats.items[0].chatId).toBe(chatId)
+  await other1Client.query({query: queries.self}).then(({data}) => {
+    expect(data.self.userId).toBe(other1UserId)
+    expect(data.self.chatCount).toBe(1)
+    expect(data.self.chats.items).toHaveLength(1)
+    expect(data.self.chats.items[0].chatId).toBe(chatId)
+  })
 
   // we add a message
   const messageId2 = uuidv4()
-  variables = {chatId, messageId: messageId2, text: 'm2'}
-  resp = await ourClient.mutate({mutation: mutations.addChatMessage, variables})
-  expect(resp.data.addChatMessage.messageId).toBe(messageId2)
+  await ourClient
+    .mutate({mutation: mutations.addChatMessage, variables: {chatId, messageId: messageId2, text: 'm2'}})
+    .then(({data}) => expect(data.addChatMessage.messageId).toBe(messageId2))
 
   // other1 adds a message
   const messageId3 = uuidv4()
-  variables = {chatId, messageId: messageId3, text: 'm3'}
-  resp = await other1Client.mutate({mutation: mutations.addChatMessage, variables})
-  expect(resp.data.addChatMessage.messageId).toBe(messageId3)
+  await other1Client
+    .mutate({mutation: mutations.addChatMessage, variables: {chatId, messageId: messageId3, text: 'm3'}})
+    .then(({data}) => expect(data.addChatMessage.messageId).toBe(messageId3))
 
   // check other2 sees both those messages
-  await eventually(async () => {
+  const secondMessageIds = await eventually(async () => {
     const {data} = await other2Client.query({query: queries.chat, variables: {chatId}})
-    expect(data.chat.chatId).toBe(chatId)
-    expect(data.chat.messagesCount).toBe(5)
-    expect(data.chat.messages.items).toHaveLength(5)
-    expect(data.chat.messages.items[0].messageId).toBe(messageIdSystem0)
-    expect(data.chat.messages.items[1].messageId).toBe(messageIdSystem1)
-    expect(data.chat.messages.items[2].messageId).toBe(messageId1)
-    expect(data.chat.messages.items[3].messageId).toBe(messageId2)
-    expect(data.chat.messages.items[4].messageId).toBe(messageId3)
+    expect(data.chat.messagesCount).toBe(7)
+    expect(data.chat.messages.items).toHaveLength(7)
+    expect(data.chat.messages.items.slice(0, 5).map((item) => item.messageId)).toEqual(firstMessageIds)
+    expect(data.chat.messages.items[5].messageId).toBe(messageId2)
+    expect(data.chat.messages.items[5].authorUserId).toBe(ourUserId)
+    expect(data.chat.messages.items[6].messageId).toBe(messageId3)
+    expect(data.chat.messages.items[6].authorUserId).toBe(other1UserId)
+    return data.chat.messages.items.slice(5).map((item) => item.messageId)
   })
 
   // other2 edits the name of the group chat
-  variables = {chatId, name: 'new name'}
-  resp = await other2Client.mutate({mutation: mutations.editGroupChat, variables})
-  expect(resp.data.editGroupChat.chatId).toBe(chatId)
-  expect(resp.data.editGroupChat.name).toBe('new name')
+  const name = uuidv4()
+  await other2Client.mutate({mutation: mutations.editGroupChat, variables: {chatId, name}}).then(({data}) => {
+    expect(data.editGroupChat.chatId).toBe(chatId)
+    expect(data.editGroupChat.name).toBe(name)
+  })
 
   // check we see the updated name and the messages
-  const messageIdSystem3 = await eventually(async () => {
+  const thirdMessageId = await eventually(async () => {
     const {data} = await ourClient.query({query: queries.chat, variables: {chatId}})
-    expect(data.chat.chatId).toBe(chatId)
-    expect(data.chat.name).toBe('new name')
-    expect(data.chat.messagesCount).toBe(6)
-    expect(data.chat.messages.items).toHaveLength(6)
-    expect(data.chat.messages.items[0].messageId).toBe(messageIdSystem0)
-    expect(data.chat.messages.items[1].messageId).toBe(messageIdSystem1)
-    expect(data.chat.messages.items[2].messageId).toBe(messageId1)
-    expect(data.chat.messages.items[3].messageId).toBe(messageId2)
-    expect(data.chat.messages.items[4].messageId).toBe(messageId3)
-    expect(data.chat.messages.items[5].text).toContain(other2Username)
-    expect(data.chat.messages.items[5].text).toContain('changed the name of the group')
-    expect(data.chat.messages.items[5].text).toContain('new name')
-    expect(data.chat.messages.items[5].textTaggedUsers).toHaveLength(1)
-    expect(data.chat.messages.items[5].textTaggedUsers[0].tag).toBe(`@${other2Username}`)
-    expect(data.chat.messages.items[5].textTaggedUsers[0].user.userId).toBe(other2UserId)
-    return data.chat.messages.items[5].messageId
+    expect(data.chat.name).toBe(name)
+    expect(data.chat.messagesCount).toBe(8)
+    expect(data.chat.messages.items).toHaveLength(8)
+    expect(data.chat.messages.items.slice(0, 5).map((item) => item.messageId)).toEqual(firstMessageIds)
+    expect(data.chat.messages.items.slice(5, 7).map((item) => item.messageId)).toEqual(secondMessageIds)
+    expect(data.chat.messages.items[7].authorUserId).toBeNull()
+    expect(data.chat.messages.items[7].text).toContain('name of the group was changed to')
+    expect(data.chat.messages.items[7].text).toContain(name)
+    expect(data.chat.messages.items[7].textTaggedUsers).toEqual([])
+    return data.chat.messages.items[7].messageId
   })
 
   // we delete the name of the group chat
-  variables = {chatId, name: ''}
-  resp = await ourClient.mutate({mutation: mutations.editGroupChat, variables})
-  expect(resp.data.editGroupChat.chatId).toBe(chatId)
-  expect(resp.data.editGroupChat.name).toBeNull()
+  await ourClient.mutate({mutation: mutations.editGroupChat, variables: {chatId, name: ''}}).then(({data}) => {
+    expect(data.editGroupChat.chatId).toBe(chatId)
+    expect(data.editGroupChat.name).toBeNull()
+  })
 
   // check other1 sees the updated name
   await eventually(async () => {
     const {data} = await other1Client.query({query: queries.chat, variables: {chatId}})
-    expect(data.chat.chatId).toBe(chatId)
     expect(data.chat.name).toBeNull()
-    expect(data.chat.messagesCount).toBe(7)
-    expect(data.chat.messages.items).toHaveLength(7)
-    expect(data.chat.messages.items[0].messageId).toBe(messageIdSystem0)
-    expect(data.chat.messages.items[1].messageId).toBe(messageIdSystem1)
-    expect(data.chat.messages.items[2].messageId).toBe(messageId1)
-    expect(data.chat.messages.items[3].messageId).toBe(messageId2)
-    expect(data.chat.messages.items[4].messageId).toBe(messageId3)
-    expect(data.chat.messages.items[5].messageId).toBe(messageIdSystem3)
-    expect(data.chat.messages.items[6].text).toContain(ourUsername)
-    expect(data.chat.messages.items[6].text).toContain('deleted the name of the group')
-    expect(data.chat.messages.items[6].textTaggedUsers).toHaveLength(1)
-    expect(data.chat.messages.items[6].textTaggedUsers[0].tag).toBe(`@${ourUsername}`)
-    expect(data.chat.messages.items[6].textTaggedUsers[0].user.userId).toBe(ourUserId)
+    expect(data.chat.messagesCount).toBe(9)
+    expect(data.chat.messages.items).toHaveLength(9)
+    expect(data.chat.messages.items.slice(0, 5).map((item) => item.messageId)).toEqual(firstMessageIds)
+    expect(data.chat.messages.items.slice(5, 7).map((item) => item.messageId)).toEqual(secondMessageIds)
+    expect(data.chat.messages.items[7].messageId).toBe(thirdMessageId)
+    expect(data.chat.messages.items[8].author).toBeNull()
+    expect(data.chat.messages.items[8].text).toContain('name of the group was deleted')
+    expect(data.chat.messages.items[8].textTaggedUsers).toEqual([])
   })
 })
 
@@ -171,14 +170,19 @@ test('Creating a group chat with our userId in the listed userIds has no affect'
 
   // we create a group chat with the two of us in it, and we uncessarily add our user Id to the userIds
   const [chatId, messageId] = [uuidv4(), uuidv4()]
-  let variables = {chatId, userIds: [ourUserId, theirUserId], messageId, messageText: 'm1'}
-  let resp = await ourClient.mutate({mutation: mutations.createGroupChat, variables})
-  expect(resp.data.createGroupChat.chatId).toBe(chatId)
-  expect(resp.data.createGroupChat.name).toBeNull()
-  expect(resp.data.createGroupChat.usersCount).toBe(2)
-  expect(resp.data.createGroupChat.users.items.map((u) => u.userId).sort()).toEqual(
-    [ourUserId, theirUserId].sort(),
-  )
+  await ourClient
+    .mutate({
+      mutation: mutations.createGroupChat,
+      variables: {chatId, userIds: [ourUserId, theirUserId], messageId, messageText: 'm1'},
+    })
+    .then(({data}) => expect(data.createGroupChat.chatId).toBe(chatId))
+
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.chat, variables: {chatId}})
+    expect(data).toMatchObject({chat: {chatId, name: null}})
+    expect(data.chat.usersCount).toBe(2)
+    expect(data.chat.users.items.map((u) => u.userId).sort()).toEqual([ourUserId, theirUserId].sort())
+  })
 })
 
 test('Cannot create, edit, add others to or leave a group chat if we are disabled', async () => {
@@ -268,74 +272,101 @@ test('Exclude users from list of users in a chat', async () => {
 
   // we create a group chat with the two of us in it
   const [chatId, messageId] = [uuidv4(), uuidv4()]
-  let variables = {chatId, userIds: [theirUserId], messageId, messageText: 'm1'}
-  let resp = await ourClient.mutate({mutation: mutations.createGroupChat, variables})
-  expect(resp.data.createGroupChat.chatId).toBe(chatId)
-  expect(resp.data.createGroupChat.name).toBeNull()
-  expect(resp.data.createGroupChat.usersCount).toBe(2)
-  expect(resp.data.createGroupChat.users.items.map((u) => u.userId).sort()).toEqual(
-    [ourUserId, theirUserId].sort(),
-  )
+  await ourClient
+    .mutate({
+      mutation: mutations.createGroupChat,
+      variables: {chatId, userIds: [theirUserId], messageId, messageText: 'm1'},
+    })
+    .then(({data}) => expect(data.createGroupChat.chatId).toBe(chatId))
 
   // check chat users, all included
-  resp = await ourClient.query({query: queries.chatUsers, variables: {chatId}})
-  expect(resp.data.chat.chatId).toBe(chatId)
-  expect(resp.data.chat.users.items).toHaveLength(2)
-  expect(resp.data.chat.users.items.map((u) => u.userId).sort()).toEqual([ourUserId, theirUserId].sort())
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.chatUsers, variables: {chatId}})
+    expect(data).toMatchObject({chat: {chatId}})
+    expect(data.chat.usersCount).toBe(2)
+    expect(data.chat.users.items).toHaveLength(2)
+    expect(data.chat.users.items.map((u) => u.userId).sort()).toEqual([ourUserId, theirUserId].sort())
+  })
 
   // exclude ourselves
-  resp = await ourClient.query({query: queries.chatUsers, variables: {chatId, excludeUserId: ourUserId}})
-  expect(resp.data.chat.chatId).toBe(chatId)
-  expect(resp.data.chat.users.items).toHaveLength(1)
-  expect(resp.data.chat.users.items[0].userId).toBe(theirUserId)
+  await ourClient
+    .query({query: queries.chatUsers, variables: {chatId, excludeUserId: ourUserId}})
+    .then(({data}) => {
+      expect(data).toMatchObject({chat: {chatId}})
+      expect(data.chat.usersCount).toBe(2)
+      expect(data.chat.users.items).toHaveLength(1)
+      expect(data.chat.users.items[0].userId).toBe(theirUserId)
+    })
 
   // exclude them
-  resp = await ourClient.query({query: queries.chatUsers, variables: {chatId, excludeUserId: theirUserId}})
-  expect(resp.data.chat.chatId).toBe(chatId)
-  expect(resp.data.chat.users.items).toHaveLength(1)
-  expect(resp.data.chat.users.items[0].userId).toBe(ourUserId)
+  await ourClient
+    .query({query: queries.chatUsers, variables: {chatId, excludeUserId: theirUserId}})
+    .then(({data}) => {
+      expect(data).toMatchObject({chat: {chatId}})
+      expect(data.chat.usersCount).toBe(2)
+      expect(data.chat.users.items).toHaveLength(1)
+      expect(data.chat.users.items[0].userId).toBe(ourUserId)
+    })
 })
 
 test('Create a group chat with just us and without a name, add people to it and leave from it', async () => {
-  const {client: ourClient, userId: ourUserId, username: ourUsername} = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
   const {client: theirClient, userId: theirUserId, username: theirUsername} = await loginCache.getCleanLogin()
   const {client: otherClient, userId: otherUserId, username: otherUsername} = await loginCache.getCleanLogin()
 
   // we create a group chat with no name and just us in it
   const [chatId, messageId1] = [uuidv4(), uuidv4()]
-  let variables = {chatId, userIds: [], messageId: messageId1, messageText: 'm1'}
-  let resp = await ourClient.mutate({mutation: mutations.createGroupChat, variables})
-  expect(resp.data.createGroupChat.chatId).toBe(chatId)
-  expect(resp.data.createGroupChat.name).toBeNull()
-  expect(resp.data.createGroupChat.usersCount).toBe(1)
-  expect(resp.data.createGroupChat.users.items).toHaveLength(1)
-  expect(resp.data.createGroupChat.users.items[0].userId).toBe(ourUserId)
+  await ourClient
+    .mutate({
+      mutation: mutations.createGroupChat,
+      variables: {chatId, userIds: [], messageId: messageId1, messageText: 'm1'},
+    })
+    .then(({data}) => expect(data.createGroupChat.chatId).toBe(chatId))
+
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.chat, variables: {chatId}})
+    expect(data).toMatchObject({chat: {chatId, name: null}})
+    expect(data.chat.usersCount).toBe(1)
+    expect(data.chat.users.items).toHaveLength(1)
+    expect(data.chat.users.items[0].userId).toBe(ourUserId)
+    expect(data.chat.messagesCount).toBe(3)
+    expect(data.chat.messages.items).toHaveLength(3)
+    expect(data.chat.messages.items[2].messageId).toBe(messageId1)
+  })
 
   // check they can't access the chat
-  resp = await theirClient.query({query: queries.chat, variables: {chatId}})
-  expect(resp.data.chat).toBeNull()
+  await theirClient
+    .query({query: queries.chat, variables: {chatId}})
+    .then(({data}) => expect(data.chat).toBeNull())
 
   // we add them and other to the chat
-  variables = {chatId, userIds: [theirUserId, otherUserId]}
-  resp = await ourClient.mutate({mutation: mutations.addToGroupChat, variables})
-  let chat = resp.data.addToGroupChat
-  expect(chat.chatId).toBe(chatId)
-  expect(chat.usersCount).toBe(3)
-  expect(chat.users.items.map((u) => u.userId).sort()).toEqual([ourUserId, theirUserId, otherUserId].sort())
-  expect(chat.messages.items).toHaveLength(3)
-  expect(chat.messages.items[1].messageId).toBe(messageId1)
-  expect(chat.messages.items[2].text).toContain(ourUsername)
-  expect(chat.messages.items[2].text).toContain(theirUsername)
-  expect(chat.messages.items[2].text).toContain(otherUsername)
-  expect(chat.messages.items[2].text).toContain('added')
-  expect(chat.messages.items[2].text).toContain('to the group')
-  expect(chat.messages.items[2].textTaggedUsers).toHaveLength(3)
-  expect(chat.messages.items[2].textTaggedUsers.map((t) => t.tag).sort()).toEqual(
-    [`@${ourUsername}`, `@${theirUsername}`, `@${otherUsername}`].sort(),
-  )
-  expect(chat.messages.items[2].textTaggedUsers.map((t) => t.user.userId).sort()).toEqual(
-    [ourUserId, theirUserId, otherUserId].sort(),
-  )
+  await ourClient.mutate({
+    mutation: mutations.addToGroupChat,
+    variables: {chatId, userIds: [theirUserId, otherUserId]},
+  })
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.chat, variables: {chatId}})
+    expect(data).toMatchObject({chat: {chatId}})
+    expect(data.chat.usersCount).toBe(3)
+    expect(data.chat.users.items.map((u) => u.userId).sort()).toEqual(
+      [ourUserId, theirUserId, otherUserId].sort(),
+    )
+    expect(data.chat.messagesCount).toBe(5)
+    expect(data.chat.messages.items).toHaveLength(5)
+    expect(data.chat.messages.items[2].messageId).toBe(messageId1)
+    // the order in which these two messages are added is not defined
+    const [theirMessage, otherMessage] = data.chat.messages.items
+      .slice(3, 5)
+      .sort((m) => (m.textTaggedUsers[0].user.userId == theirUserId ? -1 : 1))
+    expect(theirMessage.text).toContain(theirUsername)
+    expect(theirMessage.text).toContain('was added to the group')
+    expect(theirMessage.textTaggedUsers).toHaveLength(1)
+    expect(theirMessage.textTaggedUsers[0].user.userId).toBe(theirUserId)
+    expect(otherMessage.text).toContain(otherUsername)
+    expect(otherMessage.text).toContain('was added to the group')
+    expect(otherMessage.textTaggedUsers).toHaveLength(1)
+    expect(otherMessage.textTaggedUsers[0].user.userId).toBe(otherUserId)
+  })
 
   // check they have the chat now
   await eventually(async () => {
@@ -344,50 +375,49 @@ test('Create a group chat with just us and without a name, add people to it and 
     expect(data.self.chatCount).toBe(1)
     expect(data.self.chats.items).toHaveLength(1)
     expect(data.self.chats.items[0].chatId).toBe(chatId)
-    expect(data.self.chats.items[0].messagesCount).toBe(3)
+    expect(data.self.chats.items[0].messagesCount).toBe(5)
   })
 
-  // check other can directly access the chat, and they see the system message from adding a user
-  resp = await otherClient.query({query: queries.chat, variables: {chatId}})
-  expect(resp.data.chat.chatId).toBe(chatId)
+  // check other can directly access the chat
+  await otherClient
+    .query({query: queries.chat, variables: {chatId}})
+    .then(({data}) => expect(data).toMatchObject({chat: {chatId}}))
 
   // they add a message to the chat
   const messageId2 = uuidv4()
-  variables = {chatId, messageId: messageId2, text: 'lore'}
-  resp = await theirClient.mutate({mutation: mutations.addChatMessage, variables})
-  expect(resp.data.addChatMessage.messageId).toBe(messageId2)
+  await theirClient
+    .mutate({mutation: mutations.addChatMessage, variables: {chatId, messageId: messageId2, text: 'lore'}})
+    .then(({data}) => expect(data.addChatMessage.messageId).toBe(messageId2))
 
   // they leave the chat
-  resp = await theirClient.mutate({mutation: mutations.leaveGroupChat, variables: {chatId}})
-  expect(resp.data.leaveGroupChat.chatId).toBe(chatId)
-  expect(resp.data.leaveGroupChat.usersCount).toBe(2)
+  await theirClient
+    .mutate({mutation: mutations.leaveGroupChat, variables: {chatId}})
+    .then(({data}) => expect(data.leaveGroupChat.chatId).toBe(chatId))
 
   // check we see their message, we don't see them in the chat
-  resp = await ourClient.query({query: queries.chat, variables: {chatId}})
-  chat = resp.data.chat
-  expect(chat.chatId).toBe(chatId)
-  expect(chat.usersCount).toBe(2)
-  expect(chat.users.items).toHaveLength(2)
-  expect(chat.users.items.map((u) => u.userId).sort()).toEqual([ourUserId, otherUserId].sort())
-  expect(chat.messagesCount).toBe(5)
-  expect(chat.messages.items).toHaveLength(5)
-  expect(chat.messages.items[1].messageId).toBe(messageId1)
-  expect(chat.messages.items[3].messageId).toBe(messageId2)
-  expect(chat.messages.items[3].messageId).toBe(messageId2)
-  expect(chat.messages.items[4].text).toContain(theirUsername)
-  expect(chat.messages.items[4].text).toContain('left the group')
-  expect(chat.messages.items[4].textTaggedUsers).toHaveLength(1)
-  expect(chat.messages.items[4].textTaggedUsers[0].tag).toBe(`@${theirUsername}`)
-  expect(chat.messages.items[4].textTaggedUsers[0].user.userId).toBe(theirUserId)
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.chat, variables: {chatId}})
+    expect(data).toMatchObject({chat: {chatId}})
+    expect(data.chat.usersCount).toBe(2)
+    expect(data.chat.users.items).toHaveLength(2)
+    expect(data.chat.users.items.map((u) => u.userId).sort()).toEqual([ourUserId, otherUserId].sort())
+    expect(data.chat.messagesCount).toBe(7)
+    expect(data.chat.messages.items).toHaveLength(7)
+    expect(data.chat.messages.items[2].messageId).toBe(messageId1)
+    expect(data.chat.messages.items[5].messageId).toBe(messageId2)
+    expect(data.chat.messages.items[6].text).toContain(theirUsername)
+    expect(data.chat.messages.items[6].text).toContain('left the group')
+    expect(data.chat.messages.items[6].textTaggedUsers).toHaveLength(1)
+    expect(data.chat.messages.items[6].textTaggedUsers[0].user.userId).toBe(theirUserId)
+  })
 
   // we leave the chat
-  resp = await ourClient.mutate({mutation: mutations.leaveGroupChat, variables: {chatId}})
-  expect(resp.data.leaveGroupChat.chatId).toBe(chatId)
-  expect(resp.data.leaveGroupChat.usersCount).toBe(1)
+  await ourClient
+    .mutate({mutation: mutations.leaveGroupChat, variables: {chatId}})
+    .then(({data}) => expect(data.leaveGroupChat.chatId).toBe(chatId))
 
   // check we can no longer access the chat
-  resp = await ourClient.query({query: queries.chat, variables: {chatId}})
-  expect(resp.data.chat).toBeNull()
+  await ourClient.query({query: queries.chat, variables: {chatId}}).then(({data}) => expect(data.chat).toBeNull())
 })
 
 test('Cant add a users that does not exist to a group', async () => {
@@ -397,27 +427,38 @@ test('Cant add a users that does not exist to a group', async () => {
   // we create a group chat with us and another non-existent user in it,
   // should skip over the non-existent user
   const [chatId, messageId] = [uuidv4(), uuidv4()]
-  let variables = {chatId, userIds: ['uid-dne'], messageId, messageText: 'm1'}
-  let resp = await ourClient.mutate({mutation: mutations.createGroupChat, variables})
-  expect(resp.data.createGroupChat.chatId).toBe(chatId)
-  expect(resp.data.createGroupChat.usersCount).toBe(1)
-  expect(resp.data.createGroupChat.users.items[0].userId).toBe(ourUserId)
-  expect(resp.data.createGroupChat.messages.items).toHaveLength(2)
-  expect(resp.data.createGroupChat.messages.items[1].messageId).toBe(messageId)
+  await ourClient.mutate({
+    mutation: mutations.createGroupChat,
+    variables: {chatId, userIds: ['uid-dne'], messageId, messageText: 'm1'},
+  })
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.chat, variables: {chatId}})
+    expect(data).toMatchObject({chat: {chatId}})
+    expect(data.chat.usersCount).toBe(1)
+    expect(data.chat.users.items[0].userId).toBe(ourUserId)
+    expect(data.chat.messagesCount).toBe(3)
+    expect(data.chat.messages.items).toHaveLength(3)
+    expect(data.chat.messages.items[2].messageId).toBe(messageId)
+  })
 
   // add another non-existent user to the group, as well as a good one
   // should skip over the non-existent user
-  variables = {chatId, userIds: [theirUserId, 'uid-dne1', 'uid-dne2']}
-  resp = await ourClient.mutate({mutation: mutations.addToGroupChat, variables})
-  expect(resp.data.addToGroupChat.chatId).toBe(chatId)
-  expect(resp.data.addToGroupChat.usersCount).toBe(2)
-  expect(resp.data.addToGroupChat.users.items.map((u) => u.userId).sort()).toEqual(
-    [ourUserId, theirUserId].sort(),
-  )
-  expect(resp.data.addToGroupChat.messages.items).toHaveLength(3)
-  expect(resp.data.addToGroupChat.messages.items[1].messageId).toBe(messageId)
-  expect(resp.data.addToGroupChat.messages.items[2].text).toContain('added')
-  expect(resp.data.addToGroupChat.messages.items[2].textTaggedUsers).toHaveLength(2)
+  await ourClient.mutate({
+    mutation: mutations.addToGroupChat,
+    variables: {chatId, userIds: [theirUserId, 'uid-dne1', 'uid-dne2']},
+  })
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.chat, variables: {chatId}})
+    expect(data).toMatchObject({chat: {chatId}})
+    expect(data.chat.usersCount).toBe(2)
+    expect(data.chat.users.items.map((u) => u.userId).sort()).toEqual([ourUserId, theirUserId].sort())
+    expect(data.chat.messagesCount).toBe(4)
+    expect(data.chat.messages.items).toHaveLength(4)
+    expect(data.chat.messages.items[2].messageId).toBe(messageId)
+    expect(data.chat.messages.items[3].text).toContain('added')
+    expect(data.chat.messages.items[3].textTaggedUsers).toHaveLength(1)
+    expect(data.chat.messages.items[3].textTaggedUsers[0].user.userId).toBe(theirUserId)
+  })
 })
 
 test('Add someone to a group chat that is already there is a no-op', async () => {
@@ -427,31 +468,45 @@ test('Add someone to a group chat that is already there is a no-op', async () =>
 
   // we create a group chat with both of us in it
   const chatId = uuidv4()
-  let variables = {chatId, userIds: [other1UserId], messageId: uuidv4(), messageText: 'm1'}
-  let resp = await ourClient.mutate({mutation: mutations.createGroupChat, variables})
-  expect(resp.data.createGroupChat.chatId).toBe(chatId)
-  expect(resp.data.createGroupChat.usersCount).toBe(2)
-  expect(resp.data.createGroupChat.users.items.map((u) => u.userId).sort()).toEqual(
-    [ourUserId, other1UserId].sort(),
-  )
+  await ourClient
+    .mutate({
+      mutation: mutations.createGroupChat,
+      variables: {chatId, userIds: [other1UserId], messageId: uuidv4(), messageText: 'm1'},
+    })
+    .then(({data}) => expect(data.createGroupChat.chatId).toBe(chatId))
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.chat, variables: {chatId}})
+    expect(data).toMatchObject({chat: {chatId}})
+    expect(data.chat.usersCount).toBe(2)
+    expect(data.chat.users.items.map((u) => u.userId).sort()).toEqual([ourUserId, other1UserId].sort())
+  })
 
   // check adding to them to the chat again does nothing
-  variables = {chatId, userIds: [other1UserId]}
-  resp = await ourClient.mutate({mutation: mutations.addToGroupChat, variables})
-  expect(resp.data.addToGroupChat.chatId).toBe(chatId)
-  expect(resp.data.addToGroupChat.usersCount).toBe(2)
-  expect(resp.data.addToGroupChat.users.items.map((u) => u.userId).sort()).toEqual(
-    [ourUserId, other1UserId].sort(),
-  )
+  await ourClient
+    .mutate({mutation: mutations.addToGroupChat, variables: {chatId, userIds: [other1UserId]}})
+    .then(({data}) => expect(data.addToGroupChat.chatId).toBe(chatId))
+  await sleep()
+  await ourClient.query({query: queries.chat, variables: {chatId}}).then(({data}) => {
+    expect(data).toMatchObject({chat: {chatId}})
+    expect(data.chat.usersCount).toBe(2)
+    expect(data.chat.users.items.map((u) => u.userId).sort()).toEqual([ourUserId, other1UserId].sort())
+  })
 
   // check adding to them and another user to the chat at the same time adds the other user
-  variables = {chatId, userIds: [other1UserId, other2UserId]}
-  resp = await ourClient.mutate({mutation: mutations.addToGroupChat, variables})
-  expect(resp.data.addToGroupChat.chatId).toBe(chatId)
-  expect(resp.data.addToGroupChat.usersCount).toBe(3)
-  expect(resp.data.addToGroupChat.users.items.map((u) => u.userId).sort()).toEqual(
-    [ourUserId, other1UserId, other2UserId].sort(),
-  )
+  await ourClient
+    .mutate({
+      mutation: mutations.addToGroupChat,
+      variables: {chatId, userIds: [other1UserId, other2UserId]},
+    })
+    .then(({data}) => expect(data.addToGroupChat.chatId).toBe(chatId))
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.chat, variables: {chatId}})
+    expect(data).toMatchObject({chat: {chatId}})
+    expect(data.chat.usersCount).toBe(3)
+    expect(data.chat.users.items.map((u) => u.userId).sort()).toEqual(
+      [ourUserId, other1UserId, other2UserId].sort(),
+    )
+  })
 })
 
 test('Cannot add someone to a chat that DNE, that we are not in or that is a a direct chat', async () => {
@@ -460,36 +515,62 @@ test('Cannot add someone to a chat that DNE, that we are not in or that is a a d
   const {userId: other2UserId} = await loginCache.getCleanLogin()
 
   // check we can't add other1 to a chat that DNE
-  let variables = {chatId: uuidv4(), userIds: [other1UserId]}
-  await expect(ourClient.mutate({mutation: mutations.addToGroupChat, variables})).rejects.toThrow(
-    /ClientError: .* is not a member/,
-  )
+  await ourClient
+    .mutate({
+      mutation: mutations.addToGroupChat,
+      variables: {chatId: uuidv4(), userIds: [other1UserId]},
+      errorPolicy: 'all',
+    })
+    .then(({errors}) => {
+      expect(errors).toHaveLength(1)
+      expect(errors[0].message).toMatch(/ClientError: .* is not a member/)
+    })
 
   // other1 creates a group chat with only themselves in it
   const chatId1 = uuidv4()
-  variables = {chatId: chatId1, userIds: [], messageId: uuidv4(), messageText: 'm'}
-  let resp = await other1Client.mutate({mutation: mutations.createGroupChat, variables})
-  expect(resp.data.createGroupChat.chatId).toBe(chatId1)
-  expect(resp.data.createGroupChat.chatType).toBe('GROUP')
+  await other1Client.mutate({
+    mutation: mutations.createGroupChat,
+    variables: {chatId: chatId1, userIds: [], messageId: uuidv4(), messageText: 'm'},
+  })
+  await eventually(async () => {
+    const {data} = await other1Client.query({query: queries.chat, variables: {chatId: chatId1}})
+    expect(data).toMatchObject({chat: {chatId: chatId1, usersCount: 1}})
+  })
 
   // check we cannot add other2 to that group chat
-  variables = {chatId: chatId1, userIds: [other2UserId]}
-  await expect(ourClient.mutate({mutation: mutations.addToGroupChat, variables})).rejects.toThrow(
-    /ClientError: .* is not a member/,
-  )
+  await ourClient
+    .mutate({
+      mutation: mutations.addToGroupChat,
+      variables: {chatId: chatId1, userIds: [other2UserId]},
+      errorPolicy: 'all',
+    })
+    .then(({errors}) => {
+      expect(errors).toHaveLength(1)
+      expect(errors[0].message).toMatch(/ClientError: .* is not a member/)
+    })
 
   // we create a direct chat with other2
   const chatId2 = uuidv4()
-  variables = {userId: other2UserId, chatId: chatId2, messageId: uuidv4(), messageText: 'lore ipsum'}
-  resp = await ourClient.mutate({mutation: mutations.createDirectChat, variables})
-  expect(resp.data.createDirectChat.chatId).toBe(chatId2)
-  expect(resp.data.createDirectChat.chatType).toBe('DIRECT')
+  await ourClient.mutate({
+    mutation: mutations.createDirectChat,
+    variables: {userId: other2UserId, chatId: chatId2, messageId: uuidv4(), messageText: 'lore ipsum'},
+  })
 
   // check we cannot add other1 to that direct chat
-  variables = {chatId: chatId2, userIds: [other1UserId]}
-  await expect(ourClient.mutate({mutation: mutations.addToGroupChat, variables})).rejects.toThrow(
-    /ClientError: Cannot add users to non-GROUP chat /,
-  )
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.chat, variables: {chatId: chatId2}})
+    expect(data).toMatchObject({chat: {chatId: chatId2}})
+  })
+  await ourClient
+    .mutate({
+      mutation: mutations.addToGroupChat,
+      variables: {chatId: chatId2, userIds: [other1UserId]},
+      errorPolicy: 'all',
+    })
+    .then(({errors}) => {
+      expect(errors).toHaveLength(1)
+      expect(errors[0].message).toMatch(/ClientError: Cannot add users to non-GROUP chat /)
+    })
 })
 
 test('Cannot leave a chat that DNE, that we are not in, or that is a direct chat', async () => {
@@ -497,36 +578,50 @@ test('Cannot leave a chat that DNE, that we are not in, or that is a direct chat
   const {client: theirClient, userId: theirUserId} = await loginCache.getCleanLogin()
 
   // check we cannot leave a chat that DNE
-  let variables = {chatId: uuidv4()}
-  await expect(ourClient.mutate({mutation: mutations.leaveGroupChat, variables})).rejects.toThrow(
-    /ClientError: .* is not a member/,
-  )
+  await ourClient
+    .mutate({mutation: mutations.leaveGroupChat, variables: {chatId: uuidv4()}, errorPolicy: 'all'})
+    .then(({errors}) => {
+      expect(errors).toHaveLength(1)
+      expect(errors[0].message).toMatch(/ClientError: .* is not a member/)
+    })
 
   // they create a group chat with only themselves in it
   const chatId1 = uuidv4()
-  variables = {chatId: chatId1, userIds: [], messageId: uuidv4(), messageText: 'm'}
-  let resp = await theirClient.mutate({mutation: mutations.createGroupChat, variables})
-  expect(resp.data.createGroupChat.chatId).toBe(chatId1)
-  expect(resp.data.createGroupChat.chatType).toBe('GROUP')
+  await theirClient.mutate({
+    mutation: mutations.createGroupChat,
+    variables: {chatId: chatId1, userIds: [], messageId: uuidv4(), messageText: 'm'},
+  })
+  await eventually(async () => {
+    const {data} = await theirClient.query({query: queries.chat, variables: {chatId: chatId1}})
+    expect(data).toMatchObject({chat: {chatId: chatId1, usersCount: 1}})
+  })
 
   // check we cannot leave from that group chat we are not in
-  variables = {chatId: chatId1}
-  await expect(ourClient.mutate({mutation: mutations.leaveGroupChat, variables})).rejects.toThrow(
-    /ClientError: .* is not a member/,
-  )
+  await ourClient
+    .mutate({mutation: mutations.leaveGroupChat, variables: {chatId: chatId1}, errorPolicy: 'all'})
+    .then(({errors}) => {
+      expect(errors).toHaveLength(1)
+      expect(errors[0].message).toMatch(/ClientError: .* is not a member/)
+    })
 
   // we create a direct chat with them
   const chatId2 = uuidv4()
-  variables = {userId: theirUserId, chatId: chatId2, messageId: uuidv4(), messageText: 'lore ipsum'}
-  resp = await ourClient.mutate({mutation: mutations.createDirectChat, variables})
-  expect(resp.data.createDirectChat.chatId).toBe(chatId2)
-  expect(resp.data.createDirectChat.chatType).toBe('DIRECT')
+  await ourClient.mutate({
+    mutation: mutations.createDirectChat,
+    variables: {userId: theirUserId, chatId: chatId2, messageId: uuidv4(), messageText: 'lore ipsum'},
+  })
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.chat, variables: {chatId: chatId2}})
+    expect(data).toMatchObject({chat: {chatId: chatId2, usersCount: 2}})
+  })
 
   // check we cannot leave that direct chat
-  variables = {chatId: chatId2}
-  await expect(ourClient.mutate({mutation: mutations.leaveGroupChat, variables})).rejects.toThrow(
-    /ClientError: Cannot leave non-GROUP chat /,
-  )
+  await ourClient
+    .mutate({mutation: mutations.leaveGroupChat, variables: {chatId: chatId2}, errorPolicy: 'all'})
+    .then(({errors}) => {
+      expect(errors).toHaveLength(1)
+      expect(errors[0].message).toMatch(/ClientError: Cannot leave non-GROUP chat /)
+    })
 })
 
 test('Cannnot edit name of chat that DNE, that we are not in, or that is a direct chat', async () => {
@@ -534,34 +629,60 @@ test('Cannnot edit name of chat that DNE, that we are not in, or that is a direc
   const {client: theirClient, userId: theirUserId} = await loginCache.getCleanLogin()
 
   // check we cannot edit a chat that DNE
-  let variables = {chatId: uuidv4(), name: 'new name'}
-  await expect(ourClient.mutate({mutation: mutations.leaveGroupChat, variables})).rejects.toThrow(
-    /ClientError: .* is not a member/,
-  )
+  await ourClient
+    .mutate({
+      mutation: mutations.leaveGroupChat,
+      variables: {chatId: uuidv4(), name: 'new name'},
+      errorPolicy: 'all',
+    })
+    .then(({errors}) => {
+      expect(errors).toHaveLength(1)
+      expect(errors[0].message).toMatch(/ClientError: .* is not a member/)
+    })
 
   // they create a group chat with only themselves in it
   const chatId1 = uuidv4()
-  variables = {chatId: chatId1, userIds: [], messageId: uuidv4(), messageText: 'm'}
-  let resp = await theirClient.mutate({mutation: mutations.createGroupChat, variables})
-  expect(resp.data.createGroupChat.chatId).toBe(chatId1)
-  expect(resp.data.createGroupChat.chatType).toBe('GROUP')
+  await theirClient.mutate({
+    mutation: mutations.createGroupChat,
+    variables: {chatId: chatId1, userIds: [], messageId: uuidv4(), messageText: 'm'},
+  })
+  await eventually(async () => {
+    const {data} = await theirClient.query({query: queries.chat, variables: {chatId: chatId1}})
+    expect(data).toMatchObject({chat: {chatId: chatId1, usersCount: 1}})
+  })
 
   // check we cannot edit the name of their group chat
-  variables = {chatId: chatId1, name: 'c name'}
-  await expect(ourClient.mutate({mutation: mutations.editGroupChat, variables})).rejects.toThrow(
-    /ClientError: .* is not a member/,
-  )
+  await ourClient
+    .mutate({
+      mutation: mutations.editGroupChat,
+      variables: {chatId: chatId1, name: 'chat name'},
+      errorPolicy: 'all',
+    })
+    .then(({errors}) => {
+      expect(errors).toHaveLength(1)
+      expect(errors[0].message).toMatch(/ClientError: .* is not a member/)
+    })
 
   // we create a direct chat with them
   const chatId2 = uuidv4()
-  variables = {userId: theirUserId, chatId: chatId2, messageId: uuidv4(), messageText: 'lore ipsum'}
-  resp = await ourClient.mutate({mutation: mutations.createDirectChat, variables})
-  expect(resp.data.createDirectChat.chatId).toBe(chatId2)
-  expect(resp.data.createDirectChat.chatType).toBe('DIRECT')
+  await ourClient.mutate({
+    mutation: mutations.createDirectChat,
+    variables: {userId: theirUserId, chatId: chatId2, messageId: uuidv4(), messageText: 'lore ipsum'},
+  })
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.chat, variables: {chatId: chatId2}})
+    expect(data).toMatchObject({chat: {chatId: chatId2, usersCount: 2}})
+  })
 
   // check we cannot edit the name of that direct chat
-  variables = {chatId: chatId2, name: 'c name'}
-  await expect(ourClient.mutate({mutation: mutations.editGroupChat, variables})).rejects.toThrow(
-    /ClientError: Cannot edit non-GROUP chat /,
-  )
+  await ourClient
+    .mutate({
+      mutation: mutations.editGroupChat,
+      variables: {chatId: chatId2, name: 'chat name'},
+      errorPolicy: 'all',
+    })
+    .then(({errors}) => {
+      expect(errors).toHaveLength(1)
+      expect(errors[0].message).toMatch(/ClientError: Cannot edit non-GROUP chat /)
+    })
 })

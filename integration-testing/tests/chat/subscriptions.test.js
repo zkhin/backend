@@ -2,8 +2,8 @@ import dayjs from 'dayjs'
 import fs from 'fs'
 import {v4 as uuidv4} from 'uuid'
 
-import {cognito, fixturePath, sleep} from '../../utils'
-import {mutations, subscriptions} from '../../schema'
+import {cognito, eventually, fixturePath, sleep} from '../../utils'
+import {mutations, queries, subscriptions} from '../../schema'
 
 const grantData = fs.readFileSync(fixturePath('grant.jpg'))
 const grantDataB64 = new Buffer.from(grantData).toString('base64')
@@ -23,16 +23,14 @@ test('Chat message triggers cannot be called from external graphql client', asyn
 
   // they open up a chat with us
   const [chatId, messageId] = [uuidv4(), uuidv4()]
-  await theirClient
-    .mutate({
-      mutation: mutations.createDirectChat,
-      variables: {userId: ourUserId, chatId, messageId, messageText: 'lore ipsum'},
-    })
-    .then(({data: {createDirectChat: chat}}) => {
-      expect(chat.chatId).toBe(chatId)
-      expect(chat.messages.items).toHaveLength(1)
-      expect(chat.messages.items[0].messageId).toBe(messageId)
-    })
+  await theirClient.mutate({
+    mutation: mutations.createDirectChat,
+    variables: {userId: ourUserId, chatId, messageId, messageText: 'lore ipsum'},
+  })
+  await eventually(async () => {
+    const {data} = await theirClient.query({query: queries.chat, variables: {chatId}})
+    expect(data).toMatchObject({chat: {chatId, usersCount: 2, messagesCount: 1}})
+  })
 
   // create a well-formed valid chat notification object
   // verify niether of us can call the trigger method, even with a valid chat & message id
@@ -69,16 +67,14 @@ test('Cannot subscribe to other users messages', async () => {
 
   // they open up a chat with us
   const [chatId, messageId1] = [uuidv4(), uuidv4()]
-  await theirClient
-    .mutate({
-      mutation: mutations.createDirectChat,
-      variables: {userId: ourUserId, chatId, messageId: messageId1, messageText: 'hey, msg1'},
-    })
-    .then(({data: {createDirectChat: chat}}) => {
-      expect(chat.chatId).toBe(chatId)
-      expect(chat.messages.items).toHaveLength(1)
-      expect(chat.messages.items[0].messageId).toBe(messageId1)
-    })
+  await theirClient.mutate({
+    mutation: mutations.createDirectChat,
+    variables: {userId: ourUserId, chatId, messageId: messageId1, messageText: 'hey, msg1'},
+  })
+  await eventually(async () => {
+    const {data} = await theirClient.query({query: queries.chat, variables: {chatId}})
+    expect(data).toMatchObject({chat: {chatId, usersCount: 2, messagesCount: 1}})
+  })
 
   // we send a messsage to the chat
   await ourClient
@@ -99,9 +95,9 @@ test('Cannot subscribe to other users messages', async () => {
 })
 
 test('Messages in multiple chats fire', async () => {
-  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
-  const {client: theirClient, userId: theirUserId} = await loginCache.getCleanLogin()
-  const {client: otherClient, userId: otherUserId} = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId, username: ourUsername} = await loginCache.getCleanLogin()
+  const {client: theirClient, userId: theirUserId, username: theirUsername} = await loginCache.getCleanLogin()
+  const {client: otherClient, userId: otherUserId, username: otherUsername} = await loginCache.getCleanLogin()
 
   // we subscribe to chat messages
   const ourHandlers = []
@@ -154,11 +150,7 @@ test('Messages in multiple chats fire', async () => {
       mutation: mutations.createDirectChat,
       variables: {userId: theirUserId, chatId, messageId: messageId1, messageText: 'm1'},
     })
-    .then(({data}) => {
-      expect(data.createDirectChat.chatId).toBe(chatId)
-      expect(data.createDirectChat.messages.items).toHaveLength(1)
-      expect(data.createDirectChat.messages.items[0].messageId).toBe(messageId1)
-    })
+    .then(({data}) => expect(data.createDirectChat.chatId).toBe(chatId))
   await theirNextNotification.then((notification) => {
     expect(notification.message.messageId).toBe(messageId1)
     expect(notification.message.authorUserId).toBe(ourUserId)
@@ -178,56 +170,64 @@ test('Messages in multiple chats fire', async () => {
     expect(notification.message.authorUserId).toBe(theirUserId)
   })
 
-  /* Use me to establish order among notifications */
-  const notificationCompare = (a, b) => {
-    const aTextReversed = a.message.text.split('').reverse().join('')
-    const bTextReversed = b.message.text.split('').reverse().join('')
-    return aTextReversed.localeCompare(bTextReversed)
-  }
-
   // other opens a group chat with all three of us, verify we each receive two notifications
   // where order is not guaranteed (though the messages in the chat are)
+  const ourFirstFiveNotifications = new Promise((resolve) => {
+    const notifications = []
+    for (const i of Array(4).keys()) ourHandlers.push((notification) => (notifications[i] = notification))
+    ourHandlers.push((notification) => resolve([...notifications, notification]))
+  })
+  const theirFirstFiveNotifications = new Promise((resolve) => {
+    const notifications = []
+    for (const i of Array(4).keys()) theirHandlers.push((notification) => (notifications[i] = notification))
+    theirHandlers.push((notification) => resolve([...notifications, notification]))
+  })
+  const otherFirstFourNotifications = new Promise((resolve) => {
+    const notifications = []
+    for (const i of Array(3).keys()) otherHandlers.push((notification) => (notifications[i] = notification))
+    otherHandlers.push((notification) => resolve([...notifications, notification]))
+  })
+
   const [chatId2, messageId3] = [uuidv4(), uuidv4()]
-  const ourNextTwoNotifications = new Promise((resolve) => {
-    let firstNotification
-    ourHandlers.push((notification) => (firstNotification = notification))
-    ourHandlers.push((notification) => resolve([firstNotification, notification]))
-  })
-  const theirNextTwoNotifications = new Promise((resolve) => {
-    let firstNotification
-    theirHandlers.push((notification) => (firstNotification = notification))
-    theirHandlers.push((notification) => resolve([firstNotification, notification]))
-  })
-  const otherNextTwoNotifications = new Promise((resolve) => {
-    let firstNotification
-    otherHandlers.push((notification) => (firstNotification = notification))
-    otherHandlers.push((notification) => resolve([firstNotification, notification]))
-  })
   await otherClient
     .mutate({
       mutation: mutations.createGroupChat,
       variables: {chatId: chatId2, userIds: [ourUserId, theirUserId], messageId: messageId3, messageText: 'm3'},
     })
     .then(({data}) => expect(data.createGroupChat.chatId).toBe(chatId2))
-  await ourNextTwoNotifications.then((notifications) => {
-    notifications.sort(notificationCompare)
-    expect(notifications[0].message.messageId).toBe(messageId3)
-    expect(notifications[0].message.authorUserId).toBe(otherUserId)
-    expect(notifications[1].message.text).toContain('added')
-    expect(notifications[1].message.authorUserId).toBeNull()
+
+  await ourFirstFiveNotifications.then((notifications) => {
+    const systemMsgs = notifications.map((n) => n.message).filter((m) => !m.authorUserId)
+    expect(systemMsgs.filter((m) => m.text.includes('created'))).toHaveLength(1)
+    expect(systemMsgs.filter((m) => m.text.includes('added') && m.text.includes(ourUsername))).toHaveLength(1)
+    expect(systemMsgs.filter((m) => m.text.includes('added') && m.text.includes(theirUsername))).toHaveLength(1)
+    expect(systemMsgs.filter((m) => m.text.includes('added') && m.text.includes(otherUsername))).toHaveLength(1)
+    const userMsgs = notifications.map((n) => n.message).filter((m) => m.authorUserId)
+    expect(userMsgs).toHaveLength(1)
+    expect(userMsgs[0].authorUserId).toBe(otherUserId)
+    expect(userMsgs[0].messageId).toBe(messageId3)
   })
-  await theirNextTwoNotifications.then((notifications) => {
-    notifications.sort(notificationCompare)
-    expect(notifications[0].message.messageId).toBe(messageId3)
-    expect(notifications[0].message.authorUserId).toBe(otherUserId)
-    expect(notifications[1].message.text).toContain('added')
-    expect(notifications[1].message.authorUserId).toBeNull()
+
+  await theirFirstFiveNotifications.then((notifications) => {
+    const systemMsgs = notifications.map((n) => n.message).filter((m) => !m.authorUserId)
+    expect(systemMsgs.filter((m) => m.text.includes('created'))).toHaveLength(1)
+    expect(systemMsgs.filter((m) => m.text.includes('added') && m.text.includes(ourUsername))).toHaveLength(1)
+    expect(systemMsgs.filter((m) => m.text.includes('added') && m.text.includes(theirUsername))).toHaveLength(1)
+    expect(systemMsgs.filter((m) => m.text.includes('added') && m.text.includes(otherUsername))).toHaveLength(1)
+    const userMsgs = notifications.map((n) => n.message).filter((m) => m.authorUserId)
+    expect(userMsgs).toHaveLength(1)
+    expect(userMsgs[0].authorUserId).toBe(otherUserId)
+    expect(userMsgs[0].messageId).toBe(messageId3)
   })
-  await otherNextTwoNotifications.then((notifications) => {
-    expect(notifications[0].message.text).toContain('created')
-    expect(notifications[0].message.authorUserId).toBeNull()
-    expect(notifications[1].message.text).toContain('added')
-    expect(notifications[1].message.authorUserId).toBeNull()
+
+  await otherFirstFourNotifications.then((notifications) => {
+    const systemMsgs = notifications.map((n) => n.message).filter((m) => !m.authorUserId)
+    expect(systemMsgs.filter((m) => m.text.includes('created'))).toHaveLength(1)
+    expect(systemMsgs.filter((m) => m.text.includes('added') && m.text.includes(ourUsername))).toHaveLength(1)
+    expect(systemMsgs.filter((m) => m.text.includes('added') && m.text.includes(theirUsername))).toHaveLength(1)
+    expect(systemMsgs.filter((m) => m.text.includes('added') && m.text.includes(otherUsername))).toHaveLength(1)
+    const userMsgs = notifications.map((n) => n.message).filter((m) => m.authorUserId)
+    expect(userMsgs).toHaveLength(0)
   })
 
   // we post a message to the group chat
@@ -267,16 +267,14 @@ test('Format for ADDED, EDITED, DELETED message notifications', async () => {
 
   // they open up a chat with us
   const [chatId, messageId1] = [uuidv4(), uuidv4()]
-  await theirClient
-    .mutate({
-      mutation: mutations.createDirectChat,
-      variables: {userId: ourUserId, chatId, messageId: messageId1, messageText: 'hey m1'},
-    })
-    .then(({data: {createDirectChat: chat}}) => {
-      expect(chat.chatId).toBe(chatId)
-      expect(chat.messages.items).toHaveLength(1)
-      expect(chat.messages.items[0].messageId).toBe(messageId1)
-    })
+  await theirClient.mutate({
+    mutation: mutations.createDirectChat,
+    variables: {userId: ourUserId, chatId, messageId: messageId1, messageText: 'hey m1'},
+  })
+  await eventually(async () => {
+    const {data} = await theirClient.query({query: queries.chat, variables: {chatId}})
+    expect(data).toMatchObject({chat: {chatId, usersCount: 2, messagesCount: 1}})
+  })
 
   // we subscribe to our chat message notificaitons
   const handlers = []
@@ -388,18 +386,20 @@ test('Format for ADDED, EDITED, DELETED message notifications', async () => {
 })
 
 test('Notifications for a group chat', async () => {
-  const {client: ourClient, userId: ourUserId, username: ourUsername} = await loginCache.getCleanLogin()
+  const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
   const {client: other1Client, userId: other1UserId} = await loginCache.getCleanLogin()
   const {client: other2Client, userId: other2UserId} = await loginCache.getCleanLogin()
 
   // we create a group chat with all of us in it
   const chatId = uuidv4()
-  await ourClient
-    .mutate({
-      mutation: mutations.createGroupChat,
-      variables: {chatId, userIds: [other1UserId, other2UserId], messageId: uuidv4(), messageText: 'm1'},
-    })
-    .then(({data: {createGroupChat: chat}}) => expect(chat.chatId).toBe(chatId))
+  await ourClient.mutate({
+    mutation: mutations.createGroupChat,
+    variables: {chatId, userIds: [other1UserId, other2UserId], messageId: uuidv4(), messageText: 'm1'},
+  })
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.chat, variables: {chatId}})
+    expect(data).toMatchObject({chat: {chatId, usersCount: 3, messagesCount: 5}})
+  })
 
   // we initialize a subscription to new message notifications
   const handlers = []
@@ -437,12 +437,9 @@ test('Notifications for a group chat', async () => {
     })
   await nextNotification.then((notification) => {
     expect(notification.message.messageId).toBeTruthy()
-    expect(notification.message.text).toContain(ourUsername)
-    expect(notification.message.text).toContain('changed the name of the group')
+    expect(notification.message.text).toContain('The name of the group was changed to')
     expect(notification.message.text).toContain('"new name"')
-    expect(notification.message.textTaggedUsers).toHaveLength(1)
-    expect(notification.message.textTaggedUsers[0].tag).toContain(ourUsername)
-    expect(notification.message.textTaggedUsers[0].user.userId).toContain(ourUserId)
+    expect(notification.message.textTaggedUsers).toEqual([])
     expect(notification.message.authorUserId).toBeNull()
     expect(notification.message.author).toBeNull()
   })
@@ -469,16 +466,14 @@ test('Message notifications from blocke[r|d] users have authorUserId but no auth
 
   // we create a group chat with both of us in it
   const chatId = uuidv4()
-  await ourClient
-    .mutate({
-      mutation: mutations.createGroupChat,
-      variables: {chatId, userIds: [theirUserId], messageId: uuidv4(), messageText: 'm1'},
-    })
-    .then(({data: {createGroupChat: chat}}) => {
-      expect(chat.chatId).toBe(chatId)
-      expect(chat.usersCount).toBe(2)
-      expect(chat.users.items.map((u) => u.userId).sort()).toEqual([ourUserId, theirUserId].sort())
-    })
+  await ourClient.mutate({
+    mutation: mutations.createGroupChat,
+    variables: {chatId, userIds: [theirUserId], messageId: uuidv4(), messageText: 'm1'},
+  })
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.chat, variables: {chatId}})
+    expect(data).toMatchObject({chat: {chatId, usersCount: 2, messagesCount: 4}})
+  })
 
   // they block us
   await theirClient

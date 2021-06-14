@@ -5,6 +5,8 @@ import pendulum
 import pytest
 
 from app.models.chat.dynamo import ChatDynamo
+from app.models.chat.enums import ChatType
+from app.models.chat.exceptions import ChatAlreadyExists
 
 
 @pytest.fixture
@@ -12,113 +14,108 @@ def chat_dynamo(dynamo_client):
     yield ChatDynamo(dynamo_client)
 
 
-def test_transact_add_group_chat_minimal(chat_dynamo):
-    chat_id = 'cid'
-    chat_type = 'GROUP'
-    user_id = 'cuid'
+@pytest.mark.parametrize('with_user_ids', [[], ['wuid1', 'wuid2']])
+def test_add_error_direct_chat_number_of_participants(chat_dynamo, with_user_ids):
+    with pytest.raises(AssertionError, match='DIRECT chats require exactly two participants'):
+        chat_dynamo.add('cid', ChatType.DIRECT, 'uid1', with_user_ids, 'mtxt')
 
-    # add the chat to the DB
+
+def test_add_error_direct_chat_name(chat_dynamo):
+    with pytest.raises(AssertionError, match='DIRECT chats cannot be named'):
+        chat_dynamo.add('cid', ChatType.DIRECT, 'uid1', ['uid2'], 'mtxt', name='anything')
+
+
+def test_cant_add_same_group_chat_twice(chat_dynamo):
+    chat_id = str(uuid4())
+    chat_dynamo.add(chat_id, ChatType.GROUP, str(uuid4()), [], str(uuid4()))
+    with pytest.raises(ChatAlreadyExists, match=chat_id):
+        chat_dynamo.add(chat_id, ChatType.GROUP, str(uuid4()), [], str(uuid4()))
+
+
+def test_add_group_chat_minimal(chat_dynamo):
+    chat_id, user_id, msg_txt = str(uuid4()), str(uuid4()), str(uuid4())
     before = pendulum.now('utc')
-    transact = chat_dynamo.transact_add(chat_id, chat_type, user_id)
+    chat_item = chat_dynamo.add(chat_id, ChatType.GROUP, user_id, [], msg_txt)
     after = pendulum.now('utc')
-    chat_dynamo.client.transact_write_items([transact])
-
-    # retrieve the chat and verify all good
-    chat_item = chat_dynamo.get(chat_id)
-    created_at = pendulum.parse(chat_item['createdAt'])
-    assert before <= created_at
-    assert after >= created_at
+    assert chat_item == chat_dynamo.get(chat_id)
+    assert before <= pendulum.parse(chat_item['createdAt']) <= after
     assert chat_item == {
-        'partitionKey': 'chat/cid',
+        'partitionKey': f'chat/{chat_id}',
         'sortKey': '-',
         'schemaVersion': 0,
-        'chatId': 'cid',
-        'chatType': 'GROUP',
-        'createdAt': created_at.to_iso8601_string(),
-        'createdByUserId': 'cuid',
-        'userCount': 1,
+        'chatId': chat_id,
+        'chatType': ChatType.GROUP,
+        'createdAt': chat_item['createdAt'],
+        'createdByUserId': user_id,
+        'initialMemberUserIds': [user_id],
+        'initialMessageText': msg_txt,
     }
 
-    # verify we can't add another chat with same id
-    with pytest.raises(chat_dynamo.client.exceptions.TransactionCanceledException):
-        chat_dynamo.client.transact_write_items([transact])
 
-
-def test_transact_add_group_chat_maximal(chat_dynamo):
-    chat_id = 'cid'
-    chat_type = 'GROUP'
-    user_id = 'cuid'
-    name = 'group name'
-
-    # add the chat to the DB
+def test_add_group_chat_maximal(chat_dynamo):
+    chat_id, user_id, with_user_id_1, with_user_id_2 = str(uuid4()), str(uuid4()), str(uuid4()), str(uuid4())
+    msg_id, msg_txt, name = str(uuid4()), str(uuid4()), str(uuid4())
     now = pendulum.now('utc')
-    transact = chat_dynamo.transact_add(chat_id, chat_type, user_id, name=name, now=now)
-    chat_dynamo.client.transact_write_items([transact])
-
-    # retrieve the chat and verify all good
-    chat_item = chat_dynamo.get(chat_id)
+    chat_item = chat_dynamo.add(
+        chat_id,
+        ChatType.GROUP,
+        user_id,
+        [with_user_id_1, with_user_id_2],
+        msg_txt,
+        initial_message_id=msg_id,
+        name=name,
+        now=now,
+    )
+    assert chat_item == chat_dynamo.get(chat_id)
     assert chat_item == {
-        'partitionKey': 'chat/cid',
+        'partitionKey': f'chat/{chat_id}',
         'sortKey': '-',
         'schemaVersion': 0,
-        'chatId': 'cid',
-        'chatType': 'GROUP',
+        'chatId': chat_id,
+        'chatType': ChatType.GROUP,
         'createdAt': now.to_iso8601_string(),
-        'createdByUserId': 'cuid',
-        'userCount': 1,
-        'name': 'group name',
+        'createdByUserId': user_id,
+        'initialMemberUserIds': sorted([user_id, with_user_id_1, with_user_id_2]),
+        'initialMessageId': msg_id,
+        'initialMessageText': msg_txt,
+        'name': name,
     }
 
-    # verify we can't add another chat with same id
-    with pytest.raises(chat_dynamo.client.exceptions.TransactionCanceledException):
-        chat_dynamo.client.transact_write_items([transact])
 
-
-def test_transact_add_direct_chat_maximal(chat_dynamo):
-    chat_id = 'cid2'
-    chat_type = 'DIRECT'
-    creator_user_id = 'uidb'
-    with_user_id = 'uida'
-    name = 'cname'
-    now = pendulum.now('utc')
-
-    # add the chat to the DB
-    transact = chat_dynamo.transact_add(chat_id, chat_type, creator_user_id, with_user_id, name=name, now=now)
-    chat_dynamo.client.transact_write_items([transact])
-
-    # retrieve the chat and verify all good
-    chat_item = chat_dynamo.get(chat_id)
+def test_add_direct_chat(chat_dynamo):
+    chat_id, user_id, user_id_2 = str(uuid4()), str(uuid4()), str(uuid4())
+    msg_id, msg_txt = str(uuid4()), str(uuid4())
+    sorted_user_ids = sorted([user_id, user_id_2])
+    chat_item = chat_dynamo.add(
+        chat_id,
+        ChatType.DIRECT,
+        user_id,
+        [user_id_2],
+        msg_txt,
+        initial_message_id=msg_id,
+    )
+    assert chat_item == chat_dynamo.get(chat_id)
     assert chat_item == {
-        'partitionKey': 'chat/cid2',
+        'partitionKey': f'chat/{chat_id}',
         'sortKey': '-',
         'schemaVersion': 0,
-        'gsiA1PartitionKey': 'chat/uida/uidb',
+        'gsiA1PartitionKey': 'chat/' + '/'.join(sorted_user_ids),
         'gsiA1SortKey': '-',
-        'chatId': 'cid2',
-        'chatType': 'DIRECT',
-        'name': 'cname',
-        'userCount': 2,
-        'createdAt': now.to_iso8601_string(),
-        'createdByUserId': 'uidb',
+        'chatId': chat_id,
+        'chatType': ChatType.DIRECT,
+        'createdAt': chat_item['createdAt'],
+        'createdByUserId': user_id,
+        'initialMemberUserIds': sorted_user_ids,
+        'initialMessageId': msg_id,
+        'initialMessageText': msg_txt,
     }
-
-
-def test_transact_add_errors(chat_dynamo):
-    with pytest.raises(AssertionError, match='require with_user_id'):
-        chat_dynamo.transact_add('cid', 'DIRECT', 'uid')
-
-    with pytest.raises(AssertionError, match='forbit with_user_id'):
-        chat_dynamo.transact_add('cid', 'GROUP', 'uid', with_user_id='uid')
 
 
 def test_update_name(chat_dynamo):
     chat_id = 'cid'
-    chat_type = 'ctype'
-    user_id = 'uid'
 
     # add the chat to the DB, verify it is in DB
-    transact = chat_dynamo.transact_add(chat_id, chat_type, user_id)
-    chat_dynamo.client.transact_write_items([transact])
+    chat_dynamo.add(chat_id, 'chat-type', str(uuid4()), [str(uuid4())], str(uuid4()))
     assert 'name' not in chat_dynamo.get(chat_id)
 
     # update the chat name to something
@@ -132,12 +129,9 @@ def test_update_name(chat_dynamo):
 
 def test_delete(chat_dynamo):
     chat_id = 'cid'
-    chat_type = 'ctype'
-    user_id = 'uid'
 
     # add the chat to the DB, verify it is in DB
-    transact = chat_dynamo.transact_add(chat_id, chat_type, user_id)
-    chat_dynamo.client.transact_write_items([transact])
+    chat_dynamo.add(chat_id, 'chat-type', str(uuid4()), [str(uuid4())], str(uuid4()))
     assert chat_dynamo.get(chat_id)
 
     # delete it, verify it was removed from DB
@@ -145,42 +139,10 @@ def test_delete(chat_dynamo):
     assert chat_dynamo.get(chat_id) is None
 
 
-def test_increment_decrement_user_count(chat_dynamo):
-    chat_id = 'cid'
-    chat_type = 'ctype'
-    user_id = 'uid'
-
-    # add the chat to the DB, verify it is in DB
-    transact = chat_dynamo.transact_add(chat_id, chat_type, user_id)
-    chat_dynamo.client.transact_write_items([transact])
-    assert chat_dynamo.get(chat_id)['userCount'] == 1
-
-    # increment
-    transacts = [chat_dynamo.transact_increment_user_count(chat_id)]
-    chat_dynamo.client.transact_write_items(transacts)
-    assert chat_dynamo.get(chat_id)['userCount'] == 2
-
-    # decrement
-    transacts = [chat_dynamo.transact_decrement_user_count(chat_id)]
-    chat_dynamo.client.transact_write_items(transacts)
-    assert chat_dynamo.get(chat_id)['userCount'] == 1
-
-    # decrement
-    transacts = [chat_dynamo.transact_decrement_user_count(chat_id)]
-    chat_dynamo.client.transact_write_items(transacts)
-    assert chat_dynamo.get(chat_id)['userCount'] == 0
-
-    # verify can't go below zero
-    transacts = [chat_dynamo.transact_decrement_user_count(chat_id)]
-    with pytest.raises(chat_dynamo.client.exceptions.TransactionCanceledException):
-        chat_dynamo.client.transact_write_items(transacts)
-
-
 def test_update_last_message_activity_at(chat_dynamo, caplog):
     # add the chat to the DB, verify it is in DB
     chat_id = str(uuid4())
-    transact = chat_dynamo.transact_add(chat_id, 'chat-type', str(uuid4()))
-    chat_dynamo.client.transact_write_items([transact])
+    chat_dynamo.add(chat_id, 'chat-type', str(uuid4()), [str(uuid4())], str(uuid4()))
     assert 'lastMessageActivityAt' not in chat_dynamo.get(chat_id)
 
     # verify we can update from not set
@@ -216,6 +178,7 @@ def test_update_last_message_activity_at(chat_dynamo, caplog):
     [
         ['increment_flag_count', 'decrement_flag_count', 'flagCount'],
         ['increment_messages_count', 'decrement_messages_count', 'messagesCount'],
+        ['increment_user_count', 'decrement_user_count', 'userCount'],
     ],
 )
 def test_increment_decrement_count(chat_dynamo, caplog, incrementor_name, decrementor_name, attribute_name):
@@ -241,8 +204,7 @@ def test_increment_decrement_count(chat_dynamo, caplog, incrementor_name, decrem
         caplog.clear()
 
     # add the user to the DB, verify it is in DB
-    transact = chat_dynamo.transact_add(chat_id, 'chat-type', str(uuid4()))
-    chat_dynamo.client.transact_write_items([transact])
+    chat_dynamo.add(chat_id, 'chat-type', str(uuid4()), [str(uuid4())], str(uuid4()))
     assert attribute_name not in chat_dynamo.get(chat_id)
 
     # increment twice, verify
