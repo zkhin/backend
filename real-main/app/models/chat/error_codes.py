@@ -1,0 +1,3 @@
+class ChatErrorCode:
+    CHAT_NOT_FOUND = 'CHAT_NOT_FOUND'
+    NOT_A_MEMBER_OF_CHAT = 'NOT_A_MEMBER_OF_CHAT'
