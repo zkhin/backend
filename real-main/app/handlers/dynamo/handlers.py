@@ -129,6 +129,7 @@ register('chatMessage', '-', ['REMOVE'], chat_message_manager.on_chat_message_de
 register('chatMessage', '-', ['REMOVE'], chat_message_manager.on_item_delete_delete_flags)
 register('chatMessage', '-', ['REMOVE'], user_manager.sync_chat_message_deletion_count)
 register('chatMessage', 'flag', ['INSERT'], chat_message_manager.on_flag_add)
+register('chatMessage', 'flag', ['INSERT'], chat_manager.on_chat_message_flag_add)
 register('chatMessage', 'flag', ['REMOVE'], chat_message_manager.on_flag_delete)
 register('comment', '-', ['INSERT'], post_manager.on_comment_add)
 register('comment', '-', ['INSERT'], user_manager.on_comment_add)
@@ -332,8 +333,8 @@ register(
     'user',
     'profile',
     ['INSERT', 'MODIFY'],
-    user_manager.on_user_chat_message_forced_deletion_sync_user_status,
-    {'chatMessagesForcedDeletionCount': 0},
+    user_manager.on_user_chat_forced_deletion_sync_user_status,
+    {'chatsForcedDeletionCount': 0},
 )
 register(
     'user',

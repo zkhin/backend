@@ -167,25 +167,25 @@ class User(TrendingModelMixin):
             return f'https://{self.frontend_resources_domain}/{placeholder_path}'
         return None
 
-    def is_forced_disabling_criteria_met_by_chat_messages(self):
-        # matching post criteria
-        total_count = self.item.get('chatMessagesCreationCount', 0)
-        forced_deleted_count = self.item.get('chatMessagesForcedDeletionCount', 0)
-        return total_count > 5 and forced_deleted_count > total_count / 10
+    def is_forced_disabling_criteria_met(self):
+        post_count = self.item.get('postCount', 0)
+        comment_count = self.item.get('commentCount', 0)
+        chat_count = self.item.get('chatCount', 0)
 
-    def is_forced_disabling_criteria_met_by_comments(self):
-        # matching post criteria
-        total_comment_count = self.item.get('commentCount', 0) + self.item.get('commentDeletedCount', 0)
-        forced_deleted_count = self.item.get('commentForcedDeletionCount', 0)
-        return total_comment_count > 5 and forced_deleted_count > total_comment_count / 10
+        post_forced_archiving_count = self.item.get('postForcedArchivingCount', 0)
+        comment_force_deletion_count = self.item.get('commentForcedDeletionCount', 0)
+        chats_forced_deletion_count = self.item.get('chatsForcedDeletionCount', 0)
 
-    def is_forced_disabling_criteria_met_by_posts(self):
-        # forced disabling criteria, (directly from spec):
-        #   - user has over 5 posts
-        #   - their forced post archivings is at least 10% of their total post count
-        total_post_count = self.item.get('postCount', 0) + self.item.get('postArchivedCount', 0)
-        forced_archiving_count = self.item.get('postForcedArchivingCount', 0)
-        return total_post_count > 5 and forced_archiving_count > total_post_count / 10
+        total_created_count = sum([post_count, comment_count, chat_count])
+        total_force_deleted_count = sum(
+            [post_forced_archiving_count, comment_force_deletion_count, chats_forced_deletion_count]
+        )
+
+        if total_created_count <= 10 and total_force_deleted_count >= 1:
+            return True
+        if total_created_count > 10 and total_force_deleted_count > total_created_count / 10:
+            return True
+        return False
 
     def refresh_item(self, strongly_consistent=False):
         self.item = self.dynamo.get_user(self.id, strongly_consistent=strongly_consistent)

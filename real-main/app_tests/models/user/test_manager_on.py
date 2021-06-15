@@ -384,18 +384,18 @@ def test_delete_user_clears_cognito(user_manager, user, cognito_client):
     'method_name, check_method_name, log_pattern',
     [
         [
-            'on_user_chat_message_forced_deletion_sync_user_status',
-            'is_forced_disabling_criteria_met_by_chat_messages',
+            'on_user_chat_forced_deletion_sync_user_status',
+            'is_forced_disabling_criteria_met',
             'due to chatMessages',
         ],
         [
             'on_user_comment_forced_deletion_sync_user_status',
-            'is_forced_disabling_criteria_met_by_comments',
+            'is_forced_disabling_criteria_met',
             'due to comments',
         ],
         [
             'on_user_post_forced_archiving_sync_user_status',
-            'is_forced_disabling_criteria_met_by_posts',
+            'is_forced_disabling_criteria_met',
             'due to posts',
         ],
     ],

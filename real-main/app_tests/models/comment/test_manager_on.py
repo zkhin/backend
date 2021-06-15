@@ -79,10 +79,11 @@ def test_on_flag_add_force_delete_by_admin(comment_manager, comment, user3, capl
 def test_on_flag_add_force_delete_by_crowdsourced_criteria(comment_manager, comment, caplog, flag_item):
     # configure and check starting state
     assert comment.refresh_item().item.get('flagCount', 0) == 0
-    for _ in range(6):
+    for _ in range(11):
         comment.post.dynamo.increment_viewed_by_count(comment.post.id)
 
     # commentprocess, verify flagCount is incremented and force archived
+    comment_manager.on_flag_add(comment.id, new_item=flag_item)
     with caplog.at_level(logging.WARNING):
         comment_manager.on_flag_add(comment.id, new_item=flag_item)
     assert len(caplog.records) == 1

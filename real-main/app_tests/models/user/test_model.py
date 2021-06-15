@@ -607,102 +607,60 @@ def test_serialize_deleting(user, user2):
         user.serialize(user.id)
 
 
-def test_is_forced_disabling_criteria_met_by_posts(user):
+def test_is_forced_disabling_criteria_met_total_creation_less_than_ten(user):
     # check starting state
     assert user.item.get('postCount', 0) == 0
-    assert user.item.get('postArchivedCount', 0) == 0
     assert user.item.get('postForcedArchivingCount', 0) == 0
-    assert user.is_forced_disabling_criteria_met_by_posts() is False
-
-    # first post was force-disabled, shouldn't disable the user
-    user.item['postCount'] = 1
-    user.item['postArchivedCount'] = 0
-    user.item['postForcedArchivingCount'] = 1
-    assert user.is_forced_disabling_criteria_met_by_posts() is False
-
-    # just below criteria cutoff
-    user.item['postCount'] = 5
-    user.item['postArchivedCount'] = 0
-    user.item['postForcedArchivingCount'] = 1
-    assert user.is_forced_disabling_criteria_met_by_posts() is False
-    user.item['postCount'] = 3
-    user.item['postArchivedCount'] = 3
-    user.item['postForcedArchivingCount'] = 0
-    assert user.is_forced_disabling_criteria_met_by_posts() is False
-
-    # just above criteria cutoff
-    user.item['postCount'] = 6
-    user.item['postArchivedCount'] = 0
-    user.item['postForcedArchivingCount'] = 1
-    assert user.is_forced_disabling_criteria_met_by_posts() is True
-    user.item['postCount'] = 0
-    user.item['postArchivedCount'] = 6
-    user.item['postForcedArchivingCount'] = 1
-    assert user.is_forced_disabling_criteria_met_by_posts() is True
-    user.item['postCount'] = 2
-    user.item['postArchivedCount'] = 4
-    user.item['postForcedArchivingCount'] = 1
-    assert user.is_forced_disabling_criteria_met_by_posts() is True
-
-
-def test_is_forced_disabling_criteria_met_by_comments(user):
-    # check starting state
     assert user.item.get('commentCount', 0) == 0
-    assert user.item.get('commentDeletedCount', 0) == 0
     assert user.item.get('commentForcedDeletionCount', 0) == 0
-    assert user.is_forced_disabling_criteria_met_by_comments() is False
+    assert user.item.get('chatCount', 0) == 0
+    assert user.item.get('chatsForcedDeletionCount', 0) == 0
+    assert user.is_forced_disabling_criteria_met() is False
 
-    # first comment was force-disabled, shouldn't disable the user
-    user.item['commentCount'] = 1
-    user.item['commentDeletedCount'] = 0
-    user.item['commentForcedDeletionCount'] = 1
-    assert user.is_forced_disabling_criteria_met_by_comments() is False
-
-    # just below criteria cutoff
+    # total created count less than 10
     user.item['commentCount'] = 5
-    user.item['commentDeletedCount'] = 0
-    user.item['commentForcedDeletionCount'] = 1
-    assert user.is_forced_disabling_criteria_met_by_comments() is False
-    user.item['commentCount'] = 3
-    user.item['commentDeletedCount'] = 3
-    user.item['commentForcedDeletionCount'] = 0
-    assert user.is_forced_disabling_criteria_met_by_comments() is False
+    user.item['postCount'] = 2
+    user.item['chatCount'] = 2
+    assert user.is_forced_disabling_criteria_met() is False
 
-    # just above criteria cutoff
-    user.item['commentCount'] = 6
-    user.item['commentDeletedCount'] = 0
+    user.item['chatsForcedDeletionCount'] = 1
+    assert user.is_forced_disabling_criteria_met() is True
     user.item['commentForcedDeletionCount'] = 1
-    assert user.is_forced_disabling_criteria_met_by_comments() is True
-    user.item['commentCount'] = 0
-    user.item['commentDeletedCount'] = 6
-    user.item['commentForcedDeletionCount'] = 1
-    assert user.is_forced_disabling_criteria_met_by_comments() is True
-    user.item['commentCount'] = 2
-    user.item['commentDeletedCount'] = 4
-    user.item['commentForcedDeletionCount'] = 1
-    assert user.is_forced_disabling_criteria_met_by_comments() is True
+    assert user.is_forced_disabling_criteria_met() is True
+    user.item['postForcedArchivingCount'] = 1
+    user.item['chatsForcedDeletionCount'] = 3
+    assert user.is_forced_disabling_criteria_met() is True
 
 
-def test_is_forced_disabling_criteria_met_by_chat_messages(user):
+def test_is_forced_disabling_criteria_met_total_creation_more_than_ten(user):
     # check starting state
-    assert user.item.get('chatMessagesCreationCount', 0) == 0
-    assert user.item.get('chatMessagesForcedDeletionCount', 0) == 0
-    assert user.is_forced_disabling_criteria_met_by_chat_messages() is False
+    assert user.item.get('postCount', 0) == 0
+    assert user.item.get('postForcedArchivingCount', 0) == 0
+    assert user.item.get('commentCount', 0) == 0
+    assert user.item.get('commentForcedDeletionCount', 0) == 0
+    assert user.item.get('chatCount', 0) == 0
+    assert user.item.get('chatsForcedDeletionCount', 0) == 0
+    assert user.is_forced_disabling_criteria_met() is False
 
-    # first comment was force-disabled, shouldn't disable the user
-    user.item['chatMessagesCreationCount'] = 1
-    user.item['chatMessagesForcedDeletionCount'] = 1
-    assert user.is_forced_disabling_criteria_met_by_chat_messages() is False
+    # total created count more than 10
+    user.item['commentCount'] = 5
+    user.item['postCount'] = 5
+    user.item['chatCount'] = 5
+    assert user.is_forced_disabling_criteria_met() is False
 
-    # just below criteria cutoff
-    user.item['chatMessagesCreationCount'] = 5
-    user.item['chatMessagesForcedDeletionCount'] = 1
-    assert user.is_forced_disabling_criteria_met_by_chat_messages() is False
+    user.item['chatsForcedDeletionCount'] = 1
+    assert user.is_forced_disabling_criteria_met() is False
+    user.item['commentForcedDeletionCount'] = 1
+    assert user.is_forced_disabling_criteria_met() is True
+    user.item['postForcedArchivingCount'] = 1
+    assert user.is_forced_disabling_criteria_met() is True
 
-    # just above criteria cutoff
-    user.item['chatMessagesCreationCount'] = 6
-    user.item['chatMessagesForcedDeletionCount'] = 1
-    assert user.is_forced_disabling_criteria_met_by_chat_messages() is True
+    user.item['chatCount'] = 50
+    assert user.is_forced_disabling_criteria_met() is False
+    user.item['commentForcedDeletionCount'] = 4
+    assert user.is_forced_disabling_criteria_met() is False
+    user.item['commentForcedDeletionCount'] = 5
+    assert user.is_forced_disabling_criteria_met() is True
 
 
 def test_set_user_accepted_eula_version(user):

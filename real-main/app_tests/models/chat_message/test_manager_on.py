@@ -318,6 +318,7 @@ def test_on_flag_add_force_delete_by_crowdsourced_criteria(chat_message_manager,
     assert message.chat.refresh_item().item['userCount'] == 9  # just below 10% cutoff for one flag
 
     # postprocess, verify flagCount is incremented and force archived
+    chat_message_manager.on_flag_add(message.id, new_item={})
     with caplog.at_level(logging.WARNING):
         chat_message_manager.on_flag_add(message.id, new_item={})
     assert len(caplog.records) == 1

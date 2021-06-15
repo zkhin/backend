@@ -119,10 +119,11 @@ class Chat(ViewModelMixin, FlagModelMixin):
         return self
 
     def is_crowdsourced_forced_removal_criteria_met(self):
-        # force-delete the chat if at least 10% of the members of the chat have flagged it
+        # two or more flags
         flag_count = self.item.get('flagCount', 0)
-        user_count = self.item.get('userCount', 0)
-        return flag_count > user_count / 10
+        return flag_count >= 2
 
-    def delete(self):
+    def delete(self, forced=False):
         self.dynamo.delete(self.id)
+        if forced:
+            self.user_manager.dynamo.increment_chats_forced_deletion_count(self.user_id)

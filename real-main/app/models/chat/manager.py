@@ -213,6 +213,20 @@ class ChatManager(FlagManagerMixin, ViewManagerMixin, ManagerBase):
             logger.warning(f'Force deleting chat `{chat_id}` from flagging')
             chat.delete()
 
+    def on_chat_message_flag_add(self, message_id, new_item):
+        user_id = new_item['sortKey'].split('/')[1]
+        chat = self.chat_message_manager.get_chat_message(message_id).chat
+        user_count = chat.item.get('userCount', 0)
+        # if a flag for that user already exists on the chat
+        if chat.flag_dynamo.get(chat.id, user_id) and user_count == 2:
+            # force delete chat
+            chat.delete(forced=True)
+            return
+
+        # add flag to chat
+        user = self.user_manager.get_user(user_id)
+        chat.flag(user)
+
     def on_chat_delete_delete_memberships(self, chat_id, old_item):
         for user_id in self.member_dynamo.generate_user_ids_by_chat(chat_id):
             self.member_dynamo.delete(chat_id, user_id)

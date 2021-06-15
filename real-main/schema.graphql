@@ -305,7 +305,6 @@ type Mutation {
   addToGroupChat(chatId: ID!, userIds: [ID!]!): Chat
   leaveGroupChat(chatId: ID!): Chat
   reportChatViews(chatIds: [ID!]!): Boolean
-  flagChat(chatId: ID!): Chat
 
   # Chat messages
   #   - may only be edited or deleted by message author

@@ -13,7 +13,7 @@ beforeAll(async () => {
 beforeEach(async () => await loginCache.clean())
 afterAll(async () => await loginCache.reset())
 
-test('Flag chat failures', async () => {
+test.skip('Flag chat failures', async () => {
   const {client: ourClient} = await loginCache.getCleanLogin()
   const {client: other1Client, userId: other1UserId} = await loginCache.getCleanLogin()
   const {client: other2Client} = await loginCache.getCleanLogin()
@@ -53,7 +53,7 @@ test('Flag chat failures', async () => {
   // 10 users in a chat it'll be deleted right away upon someone flagging it
 })
 
-test('Flag chat success', async () => {
+test.skip('Flag chat success', async () => {
   const {client: ourClient} = await loginCache.getCleanLogin()
   const {client: theirClient, userId: theirUserId} = await loginCache.getCleanLogin()
 

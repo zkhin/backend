@@ -191,7 +191,7 @@ def test_is_crowdsourced_forced_removal_criteria_met(message):
     message.chat.item['userCount'] = 9
     message.item['flagCount'] = 0
     assert message.is_crowdsourced_forced_removal_criteria_met() is False
-    message.item['flagCount'] = 1
+    message.item['flagCount'] = 2
     assert message.is_crowdsourced_forced_removal_criteria_met() is True
 
     # simulate ten-person chat

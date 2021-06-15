@@ -495,14 +495,14 @@ class UserDynamo:
     def decrement_chat_count(self, user_id):
         return self.client.decrement_count(self.pk(user_id), 'chatCount')
 
+    def increment_chats_forced_deletion_count(self, user_id):
+        return self.client.increment_count(self.pk(user_id), 'chatsForcedDeletionCount')
+
     def increment_chat_messages_creation_count(self, user_id):
         return self.client.increment_count(self.pk(user_id), 'chatMessagesCreationCount')
 
     def increment_chat_messages_deletion_count(self, user_id):
         return self.client.increment_count(self.pk(user_id), 'chatMessagesDeletionCount')
-
-    def increment_chat_messages_forced_deletion_count(self, user_id):
-        return self.client.increment_count(self.pk(user_id), 'chatMessagesForcedDeletionCount')
 
     def increment_chats_with_unviewed_messages_count(self, user_id):
         return self.client.increment_count(self.pk(user_id), 'chatsWithUnviewedMessagesCount')

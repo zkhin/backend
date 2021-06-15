@@ -361,14 +361,14 @@ class UserManager(TrendingManagerMixin, ManagerBase):
         if getattr(user, check_method_name)():
             user.disable(forced_by=forced_by)
 
-    on_user_chat_message_forced_deletion_sync_user_status = partialmethod(
-        on_criteria_sync_user_status, 'is_forced_disabling_criteria_met_by_chat_messages', 'chatMessages'
+    on_user_chat_forced_deletion_sync_user_status = partialmethod(
+        on_criteria_sync_user_status, 'is_forced_disabling_criteria_met', 'chatMessages'
     )
     on_user_comment_forced_deletion_sync_user_status = partialmethod(
-        on_criteria_sync_user_status, 'is_forced_disabling_criteria_met_by_comments', 'comments'
+        on_criteria_sync_user_status, 'is_forced_disabling_criteria_met', 'comments'
     )
     on_user_post_forced_archiving_sync_user_status = partialmethod(
-        on_criteria_sync_user_status, 'is_forced_disabling_criteria_met_by_posts', 'posts'
+        on_criteria_sync_user_status, 'is_forced_disabling_criteria_met', 'posts'
     )
 
     def sync_elasticsearch(self, user_id, new_item, old_item=None):

@@ -579,7 +579,7 @@ def test_set_last_client(user_dynamo):
         ['increment_chat_count', 'decrement_chat_count', 'chatCount'],
         ['increment_chat_messages_creation_count', None, 'chatMessagesCreationCount'],
         ['increment_chat_messages_deletion_count', None, 'chatMessagesDeletionCount'],
-        ['increment_chat_messages_forced_deletion_count', None, 'chatMessagesForcedDeletionCount'],
+        ['increment_chats_forced_deletion_count', None, 'chatsForcedDeletionCount'],
         [
             'increment_chats_with_unviewed_messages_count',
             'decrement_chats_with_unviewed_messages_count',
