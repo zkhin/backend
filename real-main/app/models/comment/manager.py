@@ -3,7 +3,6 @@ import logging
 import pendulum
 
 from app import models
-from app.clients import BadWordsClient
 from app.mixins.base import ManagerBase
 from app.mixins.flag.manager import FlagManagerMixin
 from app.models.follower.enums import FollowStatus
@@ -30,6 +29,8 @@ class CommentManager(FlagManagerMixin, ManagerBase):
         self.post_manager = managers.get('post') or models.PostManager(clients, managers=managers)
         self.user_manager = managers.get('user') or models.UserManager(clients, managers=managers)
 
+        if 'bad_words' in clients:
+            self.bad_words_client = clients['bad_words']
         if 'dynamo' in clients:
             self.dynamo = CommentDynamo(clients['dynamo'])
         if 'real_dating' in clients:
@@ -136,7 +137,6 @@ class CommentManager(FlagManagerMixin, ManagerBase):
                 return
 
         # if detects bad words, force delete the comment
-        bad_words_client = BadWordsClient()
-        if bad_words_client.validate_bad_words_detection(text):
+        if self.bad_words_client.validate_bad_words_detection(text):
             logger.warning(f'Force deleting comment `{comment_id}` from detecting bad words')
             comment.delete(forced=True)

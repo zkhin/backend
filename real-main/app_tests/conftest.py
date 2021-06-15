@@ -168,24 +168,6 @@ def google_client():
 
 
 @pytest.fixture
-def jumio_client():
-    yield mock.Mock(
-        clients.JumioClient(
-            lambda: {
-                'apiToken': 'api-token',
-                'secret': 'secret',
-                'callbackUrl': 'callback-url',
-            }
-        )
-    )
-
-
-@pytest.fixture
-def id_analyzer_client():
-    yield mock.Mock(clients.IdAnalyzerClient(lambda: {'apiKey': 'api-key'}))
-
-
-@pytest.fixture
 def real_dating_client():
     yield mock.Mock(clients.RealDatingClient())
 
@@ -203,6 +185,11 @@ def redeem_promotion_client():
 @pytest.fixture
 def pinpoint_client():
     yield mock.Mock(clients.PinpointClient(app_id='my-app-id'))
+
+
+@pytest.fixture
+def ses_client():
+    yield mock.Mock(clients.SesClient())
 
 
 # can't nest the moto context managers, it appears. To be able to use two mocked S3 buckets
@@ -350,11 +337,11 @@ def user_manager(
     apple_client,
     facebook_client,
     google_client,
-    jumio_client,
-    id_analyzer_client,
     pinpoint_client,
     elasticsearch_client,
     real_dating_client,
+    ses_client,
+    redeem_promotion_client,
 ):
     yield models.UserManager(
         {
@@ -371,7 +358,7 @@ def user_manager(
             'pinpoint': pinpoint_client,
             'elasticsearch': elasticsearch_client,
             'real_dating': real_dating_client,
-            'jumio_client': jumio_client,
-            'id_analyzer_client': id_analyzer_client,
+            'ses': ses_client,
+            'redeem_promotion': redeem_promotion_client,
         }
     )

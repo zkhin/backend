@@ -4,7 +4,6 @@ from uuid import uuid4
 import pendulum
 
 from app import models
-from app.clients import BadWordsClient
 from app.mixins.base import ManagerBase
 from app.mixins.flag.manager import FlagManagerMixin
 from app.models.chat.enums import ChatType
@@ -34,6 +33,8 @@ class ChatMessageManager(FlagManagerMixin, ManagerBase):
         self.clients = clients
         if 'appsync' in clients:
             self.appsync = ChatMessageAppSync(clients['appsync'])
+        if 'bad_words' in clients:
+            self.bad_words_client = clients['bad_words']
         if 'dynamo' in clients:
             self.dynamo = ChatMessageDynamo(clients['dynamo'])
 
@@ -181,8 +182,7 @@ class ChatMessageManager(FlagManagerMixin, ManagerBase):
             return
 
         # if detects bad words, force delete the chat message
-        bad_words_client = BadWordsClient()
-        if bad_words_client.validate_bad_words_detection(text):
+        if self.bad_words_client.validate_bad_words_detection(text):
             logger.warning(f'Force deleting chat message `{message_id}` from detecting bad words')
             chat_message.delete(forced=True)
 

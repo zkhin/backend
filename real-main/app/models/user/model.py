@@ -5,7 +5,6 @@ import botocore
 import pendulum
 import stringcase
 
-from app.clients import RedeemPromotionClient
 from app.clients.cognito import InvalidEncryption
 from app.mixins.trending.model import TrendingModelMixin
 from app.models.post.enums import PostStatus, PostType
@@ -63,6 +62,7 @@ class User(TrendingModelMixin):
         'id_analyzer',
         'pinpoint',
         'real_dating',
+        'redeem_promotion',
         's3_uploads',
     ]
     item_type = 'user'
@@ -118,7 +118,6 @@ class User(TrendingModelMixin):
         self.id = user_item['userId']
         self.placeholder_photos_directory = placeholder_photos_directory
         self.frontend_resources_domain = frontend_resources_domain
-        self.redeem_promotion_client = RedeemPromotionClient()
 
     @property
     def username(self):

@@ -61,6 +61,7 @@ clients = {
     'pinpoint': clients.PinpointClient(),
     'post_verification': clients.PostVerificationClient(secrets_manager_client.get_post_verification_api_creds),
     'real_dating': clients.RealDatingClient(),
+    'redeem_promotion': clients.RedeemPromotionClient(),
     's3_uploads': clients.S3Client(S3_UPLOADS_BUCKET),
     's3_placeholder_photos': clients.S3Client(S3_PLACEHOLDER_PHOTOS_BUCKET),
 }

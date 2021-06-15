@@ -7,7 +7,6 @@ from functools import partialmethod
 import pendulum
 
 from app import models
-from app.clients import SesClient
 from app.mixins.base import ManagerBase
 from app.mixins.trending.manager import TrendingManagerMixin
 from app.models.appstore.enums import AppStoreSubscriptionStatus
@@ -48,6 +47,7 @@ class UserManager(TrendingManagerMixin, ManagerBase):
         'real_dating',
         's3_uploads',
         's3_placeholder_photos',
+        'ses',
     ]
     item_type = 'user'
 
@@ -77,7 +77,6 @@ class UserManager(TrendingManagerMixin, ManagerBase):
             self.email_dynamo = UserContactAttributeDynamo(clients['dynamo'], 'userEmail')
             self.phone_number_dynamo = UserContactAttributeDynamo(clients['dynamo'], 'userPhoneNumber')
         self.placeholder_photos_directory = placeholder_photos_directory
-        self.ses_client = SesClient()
 
     @property
     def real_user_id(self):

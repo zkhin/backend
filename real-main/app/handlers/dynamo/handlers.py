@@ -28,6 +28,7 @@ clients = {
     'amplitude': clients.AmplitudeClient(secrets_manager_client.get_amplitude_api_key),
     'appstore': clients.AppStoreClient(secrets_manager_client.get_apple_appstore_params),
     'appsync': clients.AppSyncClient(),
+    'bad_words': clients.BadWordsClient(),
     'cognito': clients.CognitoClient(),
     'dynamo': clients.DynamoClient(),
     'dynamo_feed': clients.DynamoClient(
@@ -45,6 +46,7 @@ clients = {
     'real_dating': clients.RealDatingClient(),
     'real_transactions': clients.RealTransactionsClient(),
     's3_uploads': clients.S3Client(S3_UPLOADS_BUCKET),
+    'ses': clients.SesClient(),
 }
 
 managers = {}
