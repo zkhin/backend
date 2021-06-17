@@ -158,15 +158,6 @@ class ChatMessageManager(FlagManagerMixin, ManagerBase):
         message = self.init_chat_message(old_item)
         message.trigger_notifications(ChatMessageNotificationType.DELETED)
 
-    def on_flag_add(self, message_id, new_item):
-        chat_message_item = self.dynamo.increment_flag_count(message_id)
-        chat_message = self.init_chat_message(chat_message_item)
-
-        # force delete the chat_message?
-        if chat_message.is_crowdsourced_forced_removal_criteria_met():
-            logger.warning(f'Force deleting chat message `{message_id}` from flagging')
-            chat_message.delete()
-
     def on_chat_message_changed_detect_bad_words(self, message_id, new_item, old_item=None):
         text = new_item['text']
         chat_message = self.init_chat_message(new_item)

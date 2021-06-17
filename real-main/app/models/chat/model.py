@@ -123,7 +123,5 @@ class Chat(ViewModelMixin, FlagModelMixin):
         flag_count = self.item.get('flagCount', 0)
         return flag_count >= 2
 
-    def delete(self, forced=False):
+    def delete(self):
         self.dynamo.delete(self.id)
-        if forced:
-            self.user_manager.dynamo.increment_chats_forced_deletion_count(self.user_id)

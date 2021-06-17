@@ -118,20 +118,16 @@ test('Flag message success', async () => {
     expect(data.flagChatMessage.flagStatus).toBe('FLAGGED')
   })
 
-  // over 10% of participants in chat have flagged message, so check it was auto-deleted
+  // met force removal criteria, message is deleted
   await eventually(async () => {
     const {data} = await theirClient.query({query: queries.chat, variables: {chatId}})
+    expect(data.chat.flagStatus).toBe('FLAGGED')
     expect(data.chat.messages.items).toHaveLength(0)
   })
   await eventually(async () => {
     const {data} = await ourClient.query({query: queries.chat, variables: {chatId}})
     expect(data.chat.messages.items).toHaveLength(0)
   })
-
-  // It would be nice to check the case when the flagged message is not auto-deleted,
-  // (less than 10% of participants in chat have flagged the message)
-  // but that would require a chat with at least 10 users, and running that integration
-  // test would be too slow to be worth it. Already covered by unit tests anyway.
 })
 
 test('User disabled from flagged messages', async () => {
@@ -151,9 +147,11 @@ test('User disabled from flagged messages', async () => {
   })
 
   // we add five more messages to the chat
+  let messageId2
   for (const i of Array(5).keys()) {
+    messageId2 = uuidv4()
     await ourClient
-      .mutate({mutation: mutations.addChatMessage, variables: {chatId, messageId: uuidv4(), text: 'msg ' + i}})
+      .mutate({mutation: mutations.addChatMessage, variables: {chatId, messageId: messageId2, text: 'msg ' + i}})
       .then(({data}) => expect(data.addChatMessage.messageId).toBeTruthy())
   }
   await eventually(async () => {
@@ -167,12 +165,119 @@ test('User disabled from flagged messages', async () => {
     expect(data.flagChatMessage.flagStatus).toBe('FLAGGED')
   })
 
-  // that catches the auto-disabling criteria, check we were disabled and hence can't add another message
+  // chat still exists
+  await eventually(async () => {
+    const {data} = await theirClient.query({query: queries.chat, variables: {chatId}})
+    expect(data.chat.chatId).toBe(chatId)
+  })
+
+  // they flag other message again
+  await theirClient
+    .mutate({mutation: mutations.flagChatMessage, variables: {messageId: messageId2}})
+    .then(({data}) => {
+      expect(data.flagChatMessage.messageId).toBe(messageId2)
+      expect(data.flagChatMessage.flagStatus).toBe('FLAGGED')
+    })
+
+  // chat is not longer available
+  await expect(
+    theirClient.mutate({mutation: mutations.addChatMessage, variables: {chatId, messageId: uuidv4(), text: 'a'}}),
+  ).rejects.toThrow(/Chat .* does not exist/)
+
+  // that catches the auto-disabling criteria, check we were disabled
   await eventually(async () => {
     const {data} = await ourClient.query({query: queries.self})
     expect(data.self.userStatus).toBe('DISABLED')
   })
+})
+
+test('User disabled from combined assets - (chats, posts)', async () => {
+  const {client: ourClient} = await loginCache.getCleanLogin()
+  const {client: theirClient, userId: theirUserId} = await loginCache.getCleanLogin()
+  const {client: otherClient, userId: otherUserId} = await loginCache.getCleanLogin()
+
+  // we create two group chats with them and other
+  const [chatId1, chatId2, messageId1, messageId2] = [uuidv4(), uuidv4(), uuidv4(), uuidv4()]
+  await ourClient.mutate({
+    mutation: mutations.createGroupChat,
+    variables: {chatId: chatId1, userIds: [theirUserId, otherUserId], messageId: messageId1, messageText: 'm1'},
+  })
+  await ourClient.mutate({
+    mutation: mutations.createGroupChat,
+    variables: {chatId: chatId2, userIds: [theirUserId, otherUserId], messageId: messageId2, messageText: 'm2'},
+  })
+
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.chat, variables: {chatId: chatId1}})
+    expect(data).toMatchObject({chat: {chatId: chatId1, usersCount: 3, messagesCount: 5}})
+  })
+
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.chat, variables: {chatId: chatId2}})
+    expect(data).toMatchObject({chat: {chatId: chatId2, usersCount: 3, messagesCount: 5}})
+  })
+
+  // we create three posts
+  for (const i of Array(3).keys()) {
+    await ourClient
+      .mutate({
+        mutation: mutations.addPost,
+        variables: {postId: uuidv4(), postType: 'TEXT_ONLY', text: `lore ipsum-${i}`},
+      })
+      .then(({data: {addPost: post}}) => {
+        expect(post.postId).toBeTruthy()
+        expect(post.postStatus).toBe('COMPLETED')
+      })
+  }
+  // they and other flag our message, check chat is force deleted, we are still alive
+  await theirClient
+    .mutate({mutation: mutations.flagChatMessage, variables: {messageId: messageId1}})
+    .then(({data}) => {
+      expect(data.flagChatMessage.messageId).toBe(messageId1)
+      expect(data.flagChatMessage.flagStatus).toBe('FLAGGED')
+    })
+  await otherClient
+    .mutate({mutation: mutations.flagChatMessage, variables: {messageId: messageId1}})
+    .then(({data}) => {
+      expect(data.flagChatMessage.messageId).toBe(messageId1)
+      expect(data.flagChatMessage.flagStatus).toBe('FLAGGED')
+    })
+
   await expect(
-    ourClient.mutate({mutation: mutations.addChatMessage, variables: {chatId, messageId: uuidv4(), text: 'a'}}),
-  ).rejects.toThrow(/User .* is not ACTIVE/)
+    ourClient.mutate({
+      mutation: mutations.addChatMessage,
+      variables: {chatId: chatId1, messageId: uuidv4(), text: 'a'},
+    }),
+  ).rejects.toThrow(/Chat .* does not exist/)
+
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.self})
+    expect(data.self.userStatus).toBe('ACTIVE')
+  })
+
+  // they and other flag our message in other chat, check chat is force deleted, we are disabled
+  await theirClient
+    .mutate({mutation: mutations.flagChatMessage, variables: {messageId: messageId2}})
+    .then(({data}) => {
+      expect(data.flagChatMessage.messageId).toBe(messageId2)
+      expect(data.flagChatMessage.flagStatus).toBe('FLAGGED')
+    })
+  await otherClient
+    .mutate({mutation: mutations.flagChatMessage, variables: {messageId: messageId2}})
+    .then(({data}) => {
+      expect(data.flagChatMessage.messageId).toBe(messageId2)
+      expect(data.flagChatMessage.flagStatus).toBe('FLAGGED')
+    })
+
+  await expect(
+    ourClient.mutate({
+      mutation: mutations.addChatMessage,
+      variables: {chatId: chatId2, messageId: uuidv4(), text: 'a'},
+    }),
+  ).rejects.toThrow(/Chat .* does not exist/)
+
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.self})
+    expect(data.self.userStatus).toBe('DISABLED')
+  })
 })

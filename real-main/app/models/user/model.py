@@ -213,16 +213,12 @@ class User(TrendingModelMixin):
             self.item = self.dynamo.set_user_status(self.id, UserStatus.DISABLED)
             if forced_by:
                 # the string USER_FORCE_DISABLED is hooked up to a cloudwatch metric & alert
-                logger.warning(
-                    f'USER_FORCE_DISABLED: user `{self.id}` / `{self.username}` disabled'
-                )
+                logger.warning(f'USER_FORCE_DISABLED: user `{self.id}` / `{self.username}` disabled')
                 # add force banned user email, phone, device_uid, forced_by and it cannot be re-used while signup
                 email = self.item.get('email', None)
                 phone = self.item.get('phoneNumber', None)
                 device = self.item.get('lastClient', {}).get('uid', None)
-                self.dynamo.add_user_banned(
-                    self.id, self.username, email=email, phone=phone, device=device
-                )
+                self.dynamo.add_user_banned(self.id, self.username, email=email, phone=phone, device=device)
         elif self.status == UserStatus.DISABLED:
             pass
         elif self.status == UserStatus.DELETING:
@@ -647,9 +643,7 @@ class User(TrendingModelMixin):
             banned_email = attribute_value if attribute_name == 'email' else None
             banned_phone = attribute_value if attribute_name == 'phone' else None
 
-            self.dynamo.add_user_banned(
-                self.id, self.item['username'], email=banned_email, phone=banned_phone
-            )
+            self.dynamo.add_user_banned(self.id, self.item['username'], email=banned_email, phone=banned_phone)
             self.dynamo.set_user_status(self.id, UserStatus.DISABLED)
             raise UserException('User device is already banned')
 

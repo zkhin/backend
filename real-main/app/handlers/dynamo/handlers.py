@@ -126,7 +126,6 @@ register('chatMessage', '-', ['MODIFY'], chat_message_manager.on_chat_message_te
 register('chatMessage', '-', ['REMOVE'], chat_manager.on_chat_message_delete)
 register('chatMessage', '-', ['REMOVE'], chat_message_manager.on_chat_message_delete)
 register('chatMessage', '-', ['REMOVE'], chat_message_manager.on_item_delete_delete_flags)
-register('chatMessage', 'flag', ['INSERT'], chat_message_manager.on_flag_add)
 register('chatMessage', 'flag', ['INSERT'], chat_manager.on_chat_message_flag_add)
 register('chatMessage', 'flag', ['REMOVE'], chat_message_manager.on_flag_delete)
 register('comment', '-', ['INSERT'], post_manager.on_comment_add)
