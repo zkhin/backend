@@ -380,45 +380,24 @@ def test_delete_user_clears_cognito(user_manager, user, cognito_client):
         cognito_client.get_user_attributes(user.id)
 
 
-@pytest.mark.parametrize(
-    'method_name, check_method_name, log_pattern',
-    [
-        [
-            'on_user_chat_forced_deletion_sync_user_status',
-            'is_forced_disabling_criteria_met',
-            'due to chatMessages',
-        ],
-        [
-            'on_user_comment_forced_deletion_sync_user_status',
-            'is_forced_disabling_criteria_met',
-            'due to comments',
-        ],
-        [
-            'on_user_post_forced_archiving_sync_user_status',
-            'is_forced_disabling_criteria_met',
-            'due to posts',
-        ],
-    ],
-)
-def test_on_criteria_sync_user_status(user_manager, user, method_name, check_method_name, log_pattern, caplog):
+def test_on_forced_deletion_sync_user_status(user_manager, user, caplog):
     # test does not call
-    with patch.object(user, check_method_name, return_value=False):
+    with patch.object(user, 'is_forced_disabling_criteria_met', return_value=False):
         with patch.object(user_manager, 'init_user', return_value=user):
             with caplog.at_level(logging.WARNING):
-                getattr(user_manager, method_name)(user.id, user.item, user.item)
+                user_manager.on_forced_deletion_sync_user_status(user.id, user.item, user.item)
     assert len(caplog.records) == 0
     assert user.refresh_item().status == UserStatus.ACTIVE
 
     # test does call
-    with patch.object(user, check_method_name, return_value=True):
+    with patch.object(user, 'is_forced_disabling_criteria_met', return_value=True):
         with patch.object(user_manager, 'init_user', return_value=user):
             with caplog.at_level(logging.WARNING):
-                getattr(user_manager, method_name)(user.id, user.item, user.item)
+                user_manager.on_forced_deletion_sync_user_status(user.id, user.item, user.item)
     assert len(caplog.records) == 1
     assert 'USER_FORCE_DISABLED' in caplog.records[0].msg
     assert user.id in caplog.records[0].msg
     assert user.username in caplog.records[0].msg
-    assert log_pattern in caplog.records[0].msg
     assert user.refresh_item().status == UserStatus.DISABLED
 
 

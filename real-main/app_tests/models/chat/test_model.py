@@ -196,6 +196,8 @@ def test_is_crowdsourced_forced_removal_criteria_met_direct_chat(direct_chat):
     assert direct_chat.item.get('flagCount', 0) == 0
     assert direct_chat.is_crowdsourced_forced_removal_criteria_met() is False
 
+    direct_chat.item['flagCount'] = 1
+    assert direct_chat.is_crowdsourced_forced_removal_criteria_met() is False
     # simulate a flag in a direct chat
     direct_chat.item['flagCount'] = 2
     assert direct_chat.is_crowdsourced_forced_removal_criteria_met() is True

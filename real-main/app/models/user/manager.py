@@ -356,20 +356,10 @@ class UserManager(TrendingManagerMixin, ManagerBase):
         user.clear_photo_s3_objects()
         user.trending_delete()
 
-    def on_criteria_sync_user_status(self, check_method_name, forced_by, user_id, new_item, old_item=None):
+    def on_forced_deletion_sync_user_status(self, user_id, new_item, old_item=None):
         user = self.init_user(new_item)
-        if getattr(user, check_method_name)():
-            user.disable(forced_by=forced_by)
-
-    on_user_chat_forced_deletion_sync_user_status = partialmethod(
-        on_criteria_sync_user_status, 'is_forced_disabling_criteria_met', 'chatMessages'
-    )
-    on_user_comment_forced_deletion_sync_user_status = partialmethod(
-        on_criteria_sync_user_status, 'is_forced_disabling_criteria_met', 'comments'
-    )
-    on_user_post_forced_archiving_sync_user_status = partialmethod(
-        on_criteria_sync_user_status, 'is_forced_disabling_criteria_met', 'posts'
-    )
+        if user.is_forced_disabling_criteria_met():
+            user.disable(forced_by=True)
 
     def sync_elasticsearch(self, user_id, new_item, old_item=None):
         self.elasticsearch_client.put_user(user_id, new_item['username'], new_item.get('fullName'))
@@ -422,14 +412,6 @@ class UserManager(TrendingManagerMixin, ManagerBase):
             self.dynamo.increment_followers_requested_count(followed_user_id)
         if old_status == FollowStatus.REQUESTED and new_status != FollowStatus.REQUESTED:
             self.dynamo.decrement_followers_requested_count(followed_user_id)
-
-    def sync_chat_message_creation_count(self, message_id, new_item):
-        if user_id := new_item.get('userId'):
-            self.dynamo.increment_chat_messages_creation_count(user_id)
-
-    def sync_chat_message_deletion_count(self, message_id, old_item):
-        if user_id := old_item.get('userId'):
-            self.dynamo.increment_chat_messages_deletion_count(user_id)
 
     def on_chat_member_add_update_chat_count(self, chat_id, new_item):
         user_id = new_item['sortKey'].split('/')[1]
