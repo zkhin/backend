@@ -81,10 +81,12 @@ type Query {
 type Mutation {
   # Set up a new user account
   createAnonymousUser: CognitoTokens!
-  createCognitoOnlyUser(username: String!, fullName: String): User
-  createAppleUser(username: String!, fullName: String, appleIdToken: String!): User
-  createFacebookUser(username: String!, fullName: String, facebookAccessToken: String!): User
-  createGoogleUser(username: String!, fullName: String, googleIdToken: String!): User
+
+  # Deprecated create user methods. No longer used by frontend.
+  createCognitoOnlyUser(username: String!, fullName: String): User @deprecated(reason: "Use `createAnonymousUser()` then `setUserPassword()`")
+  createAppleUser(username: String!, fullName: String, appleIdToken: String!): User @deprecated(reason: "Use `createAnonymousUser()` then `linkAppleLogin()`")
+  createFacebookUser(username: String!, fullName: String, facebookAccessToken: String!): User @deprecated(reason: "Use `createAnonymousUser()` then `linkFacebookLogin()`")
+  createGoogleUser(username: String!, fullName: String, googleIdToken: String!): User @deprecated(reason: "Use `createAnonymousUser()` then `linkGoogleLogin()`")
 
   # Add a federated login to the user's account
   linkAppleLogin(appleIdToken: String!): User
