@@ -816,6 +816,7 @@ type Image {
   url480p: AWSURL!
   url1080p: AWSURL!
   url4k: AWSURL!
+  urlEla: AWSURL
   width: Int
   height: Int
   colors: [Color!]

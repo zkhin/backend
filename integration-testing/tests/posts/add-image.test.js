@@ -76,6 +76,7 @@ test('Add image post with image data directly included', async () => {
   await got.head(image.url1080p)
   await got.head(image.url480p)
   await got.head(image.url64p)
+  await got.head(image.urlEla)
 
   // check the data in the native image is correct
   const s3ImageData = await got.get(image.url).buffer()
@@ -93,6 +94,7 @@ test('Add image post with image data directly included', async () => {
   expect(imageCheck.url1080p.split('?')[0]).toBe(image.url1080p.split('?')[0])
   expect(imageCheck.url480p.split('?')[0]).toBe(image.url480p.split('?')[0])
   expect(imageCheck.url64p.split('?')[0]).toBe(image.url64p.split('?')[0])
+  expect(imageCheck.urlEla.split('?')[0]).toBe(image.urlEla.split('?')[0])
 })
 
 test('Add image post (with postType specified), check non-duplicates are not marked as such', async () => {

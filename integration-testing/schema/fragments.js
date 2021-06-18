@@ -55,6 +55,7 @@ export const image = gql`
     url1080p
     url480p
     url64p
+    urlEla
     width
     height
     colors {
