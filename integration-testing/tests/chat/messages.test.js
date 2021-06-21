@@ -793,6 +793,7 @@ test('Cant send message to deleted user', async () => {
 
   // verify the they can't add a message to our chat
   variables = {chatId, messageId: uuidv4(), text: 'lore'}
+  await sleep()
   await theirClient
     .mutate({mutation: mutations.addChatMessage, variables, errorPolicy: 'all'})
     .then(({errors}) => {
