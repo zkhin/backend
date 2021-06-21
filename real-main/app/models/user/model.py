@@ -171,6 +171,8 @@ class User(TrendingModelMixin):
         post_count = self.item.get('postCount', 0)
         comment_count = self.item.get('commentCount', 0)
         chat_count = self.item.get('chatCount', 0)
+        comment_deleted_count = self.item.get('commentDeletedCount', 0)
+        post_archived_count = self.item.get('postArchivedCount', 0)
 
         post_forced_archiving_count = self.item.get('postForcedArchivingCount', 0)
         comment_force_deletion_count = self.item.get('commentForcedDeletionCount', 0)
@@ -178,7 +180,13 @@ class User(TrendingModelMixin):
 
         total_created_count = sum([post_count, comment_count, chat_count])
         total_force_deleted_count = sum(
-            [post_forced_archiving_count, comment_force_deletion_count, chats_forced_deletion_count]
+            [
+                post_forced_archiving_count,
+                comment_force_deletion_count,
+                chats_forced_deletion_count,
+                comment_deleted_count,
+                post_archived_count,
+            ]
         )
 
         return total_created_count + 5 < total_force_deleted_count * 10

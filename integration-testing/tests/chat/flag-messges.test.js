@@ -191,7 +191,7 @@ test('User disabled from flagged messages', async () => {
   })
 })
 
-test('User disabled from combined assets - (chats, posts)', async () => {
+test('Chat force deleted from combined assets - (chat messages, posts)', async () => {
   const {client: ourClient} = await loginCache.getCleanLogin()
   const {client: theirClient, userId: theirUserId} = await loginCache.getCleanLogin()
   const {client: otherClient, userId: otherUserId} = await loginCache.getCleanLogin()
@@ -255,7 +255,7 @@ test('User disabled from combined assets - (chats, posts)', async () => {
     expect(data.self.userStatus).toBe('ACTIVE')
   })
 
-  // they and other flag our message in other chat, check chat is force deleted, we are disabled
+  // they and other flag our message in other chat, check chat is force deleted
   await theirClient
     .mutate({mutation: mutations.flagChatMessage, variables: {messageId: messageId2}})
     .then(({data}) => {
@@ -275,9 +275,4 @@ test('User disabled from combined assets - (chats, posts)', async () => {
       variables: {chatId: chatId2, messageId: uuidv4(), text: 'a'},
     }),
   ).rejects.toThrow(/Chat .* does not exist/)
-
-  await eventually(async () => {
-    const {data} = await ourClient.query({query: queries.self})
-    expect(data.self.userStatus).toBe('DISABLED')
-  })
 })

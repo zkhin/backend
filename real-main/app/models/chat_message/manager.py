@@ -204,3 +204,6 @@ class ChatMessageManager(FlagManagerMixin, ManagerBase):
                     return True
 
         return True if chat_type == ChatType.DIRECT else False
+
+    def on_flag_add(self):
+        pass

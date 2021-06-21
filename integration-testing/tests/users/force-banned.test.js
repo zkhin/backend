@@ -58,6 +58,11 @@ test('Add comments with bad word - force banned', async () => {
   await theirClient.mutate({mutation: mutations.addComment, variables}).then(({data: {addComment: comment}}) => {
     expect(comment.commentId).toBe(theirCommentId)
   })
+  const theirCommentId1 = uuidv4()
+  variables = {commentId: theirCommentId1, postId, text: theirText}
+  await theirClient.mutate({mutation: mutations.addComment, variables}).then(({data: {addComment: comment}}) => {
+    expect(comment.commentId).toBe(theirCommentId1)
+  })
   await eventually(async () => {
     const {data} = await theirClient.query({query: queries.self})
     expect(data.self.userStatus).toBe('DISABLED')
