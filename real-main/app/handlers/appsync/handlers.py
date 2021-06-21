@@ -1490,7 +1490,7 @@ def add_chat_message(caller_user, arguments, **kwargs):
     if not chat or not chat.is_member(caller_user.id):
         if not chat:
             raise ClientException(
-                f'Chat `{chat.id}` does not exist',
+                f'Chat `{chat_id}` does not exist',
                 [ChatErrorCode.CHAT_NOT_FOUND],
             )
         if not chat.is_member(caller_user.id):
