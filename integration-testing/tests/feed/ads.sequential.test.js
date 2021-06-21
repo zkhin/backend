@@ -410,67 +410,67 @@ describe('Post lifecycle and ads injected into feed', () => {
         expect(data.self.feed.items[2].postId).toBe(pid1)
       })
     })
-  })
 
-  describe('ad with postStatus ARCHIVED', () => {
-    beforeAll(async () => {
-      // client1 archives their ad post
-      await client1.mutate({mutation: mutations.archivePost, variables: {postId: adid1}})
-      await eventually(async () => {
-        const {data} = await client1.query({query: queries.post, variables: {postId: adid1}})
-        expect(data.post.postId).toBe(adid1)
-        expect(data.post.postStatus).toBe('ARCHIVED')
+    describe('ad with postStatus ARCHIVED', () => {
+      beforeAll(async () => {
+        // client1 archives their ad post
+        await client1.mutate({mutation: mutations.archivePost, variables: {postId: adid1}})
+        await eventually(async () => {
+          const {data} = await client1.query({query: queries.post, variables: {postId: adid1}})
+          expect(data.post.postId).toBe(adid1)
+          expect(data.post.postStatus).toBe('ARCHIVED')
+        })
       })
-    })
 
-    test('is not injected into feed', async () => {
-      await eventually(async () => {
-        const {data} = await client2.query({query: queries.selfFeed})
-        expect(data.self.feed.items).toHaveLength(2)
-        expect(data.self.feed.items[0].postId).toBe(pid2)
-        expect(data.self.feed.items[1].postId).toBe(pid1)
+      test('is not injected into feed', async () => {
+        await eventually(async () => {
+          const {data} = await client2.query({query: queries.selfFeed})
+          expect(data.self.feed.items).toHaveLength(2)
+          expect(data.self.feed.items[0].postId).toBe(pid2)
+          expect(data.self.feed.items[1].postId).toBe(pid1)
+        })
       })
-    })
-  })
 
-  describe('ad recently restored back to postStatus COMPLETED', () => {
-    beforeAll(async () => {
-      // client1 restores their ad post
-      await client1.mutate({mutation: mutations.restoreArchivedPost, variables: {postId: adid1}})
-      await eventually(async () => {
-        const {data} = await client1.query({query: queries.post, variables: {postId: adid1}})
-        expect(data.post.postId).toBe(adid1)
-        expect(data.post.postStatus).toBe('COMPLETED')
-      })
-    })
+      describe('ad recently restored back to postStatus COMPLETED', () => {
+        beforeAll(async () => {
+          // client1 restores their ad post
+          await client1.mutate({mutation: mutations.restoreArchivedPost, variables: {postId: adid1}})
+          await eventually(async () => {
+            const {data} = await client1.query({query: queries.post, variables: {postId: adid1}})
+            expect(data.post.postId).toBe(adid1)
+            expect(data.post.postStatus).toBe('COMPLETED')
+          })
+        })
 
-    test('is injected into feed', async () => {
-      await eventually(async () => {
-        const {data} = await client2.query({query: queries.selfFeed})
-        expect(data.self.feed.items).toHaveLength(3)
-        expect(data.self.feed.items[0].postId).toBe(pid2)
-        expect(data.self.feed.items[1].postId).toBe(adid1)
-        expect(data.self.feed.items[2].postId).toBe(pid1)
-      })
-    })
-  })
+        test('is injected into feed', async () => {
+          await eventually(async () => {
+            const {data} = await client2.query({query: queries.selfFeed})
+            expect(data.self.feed.items).toHaveLength(3)
+            expect(data.self.feed.items[0].postId).toBe(pid2)
+            expect(data.self.feed.items[1].postId).toBe(adid1)
+            expect(data.self.feed.items[2].postId).toBe(pid1)
+          })
+        })
 
-  describe('ad recently that has been deleted', () => {
-    beforeAll(async () => {
-      // client1 deletes their ad post
-      await client1.mutate({mutation: mutations.deletePost, variables: {postId: adid1}})
-      await eventually(async () => {
-        const {data} = await client1.query({query: queries.post, variables: {postId: adid1}})
-        expect(data.post).toBeNull()
-      })
-    })
+        describe('ad recently that has been deleted', () => {
+          beforeAll(async () => {
+            // client1 deletes their ad post
+            await client1.mutate({mutation: mutations.deletePost, variables: {postId: adid1}})
+            await eventually(async () => {
+              const {data} = await client1.query({query: queries.post, variables: {postId: adid1}})
+              expect(data.post).toBeNull()
+            })
+          })
 
-    test('is not injected into feed', async () => {
-      await eventually(async () => {
-        const {data} = await client2.query({query: queries.selfFeed})
-        expect(data.self.feed.items).toHaveLength(2)
-        expect(data.self.feed.items[0].postId).toBe(pid2)
-        expect(data.self.feed.items[1].postId).toBe(pid1)
+          test('is not injected into feed', async () => {
+            await eventually(async () => {
+              const {data} = await client2.query({query: queries.selfFeed})
+              expect(data.self.feed.items).toHaveLength(2)
+              expect(data.self.feed.items[0].postId).toBe(pid2)
+              expect(data.self.feed.items[1].postId).toBe(pid1)
+            })
+          })
+        })
       })
     })
   })
