@@ -167,25 +167,35 @@ class User(TrendingModelMixin):
             return f'https://{self.frontend_resources_domain}/{placeholder_path}'
         return None
 
-    def is_forced_disabling_criteria_met_by_chat_messages(self):
-        # matching post criteria
-        total_count = self.item.get('chatMessagesCreationCount', 0)
-        forced_deleted_count = self.item.get('chatMessagesForcedDeletionCount', 0)
-        return total_count > 5 and forced_deleted_count > total_count / 10
+    def is_forced_disabling_criteria_met(self):
+        post_count = self.item.get('postCount', 0)
+        comment_count = self.item.get('commentCount', 0)
+        chat_count = self.item.get('chatCount', 0)
+        comment_deleted_count = self.item.get('commentDeletedCount', 0)
+        post_archived_count = self.item.get('postArchivedCount', 0)
 
-    def is_forced_disabling_criteria_met_by_comments(self):
-        # matching post criteria
-        total_comment_count = self.item.get('commentCount', 0) + self.item.get('commentDeletedCount', 0)
-        forced_deleted_count = self.item.get('commentForcedDeletionCount', 0)
-        return total_comment_count > 5 and forced_deleted_count > total_comment_count / 10
+        post_forced_archiving_count = self.item.get('postForcedArchivingCount', 0)
+        comment_force_deletion_count = self.item.get('commentForcedDeletionCount', 0)
+        chats_forced_deletion_count = self.item.get('chatsForcedDeletionCount', 0)
 
-    def is_forced_disabling_criteria_met_by_posts(self):
-        # forced disabling criteria, (directly from spec):
-        #   - user has over 5 posts
-        #   - their forced post archivings is at least 10% of their total post count
-        total_post_count = self.item.get('postCount', 0) + self.item.get('postArchivedCount', 0)
-        forced_archiving_count = self.item.get('postForcedArchivingCount', 0)
-        return total_post_count > 5 and forced_archiving_count > total_post_count / 10
+        total_created_count = sum(
+            [
+                post_count,
+                comment_count,
+                chat_count,
+                comment_deleted_count,
+                post_archived_count,
+            ]
+        )
+        total_force_deleted_count = sum(
+            [
+                post_forced_archiving_count,
+                comment_force_deletion_count,
+                chats_forced_deletion_count,
+            ]
+        )
+
+        return total_created_count + 5 < total_force_deleted_count * 10
 
     def refresh_item(self, strongly_consistent=False):
         self.item = self.dynamo.get_user(self.id, strongly_consistent=strongly_consistent)
@@ -212,21 +222,17 @@ class User(TrendingModelMixin):
             raise Exception(f'Unrecognized user status `{self.status}`')
         return self
 
-    def disable(self, forced_by=None):
+    def disable(self, forced=False):
         if self.status in (UserStatus.ACTIVE, UserStatus.ANONYMOUS):
             self.item = self.dynamo.set_user_status(self.id, UserStatus.DISABLED)
-            if forced_by:
+            if forced:
                 # the string USER_FORCE_DISABLED is hooked up to a cloudwatch metric & alert
-                logger.warning(
-                    f'USER_FORCE_DISABLED: user `{self.id}` / `{self.username}` disabled due to {forced_by}'
-                )
+                logger.warning(f'USER_FORCE_DISABLED: user `{self.id}` / `{self.username}` disabled')
                 # add force banned user email, phone, device_uid, forced_by and it cannot be re-used while signup
                 email = self.item.get('email', None)
                 phone = self.item.get('phoneNumber', None)
                 device = self.item.get('lastClient', {}).get('uid', None)
-                self.dynamo.add_user_banned(
-                    self.id, self.username, forced_by, email=email, phone=phone, device=device
-                )
+                self.dynamo.add_user_banned(self.id, self.username, email=email, phone=phone, device=device)
         elif self.status == UserStatus.DISABLED:
             pass
         elif self.status == UserStatus.DELETING:
@@ -651,9 +657,7 @@ class User(TrendingModelMixin):
             banned_email = attribute_value if attribute_name == 'email' else None
             banned_phone = attribute_value if attribute_name == 'phone' else None
 
-            self.dynamo.add_user_banned(
-                self.id, self.item['username'], 'signUp', email=banned_email, phone=banned_phone
-            )
+            self.dynamo.add_user_banned(self.id, self.item['username'], email=banned_email, phone=banned_phone)
             self.dynamo.set_user_status(self.id, UserStatus.DISABLED)
             raise UserException('User device is already banned')
 

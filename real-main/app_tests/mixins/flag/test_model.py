@@ -110,16 +110,22 @@ def test_unflag(model, user2):
 
 @pytest.mark.parametrize('model', pytest.lazy_fixture(['post', 'comment']))
 def test_is_crowdsourced_forced_removal_criteria_met_post(model, user2):
-    # should archive if over 5 users have viewed the model and more than 10% have flagged it
+    # should archive if over 10 users have viewed the model and more than 10% have flagged it
     # one flag, verify shouldn't force-archive
     model.dynamo.increment_flag_count(model.id)
     model.refresh_item()
     assert model.is_crowdsourced_forced_removal_criteria_met() is False
 
-    # with 5 views, verify still shouldn't force-archive
-    with patch.object(model.__class__, 'viewed_by_count', 5):
+    # with 10 views, verify still shouldn't force-archive
+    with patch.object(model.__class__, 'viewed_by_count', 10):
         assert model.is_crowdsourced_forced_removal_criteria_met() is False
 
-    # with 6 views, verify should force-archive now
-    with patch.object(model.__class__, 'viewed_by_count', 6):
+    # with 11 views, verify still shouldn't force-archive
+    with patch.object(model.__class__, 'viewed_by_count', 11):
+        assert model.is_crowdsourced_forced_removal_criteria_met() is False
+
+    # with 11 views, increase flag count, verify force-achive
+    model.dynamo.increment_flag_count(model.id)
+    model.refresh_item()
+    with patch.object(model.__class__, 'viewed_by_count', 11):
         assert model.is_crowdsourced_forced_removal_criteria_met() is True

@@ -295,6 +295,53 @@ def test_on_flag_add_deletes_chat_if_crowdsourced_criteria_met(chat_manager, cha
     assert chat.refresh_item().item is None
 
 
+def test_on_chat_message_flag_add_chat_message_flag(chat_manager, user1_message, user1):
+    # check & configure starting state
+    assert user1_message.refresh_item().item.get('flagCount', 0) == 0
+    for _ in range(8):
+        user1_message.chat.dynamo.increment_user_count(user1_message.chat_id)
+    assert user1_message.chat.refresh_item().item['userCount'] == 10  # just above cutoff for one flag
+
+    # messageprocess, verify flagCount is incremented & not force achived
+    chat_manager.on_chat_message_flag_add(user1_message.id, new_item={'sortKey': f'flag/{user1.id}'})
+    assert user1_message.refresh_item().item.get('flagCount', 0) == 1
+
+
+def test_on_chat_message_flag_add_chat_message_force_delete_by_crowdsourced_criteria(
+    chat_manager, user1_message, user1, user2, caplog
+):
+    # configure and check starting state
+    assert user1_message.refresh_item().item.get('flagCount', 0) == 0
+    for _ in range(7):
+        user1_message.chat.dynamo.increment_user_count(user1_message.chat_id)
+    assert user1_message.chat.refresh_item().item['userCount'] == 9  # just below 10% cutoff for one flag
+
+    # postprocess, verify flagCount is incremented and force archived
+    chat_manager.on_chat_message_flag_add(user1_message.id, new_item={'sortKey': f'flag/{user1.id}'})
+    with caplog.at_level(logging.WARNING):
+        chat_manager.on_chat_message_flag_add(user1_message.id, new_item={'sortKey': f'flag/{user2.id}'})
+    assert len(caplog.records) == 1
+    assert 'Force deleting chat message' in caplog.records[0].msg
+    assert user1_message.refresh_item().item is None
+
+
+def test_on_chat_message_flag_add_chat_flag(chat_manager, chat_message_manager, chat, user1, user2):
+    user2_message_1 = chat_message_manager.add_chat_message(chat.id, 'lore', user_id=user2.id)
+    user2_message_2 = chat_message_manager.add_chat_message(chat.id, 'lore', user_id=user2.id)
+    # check starting state
+    assert chat.flag_dynamo.get(chat.id, user1.id) is None
+
+    # user1 flags user2's chat message first time
+    chat_manager.on_chat_message_flag_add(user2_message_1.id, new_item={'sortKey': f'flag/{user1.id}'})
+    assert chat.flag_dynamo.get(chat.id, user1.id)
+
+    # user1 flags user2's chat message again
+    chat_manager.on_chat_message_flag_add(user2_message_2.id, new_item={'sortKey': f'flag/{user1.id}'})
+    assert chat.flag_dynamo.get(chat.id, user1.id)
+    # check chat is force deleted
+    assert chat_manager.get_chat(chat.id) is None
+
+
 def test_on_chat_delete_delete_memberships(chat_manager, user1, user2, chat):
     # set up a group chat as well, add both users, verify starting state
     group_chat = chat_manager.add_group_chat(str(uuid4()), user1.id, [user2.id])

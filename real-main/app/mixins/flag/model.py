@@ -36,7 +36,7 @@ class FlagModelMixin:
 
     def is_crowdsourced_forced_removal_criteria_met(self):
         # the item should be force-archived if (directly from spec):
-        #   - over 5 users have viewed the item and
+        #   - over 10 users have viewed the item and
         #   - at least 10% of them have flagged it
         flag_count = self.item.get('flagCount', 0)
-        return self.viewed_by_count > 5 and flag_count > self.viewed_by_count / 10
+        return self.viewed_by_count > 10 and flag_count > self.viewed_by_count / 10

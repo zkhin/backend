@@ -274,32 +274,6 @@ def test_sync_follow_counts_due_to_follow_status_fails_softly(
     assert followed.refresh_item().item.get('followersRequestedCount', 0) == 0
 
 
-def test_sync_chat_message_creation_count(user_manager, user2, message, system_message):
-    # check starting state
-    assert user2.refresh_item().item.get('chatMessagesCreationCount', 0) == 0
-
-    # sync a message creation by user2, verify increments
-    user_manager.sync_chat_message_creation_count(message.id, new_item=message.item)
-    assert user2.refresh_item().item.get('chatMessagesCreationCount', 0) == 1
-
-    # sync a system message creation, verify no error and no increment
-    user_manager.sync_chat_message_creation_count(system_message.id, new_item=system_message.item)
-    assert user2.refresh_item().item.get('chatMessagesCreationCount', 0) == 1
-
-
-def test_sync_chat_message_deletion_count(user_manager, user2, message, system_message):
-    # check starting state
-    assert user2.refresh_item().item.get('chatMessagesDeletionCount', 0) == 0
-
-    # sync a message deletion by user2, verify increments
-    user_manager.sync_chat_message_deletion_count(message.id, old_item=message.item)
-    assert user2.refresh_item().item.get('chatMessagesDeletionCount', 0) == 1
-
-    # sync a system message deletion, verify no error and no increment
-    user_manager.sync_chat_message_deletion_count(system_message.id, old_item=system_message.item)
-    assert user2.refresh_item().item.get('chatMessagesDeletionCount', 0) == 1
-
-
 def test_on_user_new_followers_sync_card_public_user(user_manager, follower_manager, card_manager, user, user2):
     follower, followed = user, user2
     follow = follower_manager.request_to_follow(follower, followed)

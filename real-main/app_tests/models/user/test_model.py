@@ -258,10 +258,9 @@ def test_disable_enable_user_status(user, caplog):
 
     # force disable user
     with caplog.at_level(logging.WARNING):
-        user.disable(forced_by='kittens')
+        user.disable(forced=True)
     assert len(caplog.records) == 1
     assert 'USER_FORCE_DISABLED' in caplog.records[0].msg
-    assert 'kittens' in caplog.records[0].msg
     assert user.id in caplog.records[0].msg
     assert user.username in caplog.records[0].msg
     assert user.status == UserStatus.DISABLED
@@ -607,102 +606,65 @@ def test_serialize_deleting(user, user2):
         user.serialize(user.id)
 
 
-def test_is_forced_disabling_criteria_met_by_posts(user):
+def test_is_forced_disabling_criteria_met_first_five_items(user):
     # check starting state
     assert user.item.get('postCount', 0) == 0
-    assert user.item.get('postArchivedCount', 0) == 0
     assert user.item.get('postForcedArchivingCount', 0) == 0
-    assert user.is_forced_disabling_criteria_met_by_posts() is False
-
-    # first post was force-disabled, shouldn't disable the user
-    user.item['postCount'] = 1
-    user.item['postArchivedCount'] = 0
-    user.item['postForcedArchivingCount'] = 1
-    assert user.is_forced_disabling_criteria_met_by_posts() is False
-
-    # just below criteria cutoff
-    user.item['postCount'] = 5
-    user.item['postArchivedCount'] = 0
-    user.item['postForcedArchivingCount'] = 1
-    assert user.is_forced_disabling_criteria_met_by_posts() is False
-    user.item['postCount'] = 3
-    user.item['postArchivedCount'] = 3
-    user.item['postForcedArchivingCount'] = 0
-    assert user.is_forced_disabling_criteria_met_by_posts() is False
-
-    # just above criteria cutoff
-    user.item['postCount'] = 6
-    user.item['postArchivedCount'] = 0
-    user.item['postForcedArchivingCount'] = 1
-    assert user.is_forced_disabling_criteria_met_by_posts() is True
-    user.item['postCount'] = 0
-    user.item['postArchivedCount'] = 6
-    user.item['postForcedArchivingCount'] = 1
-    assert user.is_forced_disabling_criteria_met_by_posts() is True
-    user.item['postCount'] = 2
-    user.item['postArchivedCount'] = 4
-    user.item['postForcedArchivingCount'] = 1
-    assert user.is_forced_disabling_criteria_met_by_posts() is True
-
-
-def test_is_forced_disabling_criteria_met_by_comments(user):
-    # check starting state
     assert user.item.get('commentCount', 0) == 0
-    assert user.item.get('commentDeletedCount', 0) == 0
     assert user.item.get('commentForcedDeletionCount', 0) == 0
-    assert user.is_forced_disabling_criteria_met_by_comments() is False
+    assert user.item.get('chatCount', 0) == 0
+    assert user.item.get('chatsForcedDeletionCount', 0) == 0
+    assert user.is_forced_disabling_criteria_met() is False
 
-    # first comment was force-disabled, shouldn't disable the user
+    # total created count less than 10
     user.item['commentCount'] = 1
-    user.item['commentDeletedCount'] = 0
-    user.item['commentForcedDeletionCount'] = 1
-    assert user.is_forced_disabling_criteria_met_by_comments() is False
+    user.item['postCount'] = 1
+    user.item['chatCount'] = 1
+    assert user.is_forced_disabling_criteria_met() is False
 
-    # just below criteria cutoff
-    user.item['commentCount'] = 5
-    user.item['commentDeletedCount'] = 0
+    # one item is forced deleted, force disable
+    user.item['chatsForcedDeletionCount'] = 1
+    assert user.is_forced_disabling_criteria_met() is True
+    # four items, still force disable
+    user.item['chatCount'] = 2
+    assert user.is_forced_disabling_criteria_met() is True
+    # five items, skip force disable
+    user.item['postCount'] = 2
+    assert user.is_forced_disabling_criteria_met() is False
+    # one more itme is forced deleted, force disable
     user.item['commentForcedDeletionCount'] = 1
-    assert user.is_forced_disabling_criteria_met_by_comments() is False
-    user.item['commentCount'] = 3
-    user.item['commentDeletedCount'] = 3
-    user.item['commentForcedDeletionCount'] = 0
-    assert user.is_forced_disabling_criteria_met_by_comments() is False
-
-    # just above criteria cutoff
-    user.item['commentCount'] = 6
-    user.item['commentDeletedCount'] = 0
-    user.item['commentForcedDeletionCount'] = 1
-    assert user.is_forced_disabling_criteria_met_by_comments() is True
-    user.item['commentCount'] = 0
-    user.item['commentDeletedCount'] = 6
-    user.item['commentForcedDeletionCount'] = 1
-    assert user.is_forced_disabling_criteria_met_by_comments() is True
-    user.item['commentCount'] = 2
-    user.item['commentDeletedCount'] = 4
-    user.item['commentForcedDeletionCount'] = 1
-    assert user.is_forced_disabling_criteria_met_by_comments() is True
+    assert user.is_forced_disabling_criteria_met() is True
 
 
-def test_is_forced_disabling_criteria_met_by_chat_messages(user):
+def test_is_forced_disabling_criteria_met_after_five_items(user):
     # check starting state
-    assert user.item.get('chatMessagesCreationCount', 0) == 0
-    assert user.item.get('chatMessagesForcedDeletionCount', 0) == 0
-    assert user.is_forced_disabling_criteria_met_by_chat_messages() is False
+    assert user.item.get('postCount', 0) == 0
+    assert user.item.get('postForcedArchivingCount', 0) == 0
+    assert user.item.get('commentCount', 0) == 0
+    assert user.item.get('commentForcedDeletionCount', 0) == 0
+    assert user.item.get('chatCount', 0) == 0
+    assert user.item.get('chatsForcedDeletionCount', 0) == 0
+    assert user.is_forced_disabling_criteria_met() is False
 
-    # first comment was force-disabled, shouldn't disable the user
-    user.item['chatMessagesCreationCount'] = 1
-    user.item['chatMessagesForcedDeletionCount'] = 1
-    assert user.is_forced_disabling_criteria_met_by_chat_messages() is False
+    # total created count more than 10
+    user.item['commentCount'] = 4
+    user.item['postCount'] = 1
+    user.item['chatCount'] = 1
+    assert user.is_forced_disabling_criteria_met() is False
 
-    # just below criteria cutoff
-    user.item['chatMessagesCreationCount'] = 5
-    user.item['chatMessagesForcedDeletionCount'] = 1
-    assert user.is_forced_disabling_criteria_met_by_chat_messages() is False
+    user.item['chatsForcedDeletionCount'] = 1
+    assert user.is_forced_disabling_criteria_met() is False
+    user.item['commentForcedDeletionCount'] = 1
+    assert user.is_forced_disabling_criteria_met() is True
 
-    # just above criteria cutoff
-    user.item['chatMessagesCreationCount'] = 6
-    user.item['chatMessagesForcedDeletionCount'] = 1
-    assert user.is_forced_disabling_criteria_met_by_chat_messages() is True
+    user.item['chatCount'] = 9
+    assert user.is_forced_disabling_criteria_met() is True
+    # after 10 items, skip force disable
+    user.item['postCount'] = 10
+    assert user.is_forced_disabling_criteria_met() is False
+    # one more itme is forced deleted, force disable
+    user.item['postForcedArchivingCount'] = 1
+    assert user.is_forced_disabling_criteria_met() is True
 
 
 def test_set_user_accepted_eula_version(user):
@@ -979,7 +941,7 @@ def test_link_federated_login_banned_user(anonymous_user, user_4_stream_updated)
     user.refresh_item()
     assert user.item['lastClient'] == client
 
-    user.dynamo.add_user_banned(user.id, 'user1', 'signUp', device='uuid-banned')
+    user.dynamo.add_user_banned(user_id=user.id, username='user1', device='uuid-banned')
 
     # call, verify final state
     with pytest.raises(UserException, match='device is already banned'):
@@ -1220,7 +1182,7 @@ def test_start_change_contact_attribute_banned_device(user):
     user.refresh_item()
     assert user.item['lastClient'] == client
 
-    user.dynamo.add_user_banned(user.id, 'user1', 'signUp', device='uuid-banned')
+    user.dynamo.add_user_banned(user_id=user.id, username='user1', device='uuid-banned')
 
     # start the email change
     new_email = 'go@go.com'
@@ -1232,7 +1194,7 @@ def test_start_change_contact_attribute_banned_device(user):
 
 def test_start_change_contact_attribute_banned_email(user, user2):
     banned_email = 'go@go.com'
-    user.dynamo.add_user_banned(user.id, 'user1', 'signUp', email=banned_email)
+    user.dynamo.add_user_banned(user_id=user.id, username='user1', email=banned_email)
 
     # start the email change
     with pytest.raises(UserException, match='email'):
@@ -1243,7 +1205,7 @@ def test_start_change_contact_attribute_banned_email(user, user2):
 
 def test_start_change_contact_attribute_banned_phone(user, user2):
     banned_phone = '+12125551212'
-    user.dynamo.add_user_banned(user.id, 'user1', 'signUp', phone=banned_phone)
+    user.dynamo.add_user_banned(user_id=user.id, username='user1', phone=banned_phone)
 
     # start the email change
     with pytest.raises(UserException, match='phone'):

@@ -495,14 +495,8 @@ class UserDynamo:
     def decrement_chat_count(self, user_id):
         return self.client.decrement_count(self.pk(user_id), 'chatCount')
 
-    def increment_chat_messages_creation_count(self, user_id):
-        return self.client.increment_count(self.pk(user_id), 'chatMessagesCreationCount')
-
-    def increment_chat_messages_deletion_count(self, user_id):
-        return self.client.increment_count(self.pk(user_id), 'chatMessagesDeletionCount')
-
-    def increment_chat_messages_forced_deletion_count(self, user_id):
-        return self.client.increment_count(self.pk(user_id), 'chatMessagesForcedDeletionCount')
+    def increment_chats_forced_deletion_count(self, user_id):
+        return self.client.increment_count(self.pk(user_id), 'chatsForcedDeletionCount')
 
     def increment_chats_with_unviewed_messages_count(self, user_id):
         return self.client.increment_count(self.pk(user_id), 'chatsWithUnviewedMessagesCount')
@@ -590,7 +584,7 @@ class UserDynamo:
         key = {'partitionKey': f'user/{user_id}', 'sortKey': 'deleted'}
         return self.client.delete_item(key)
 
-    def add_user_banned(self, user_id, username, forced_by, email=None, phone=None, device=None, now=None):
+    def add_user_banned(self, user_id, username, email=None, phone=None, device=None, now=None):
         now = now or pendulum.now('utc')
         banned_at_str = now.to_iso8601_string()
         item = {
@@ -600,7 +594,6 @@ class UserDynamo:
             'userId': user_id,
             'username': username,
             'bannedAt': banned_at_str,
-            'forcedBy': forced_by,
         }
         if email is not None:
             item['gsiA1PartitionKey'] = f'email/{email}'

@@ -577,9 +577,7 @@ def test_set_last_client(user_dynamo):
         ['increment_album_count', 'decrement_album_count', 'albumCount'],
         ['increment_card_count', 'decrement_card_count', 'cardCount'],
         ['increment_chat_count', 'decrement_chat_count', 'chatCount'],
-        ['increment_chat_messages_creation_count', None, 'chatMessagesCreationCount'],
-        ['increment_chat_messages_deletion_count', None, 'chatMessagesDeletionCount'],
-        ['increment_chat_messages_forced_deletion_count', None, 'chatMessagesForcedDeletionCount'],
+        ['increment_chats_forced_deletion_count', None, 'chatsForcedDeletionCount'],
         [
             'increment_chats_with_unviewed_messages_count',
             'decrement_chats_with_unviewed_messages_count',
@@ -1089,7 +1087,7 @@ def test_add_user_banned(user_dynamo, caplog):
 
     # add the item, verify
     before = pendulum.now('utc')
-    user_banned_item = user_dynamo.add_user_banned(user_id, 'abc', 'comments', email='abc@test.com')
+    user_banned_item = user_dynamo.add_user_banned(user_id, 'abc', email='abc@test.com')
     after = pendulum.now('utc')
     assert user_dynamo.client.get_item(key) == user_banned_item
     banned_at = pendulum.parse(user_banned_item['bannedAt'])
@@ -1100,7 +1098,6 @@ def test_add_user_banned(user_dynamo, caplog):
         'userId': user_id,
         'username': 'abc',
         'bannedAt': banned_at.to_iso8601_string(),
-        'forcedBy': 'comments',
         'gsiA1PartitionKey': 'email/abc@test.com',
         'gsiA1SortKey': 'banned',
     }
@@ -1109,7 +1106,7 @@ def test_add_user_banned(user_dynamo, caplog):
 
     # verify can't add same subitem a second time
     with caplog.at_level(logging.WARNING):
-        new_item = user_dynamo.add_user_banned(user_id, 'abc', 'comments')
+        new_item = user_dynamo.add_user_banned(user_id, 'abc')
     assert new_item is None
     assert len(caplog.records) == 1
     assert caplog.records[0].levelname == 'WARNING'
@@ -1134,9 +1131,9 @@ def test_generate_banned_user_by_contact_attr(user_dynamo, caplog):
 
     # add banned user
 
-    user_dynamo.add_user_banned(user_id_1, 'abc-1', 'comments', email='abc1@test.com')
-    user_dynamo.add_user_banned(user_id_2, 'abc-2', 'posts', phone='+1234567890')
-    user_dynamo.add_user_banned(user_id_3, 'abc-3', 'chatMessages', device='x-real-device-1')
+    user_dynamo.add_user_banned(user_id_1, 'abc-1', email='abc1@test.com')
+    user_dynamo.add_user_banned(user_id_2, 'abc-2', phone='+1234567890')
+    user_dynamo.add_user_banned(user_id_3, 'abc-3', device='x-real-device-1')
 
     user_ids = user_dynamo.generate_banned_user_by_contact_attr(email='abc1@test.com')
     assert user_ids == [user_id_1]

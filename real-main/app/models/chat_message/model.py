@@ -78,10 +78,8 @@ class ChatMessage(FlagModelMixin):
         self.item = self.dynamo.edit_chat_message(self.id, text, text_tags, now=now)
         return self
 
-    def delete(self, forced=False):
+    def delete(self):
         self.item = self.dynamo.delete_chat_message(self.id)
-        if forced:
-            self.user_manager.dynamo.increment_chat_messages_forced_deletion_count(self.user_id)
         return self
 
     def flag(self, user):
@@ -130,10 +128,17 @@ class ChatMessage(FlagModelMixin):
         return json.dumps(serialized, cls=DecimalJsonEncoder)
 
     def is_crowdsourced_forced_removal_criteria_met(self):
-        # force-delete the chat message if at least 10% of the members of the chat have flagged it
+        """
+        - If the chat has two or fewer users in it, forced removal criteria is met
+            if the chat message has one or more flags
+        - If the chat has more than two users in it, forced removal criteria is met
+            if the chat message has two or more flags
+        """
         flag_count = self.item.get('flagCount', 0)
         user_count = self.chat.item.get('userCount', 0)
-        return flag_count > user_count / 10
+        if (user_count <= 2 and flag_count >= 1) or (user_count > 2 and flag_count >= 2):
+            return True
+        return False
 
     def on_add_or_edit(self, old_item):
         if old_item:

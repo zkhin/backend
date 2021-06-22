@@ -121,14 +121,12 @@ register('chat', 'member', ['REMOVE'], user_manager.on_chat_member_delete_update
 register('chat', 'view', ['INSERT', 'MODIFY'], chat_manager.sync_member_messages_unviewed_count, {'viewCount': 0})
 register('chatMessage', '-', ['INSERT'], chat_manager.on_chat_message_add)
 register('chatMessage', '-', ['INSERT'], chat_message_manager.on_chat_message_add)
-register('chatMessage', '-', ['INSERT'], user_manager.sync_chat_message_creation_count)
 register('chatMessage', '-', ['INSERT', 'MODIFY'], chat_message_manager.on_chat_message_changed_detect_bad_words)
 register('chatMessage', '-', ['MODIFY'], chat_message_manager.on_chat_message_text_change, {'text': None})
 register('chatMessage', '-', ['REMOVE'], chat_manager.on_chat_message_delete)
 register('chatMessage', '-', ['REMOVE'], chat_message_manager.on_chat_message_delete)
 register('chatMessage', '-', ['REMOVE'], chat_message_manager.on_item_delete_delete_flags)
-register('chatMessage', '-', ['REMOVE'], user_manager.sync_chat_message_deletion_count)
-register('chatMessage', 'flag', ['INSERT'], chat_message_manager.on_flag_add)
+register('chatMessage', 'flag', ['INSERT'], chat_manager.on_chat_message_flag_add)
 register('chatMessage', 'flag', ['REMOVE'], chat_message_manager.on_flag_delete)
 register('comment', '-', ['INSERT'], post_manager.on_comment_add)
 register('comment', '-', ['INSERT'], user_manager.on_comment_add)
@@ -332,14 +330,14 @@ register(
     'user',
     'profile',
     ['INSERT', 'MODIFY'],
-    user_manager.on_user_chat_message_forced_deletion_sync_user_status,
-    {'chatMessagesForcedDeletionCount': 0},
+    user_manager.on_forced_deletion_sync_user_status,
+    {'chatsForcedDeletionCount': 0},
 )
 register(
     'user',
     'profile',
     ['INSERT', 'MODIFY'],
-    user_manager.on_user_comment_forced_deletion_sync_user_status,
+    user_manager.on_forced_deletion_sync_user_status,
     {'commentForcedDeletionCount': 0},
 )
 register(
@@ -354,7 +352,7 @@ register(
     'user',
     'profile',
     ['INSERT', 'MODIFY'],
-    user_manager.on_user_post_forced_archiving_sync_user_status,
+    user_manager.on_forced_deletion_sync_user_status,
     {'postForcedArchivingCount': 0},
 )
 register(

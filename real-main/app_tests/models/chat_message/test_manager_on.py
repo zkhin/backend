@@ -1,4 +1,3 @@
-import logging
 from unittest.mock import patch
 from uuid import uuid4
 
@@ -296,33 +295,6 @@ def test_on_chat_message_delete_triggers_notifications(chat_message_manager, mes
     assert tn_mock.call_count == 1
     assert tn_mock.call_args.args[0] == ChatMessageNotificationType.DELETED
     assert tn_mock.call_args.args[1] == user2.id
-
-
-def test_on_flag_add(chat_message_manager, message):
-    # check & configure starting state
-    assert message.refresh_item().item.get('flagCount', 0) == 0
-    for _ in range(8):
-        message.chat.dynamo.increment_user_count(message.chat_id)
-    assert message.chat.refresh_item().item['userCount'] == 10  # just above cutoff for one flag
-
-    # messageprocess, verify flagCount is incremented & not force achived
-    chat_message_manager.on_flag_add(message.id, new_item={})
-    assert message.refresh_item().item.get('flagCount', 0) == 1
-
-
-def test_on_flag_add_force_delete_by_crowdsourced_criteria(chat_message_manager, message, caplog):
-    # configure and check starting state
-    assert message.refresh_item().item.get('flagCount', 0) == 0
-    for _ in range(7):
-        message.chat.dynamo.increment_user_count(message.chat_id)
-    assert message.chat.refresh_item().item['userCount'] == 9  # just below 10% cutoff for one flag
-
-    # postprocess, verify flagCount is incremented and force archived
-    with caplog.at_level(logging.WARNING):
-        chat_message_manager.on_flag_add(message.id, new_item={})
-    assert len(caplog.records) == 1
-    assert 'Force deleting chat message' in caplog.records[0].msg
-    assert message.refresh_item().item is None
 
 
 def test_on_chat_delete_delete_messages(chat_message_manager, chat):

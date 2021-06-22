@@ -213,6 +213,32 @@ class ChatManager(FlagManagerMixin, ViewManagerMixin, ManagerBase):
             logger.warning(f'Force deleting chat `{chat_id}` from flagging')
             chat.delete()
 
+    def on_chat_message_flag_add(self, message_id, new_item):
+        user_id = new_item['sortKey'].split('/')[1]
+        chat_message_item = self.chat_message_manager.dynamo.increment_flag_count(message_id)
+        chat_message = self.chat_message_manager.init_chat_message(chat_message_item)
+        chat = chat_message.chat
+
+        if not chat:
+            return
+        user_count = chat.item.get('userCount', 0)
+        # if a flag for that user already exists on the direct chat
+        if chat.flag_dynamo.get(chat.id, user_id) and user_count == 2:
+            # delete chat
+            chat.delete()
+            # increase chatsForcedDeletionCount
+            self.user_manager.dynamo.increment_chats_forced_deletion_count(chat_message.user_id)
+            return
+
+        # add flag to chat
+        user = self.user_manager.get_user(user_id)
+        chat.flag(user)
+
+        # force delete the chat_message?
+        if chat_message.is_crowdsourced_forced_removal_criteria_met():
+            logger.warning(f'Force deleting chat message `{message_id}` from flagging')
+            chat_message.delete()
+
     def on_chat_delete_delete_memberships(self, chat_id, old_item):
         for user_id in self.member_dynamo.generate_user_ids_by_chat(chat_id):
             self.member_dynamo.delete(chat_id, user_id)

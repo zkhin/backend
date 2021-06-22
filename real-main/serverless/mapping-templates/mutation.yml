@@ -347,12 +347,6 @@
   response: Lambda.response.vtl
 
 - type: Mutation
-  field: flagChat
-  dataSource: LambdaDataSource
-  request: false
-  response: Lambda.response.vtl
-
-- type: Mutation
   field: addChatMessage
   dataSource: LambdaDataSource
   request: false
