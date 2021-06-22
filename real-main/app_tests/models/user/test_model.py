@@ -258,7 +258,7 @@ def test_disable_enable_user_status(user, caplog):
 
     # force disable user
     with caplog.at_level(logging.WARNING):
-        user.disable(forced_by=True)
+        user.disable(forced=True)
     assert len(caplog.records) == 1
     assert 'USER_FORCE_DISABLED' in caplog.records[0].msg
     assert user.id in caplog.records[0].msg

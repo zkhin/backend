@@ -135,7 +135,7 @@ test('User disabled from flagged messages', async () => {
   const {client: theirClient, userId: theirUserId} = await loginCache.getCleanLogin()
 
   // we create a direct chat with them
-  const [chatId, messageId] = [uuidv4(), uuidv4()]
+  const [chatId, messageId, messageId2] = [uuidv4(), uuidv4(), uuidv4()]
   await ourClient.mutate({
     mutation: mutations.createDirectChat,
     variables: {userId: theirUserId, chatId, messageId, messageText: 'lore ipsum'},
@@ -146,17 +146,13 @@ test('User disabled from flagged messages', async () => {
     expect(data).toMatchObject({chat: {chatId, usersCount: 2, messagesCount: 1}})
   })
 
-  // we add five more messages to the chat
-  let messageId2
-  for (const i of Array(5).keys()) {
-    messageId2 = uuidv4()
-    await ourClient
-      .mutate({mutation: mutations.addChatMessage, variables: {chatId, messageId: messageId2, text: 'msg ' + i}})
-      .then(({data}) => expect(data.addChatMessage.messageId).toBeTruthy())
-  }
+  await ourClient
+    .mutate({mutation: mutations.addChatMessage, variables: {chatId, messageId: messageId2, text: 'lore ipsum'}})
+    .then(({data}) => expect(data.addChatMessage.messageId).toBe(messageId2))
+
   await eventually(async () => {
     const {data} = await ourClient.query({query: queries.chat, variables: {chatId}})
-    expect(data).toMatchObject({chat: {chatId, usersCount: 2, messagesCount: 6}})
+    expect(data).toMatchObject({chat: {chatId, usersCount: 2, messagesCount: 2}})
   })
 
   // they flag one of our messages

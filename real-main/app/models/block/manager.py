@@ -76,4 +76,4 @@ class BlockManager:
         if blocker_user_id == self.user_manager.real_user_id:
             user = self.user_manager.get_user(user_id)
             if user:
-                user.disable(forced_by='blocked by REAL user')
+                user.disable(forced=True)

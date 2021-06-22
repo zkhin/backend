@@ -178,14 +178,20 @@ class User(TrendingModelMixin):
         comment_force_deletion_count = self.item.get('commentForcedDeletionCount', 0)
         chats_forced_deletion_count = self.item.get('chatsForcedDeletionCount', 0)
 
-        total_created_count = sum([post_count, comment_count, chat_count])
+        total_created_count = sum(
+            [
+                post_count,
+                comment_count,
+                chat_count,
+                comment_deleted_count,
+                post_archived_count,
+            ]
+        )
         total_force_deleted_count = sum(
             [
                 post_forced_archiving_count,
                 comment_force_deletion_count,
                 chats_forced_deletion_count,
-                comment_deleted_count,
-                post_archived_count,
             ]
         )
 
@@ -216,10 +222,10 @@ class User(TrendingModelMixin):
             raise Exception(f'Unrecognized user status `{self.status}`')
         return self
 
-    def disable(self, forced_by=False):
+    def disable(self, forced=False):
         if self.status in (UserStatus.ACTIVE, UserStatus.ANONYMOUS):
             self.item = self.dynamo.set_user_status(self.id, UserStatus.DISABLED)
-            if forced_by:
+            if forced:
                 # the string USER_FORCE_DISABLED is hooked up to a cloudwatch metric & alert
                 logger.warning(f'USER_FORCE_DISABLED: user `{self.id}` / `{self.username}` disabled')
                 # add force banned user email, phone, device_uid, forced_by and it cannot be re-used while signup
