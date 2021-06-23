@@ -54,15 +54,7 @@ Resources:
         - PolicyName: CognitoIdentityPoolAuthenticatedPolicy
           PolicyDocument:
             Version: '2012-10-17'
-            Statement:
-              - Effect: Allow
-                Action: appsync:GraphQL
-                # 'GraphQlApi' name comes from https://github.com/sid88in/serverless-appsync-plugin/blob/1.1.1/index.js#L11
-                Resource: !Join [ /, [ 'arn:aws:appsync:#{AWS::Region}:#{AWS::AccountId}:apis', !GetAtt GraphQlApi.ApiId, '*' ] ]
-              # https://aws-amplify.github.io/docs/js/analytics#update-your-iam-policy
-              - Effect: Allow
-                Action: mobiletargeting:PutEvents
-                Resource: !Join [ /, [ !GetAtt PinpointApp.Arn, 'events' ] ]
+            Statement: ${file(serverless/vars.js):cognitoIdentityPoolAuthRolePolicyStatements}
 
   CognitoIdentityPoolUnauthenticatedAuthRole:
     Type: AWS::IAM::Role
