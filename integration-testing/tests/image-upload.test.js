@@ -119,14 +119,16 @@ test('Upload heic image', async () => {
   await got.put(uploadUrl, {headers: heicHeaders, body: heicImageData})
 
   // check that post completed and generated all thumbnails ok
-  const image = await eventually(async () => {
-    const {data} = await client.query({query: queries.post, variables: {postId}})
-    expect(data.post.postId).toBe(postId)
-    expect(data.post.postStatus).toBe('COMPLETED')
-    expect(data.post.isVerified).toBe(true)
-    expect(data.post.image).toBeTruthy()
-    return data.post.image
-  })
+  const image = await eventually(
+    async () => {
+      const {data} = await client.query({query: queries.post, variables: {postId}})
+      expect(data.post.postId).toBe(postId)
+      expect(data.post.postStatus).toBe('COMPLETED')
+      expect(data.post.image).toBeTruthy()
+      return data.post.image
+    },
+    {maxDelay: 20},
+  )
 
   // check the native image size dims
   await requestImageSize(image.url).then(({width, height}) => {
