@@ -313,6 +313,7 @@ def test_set(post, user):
     assert post.item.get('likesDisabled', False) is False
     assert post.item.get('sharingDisabled', False) is False
     assert post.item.get('verificationHidden', False) is False
+    assert 'payment' not in post.item
 
     # do some edits
     new_text = f'its a new dawn, right @{user.item["username"]}, its a new day'
@@ -322,6 +323,7 @@ def test_set(post, user):
         likes_disabled=True,
         sharing_disabled=True,
         verification_hidden=True,
+        payment=0.01,
     )
 
     # verify new values
@@ -331,6 +333,7 @@ def test_set(post, user):
     assert post.item.get('likesDisabled', False) is True
     assert post.item.get('sharingDisabled', False) is True
     assert post.item.get('verificationHidden', False) is True
+    assert post.item['payment'] == decimal.Decimal('0.01')
 
     # edit some params, ignore others
     post.set(likes_disabled=False, verification_hidden=False)
@@ -342,11 +345,17 @@ def test_set(post, user):
     assert post.item.get('likesDisabled', False) is False
     assert post.item.get('sharingDisabled', False) is True
     assert post.item.get('verificationHidden', False) is False
+    assert post.item['payment'] == decimal.Decimal('0.01')
 
     # set keywords
     keywords = ['bird', 'tea', 'mine']
     post.set(keywords=keywords)
     assert post.item['keywords'].sort() == keywords.sort()
+
+
+def test_set_cant_set_payment_to_negative_number(post):
+    with pytest.raises(PostException, match='negative value'):
+        post.set(payment=-0.1)
 
 
 def test_set_cant_create_contentless_post(post_manager, post):

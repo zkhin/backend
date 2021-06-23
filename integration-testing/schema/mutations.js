@@ -493,6 +493,7 @@ export const addPost = gql`
       verificationHidden
       flagStatus
       keywords
+      payment
     }
   }
   ${fragments.comment}
@@ -509,6 +510,7 @@ export const editPost = gql`
     $sharingDisabled: Boolean
     $verificationHidden: Boolean
     $keywords: [String!]
+    $payment: Float
   ) {
     editPost(
       postId: $postId
@@ -518,6 +520,7 @@ export const editPost = gql`
       sharingDisabled: $sharingDisabled
       verificationHidden: $verificationHidden
       keywords: $keywords
+      payment: $payment
     ) {
       postId
       postStatus
@@ -539,6 +542,7 @@ export const editPost = gql`
       sharingDisabled
       verificationHidden
       keywords
+      payment
     }
   }
   ${fragments.textTaggedUser}

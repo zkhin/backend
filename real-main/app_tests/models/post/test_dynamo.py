@@ -678,6 +678,25 @@ def test_set_verification_hidden(post_dynamo):
     assert post_item['verificationHidden'] is False
 
 
+def test_set_payment(post_dynamo):
+    # create a post
+    post_item = post_dynamo.add_pending_post('uidA', 'pid1', 'ptype', text='t')
+    assert post_dynamo.get_post('pid1') == post_item
+    assert 'payment' not in post_item
+
+    # edit it back and forth
+    post_item = post_dynamo.set('pid1', payment=0.01)
+    assert post_item['payment'] == Decimal('0.01')
+    post_item = post_dynamo.set('pid1', payment=0)
+    assert post_item['payment'] == 0
+    post_item = post_dynamo.set('pid1', payment=1)
+    assert post_item['payment'] == 1
+
+    # double check the value stuck
+    post_item = post_dynamo.get_post('pid1')
+    assert post_item['payment'] == 1
+
+
 def test_generate_expired_post_pks_by_day(post_dynamo):
     # add three posts, two that expire on the same day, and one that never expires, and complete them all
     now = pendulum.now('utc')

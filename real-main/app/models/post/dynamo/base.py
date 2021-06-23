@@ -225,6 +225,7 @@ class PostDynamo:
         sharing_disabled=None,
         verification_hidden=None,
         keywords=None,
+        payment=None,
     ):
         exp_actions = collections.defaultdict(list)
         exp_names = {}
@@ -264,6 +265,10 @@ class PostDynamo:
         if keywords is not None:
             exp_actions['SET'].append('keywords = :kw')
             exp_values[':kw'] = list(set(keywords))  # remove duplicates
+
+        if payment is not None:
+            exp_actions['SET'].append('payment = :py')
+            exp_values[':py'] = to_decimal(payment)
 
         assert exp_actions, 'Action-less post edit requested'
 

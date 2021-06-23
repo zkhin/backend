@@ -888,6 +888,7 @@ def edit_post(caller_user, arguments, **kwargs):
         'sharing_disabled': arguments.get('sharingDisabled'),
         'verification_hidden': arguments.get('verificationHidden'),
         'keywords': arguments.get('keywords'),
+        'payment': arguments.get('payment'),
     }
 
     post = post_manager.get_post(post_id)

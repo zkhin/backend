@@ -486,13 +486,17 @@ class Post(FlagModelMixin, TrendingModelMixin, ViewModelMixin):
         sharing_disabled=None,
         verification_hidden=None,
         keywords=None,
+        payment=None,
     ):
-        args = [text, comments_disabled, likes_disabled, sharing_disabled, verification_hidden, keywords]
+        args = [text, comments_disabled, likes_disabled, sharing_disabled, verification_hidden, keywords, payment]
         if all(v is None for v in args):
             raise PostException('Empty edit requested')
 
         if self.type == PostType.TEXT_ONLY and text == '':
             raise PostException('Cannot set text to null on text-only post')
+
+        if payment is not None and payment < 0:
+            raise PostException('Cannot set payment to negative value')
 
         text_tags = self.user_manager.get_text_tags(text) if text is not None else None
         self.item = self.dynamo.set(
@@ -504,6 +508,7 @@ class Post(FlagModelMixin, TrendingModelMixin, ViewModelMixin):
             sharing_disabled=sharing_disabled,
             verification_hidden=verification_hidden,
             keywords=keywords,
+            payment=payment,
         )
         return self
 

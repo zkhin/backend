@@ -279,3 +279,40 @@ test('Edit post text ensure textTagged users is rewritten', async () => {
   expect(resp.data.editPost.textTaggedUsers[0].user.userId).toBe(otherUserId)
   expect(resp.data.editPost.textTaggedUsers[0].user.username).toBe(otherUsername)
 })
+
+test('Edit post payment property', async () => {
+  const {client: ourClient} = await loginCache.getCleanLogin()
+  const postId = uuidv4()
+  const paymentDefault = 0.00001
+
+  // we add a post
+  await ourClient
+    .mutate({mutation: mutations.addPost, variables: {postId}})
+    .then(({data: {addPost: post}}) => expect(post.payment).toBe(paymentDefault))
+  await ourClient
+    .query({query: queries.post, variables: {postId}})
+    .then(({data: {post}}) => expect(post.payment).toBe(paymentDefault))
+
+  // edit the payment value
+  await ourClient
+    .mutate({mutation: mutations.editPost, variables: {postId, payment: 0.1}})
+    .then(({data: {editPost: post}}) => expect(post.payment).toBe(0.1))
+  await ourClient
+    .query({query: queries.post, variables: {postId}})
+    .then(({data: {post}}) => expect(post.payment).toBe(0.1))
+
+  // verify can't go negative
+  await ourClient
+    .mutate({mutation: mutations.editPost, variables: {postId, payment: -0.1}, errorPolicy: 'all'})
+    .then(({errors}) =>
+      expect(errors).toMatchObject([{message: 'ClientError: Cannot set payment to negative value'}]),
+    )
+
+  // edit to zero
+  await ourClient
+    .mutate({mutation: mutations.editPost, variables: {postId, payment: 0}})
+    .then(({data: {editPost: post}}) => expect(post.payment).toBe(0))
+  await ourClient
+    .query({query: queries.post, variables: {postId}})
+    .then(({data: {post}}) => expect(post.payment).toBe(0))
+})

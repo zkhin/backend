@@ -222,6 +222,7 @@ type Mutation {
     sharingDisabled: Boolean,
     verificationHidden: Boolean,
     keywords: [String!],
+    payment: Float,
   ): Post
 
   # Edit Post.album
