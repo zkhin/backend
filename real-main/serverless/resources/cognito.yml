@@ -23,7 +23,6 @@ Resources:
         - 'arn:aws:iam::#{AWS::AccountId}:oidc-provider/accounts.google.com'
       SupportedLoginProviders:
         appleid.apple.com: ${env:AUTHENTICATION_PROVIDER_APPLEID, 'app.real.mobile'}
-        graph.facebook.com: '864583797262307'
 
   CognitoIdentityPoolRoles:
     Type: AWS::Cognito::IdentityPoolRoleAttachment

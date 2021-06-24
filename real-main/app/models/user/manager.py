@@ -41,7 +41,6 @@ class UserManager(TrendingManagerMixin, ManagerBase):
         'cognito',
         'elasticsearch',
         'dynamo',
-        'facebook',
         'google',
         'pinpoint',
         'real_dating',
@@ -221,7 +220,7 @@ class UserManager(TrendingManagerMixin, ManagerBase):
         return user
 
     def create_federated_user(self, provider, user_id, username, token, full_name=None):
-        assert provider in ('apple', 'facebook', 'google'), f'Unrecognized identity provider `{provider}`'
+        assert provider in ('apple', 'google'), f'Unrecognized identity provider `{provider}`'
         provider_client = self.clients[provider]
 
         # do operations that do not alter state first

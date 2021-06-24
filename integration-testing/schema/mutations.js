@@ -38,17 +38,6 @@ export const createAppleUser = gql`
   }
 `
 
-export const createFacebookUser = gql`
-  mutation CreateFacebookUser($username: String!, $fullName: String, $facebookAccessToken: String!) {
-    createFacebookUser(username: $username, fullName: $fullName, facebookAccessToken: $facebookAccessToken) {
-      userId
-      username
-      fullName
-      email
-    }
-  }
-`
-
 export const createGoogleUser = gql`
   mutation CreateGoogleUser($username: String!, $fullName: String, $googleIdToken: String!) {
     createGoogleUser(username: $username, fullName: $fullName, googleIdToken: $googleIdToken) {

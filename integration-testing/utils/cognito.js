@@ -52,7 +52,6 @@ export const AuthFlow = 'USER_PASSWORD_AUTH'
 // To be used in the `Logins` parameter when calling the identity pool
 export const userPoolLoginsKey = `cognito-idp.${AWS.config.region}.amazonaws.com/${userPoolId}`
 export const googleLoginsKey = 'accounts.google.com'
-export const facebookLoginsKey = 'graph.facebook.com'
 
 export const generatePassword = () => {
   return pwdGenerator.generate({length: 8})

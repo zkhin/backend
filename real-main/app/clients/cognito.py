@@ -34,7 +34,6 @@ class CognitoClient:
         aws_region = boto3.Session().region_name
         self.userPoolLoginsKey = f'cognito-idp.{aws_region}.amazonaws.com/{user_pool_id}'
         self.googleLoginsKey = 'accounts.google.com'
-        self.facebookLoginsKey = 'graph.facebook.com'
         self.appleLoginsKey = 'appleid.apple.com'
 
     def get_private_key(self):
@@ -102,13 +101,10 @@ class CognitoClient:
             Permanent=True,
         )
 
-    def link_identity_pool_entries(
-        self, user_id, apple_token=None, cognito_token=None, facebook_token=None, google_token=None
-    ):
+    def link_identity_pool_entries(self, user_id, apple_token=None, cognito_token=None, google_token=None):
         """
         The `apple_token`, if provided, should be the apple id token.
         The `cognito_token`, if provided, should be the cognito id token.
-        The `facebook_token`, if provided, should be the facebook access token.
         The `google_token`, if provided, should be the google id token.
         """
         logins = {}
@@ -116,8 +112,6 @@ class CognitoClient:
             logins[self.appleLoginsKey] = apple_token
         if cognito_token:
             logins[self.userPoolLoginsKey] = cognito_token
-        if facebook_token:
-            logins[self.facebookLoginsKey] = facebook_token
         if google_token:
             logins[self.googleLoginsKey] = google_token
         self.identity_pool_client.get_credentials_for_identity(IdentityId=user_id, Logins=logins)

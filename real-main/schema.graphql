@@ -85,12 +85,10 @@ type Mutation {
   # Deprecated create user methods. No longer used by frontend.
   createCognitoOnlyUser(username: String!, fullName: String): User @deprecated(reason: "Use `createAnonymousUser()` then `setUserPassword()`")
   createAppleUser(username: String!, fullName: String, appleIdToken: String!): User @deprecated(reason: "Use `createAnonymousUser()` then `linkAppleLogin()`")
-  createFacebookUser(username: String!, fullName: String, facebookAccessToken: String!): User @deprecated(reason: "Use `createAnonymousUser()` then `linkFacebookLogin()`")
   createGoogleUser(username: String!, fullName: String, googleIdToken: String!): User @deprecated(reason: "Use `createAnonymousUser()` then `linkGoogleLogin()`")
 
   # Add a federated login to the user's account
   linkAppleLogin(appleIdToken: String!): User
-  linkFacebookLogin(facebookAccessToken: String!): User
   linkGoogleLogin(googleIdToken: String!): User
 
   # Change email, with verification. Use these mutations - do not update the user pool directly.
