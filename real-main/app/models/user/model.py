@@ -483,7 +483,7 @@ class User(TrendingModelMixin):
         return self
 
     def link_federated_login(self, provider, token):
-        assert provider in ('apple', 'facebook', 'google'), f'Unrecognized identity provider `{provider}`'
+        assert provider in ('apple', 'google'), f'Unrecognized identity provider `{provider}`'
         provider_client = self.clients[provider]
 
         # extract email from the token first

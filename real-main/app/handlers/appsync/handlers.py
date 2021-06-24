@@ -54,7 +54,6 @@ clients = {
     'cognito': clients.CognitoClient(real_key_pair_getter=secrets_manager_client.get_real_key_pair),
     'dynamo': clients.DynamoClient(),
     'elasticsearch': clients.ElasticSearchClient(),
-    'facebook': clients.FacebookClient(),
     'google': clients.GoogleClient(secrets_manager_client.get_google_client_ids),
     'jumio': clients.JumioClient(secrets_manager_client.get_jumio_api_creds),
     'id_analyzer': clients.IdAnalyzerClient(secrets_manager_client.get_id_analyzer_api_key),
@@ -173,21 +172,6 @@ def create_apple_user(caller_user_id, arguments, client=None, **kwargs):
     return user.serialize(caller_user_id)
 
 
-@routes.register('Mutation.createFacebookUser')
-def create_facebook_user(caller_user_id, arguments, client=None, **kwargs):
-    username = arguments['username']
-    full_name = arguments.get('fullName')
-    facebook_token = arguments['facebookAccessToken']
-    try:
-        user = user_manager.create_federated_user(
-            'facebook', caller_user_id, username, facebook_token, full_name=full_name
-        )
-    except UserException as err:
-        raise ClientException(str(err)) from err
-    user.set_last_client(client)
-    return user.serialize(caller_user_id)
-
-
 @routes.register('Mutation.createGoogleUser')
 def create_google_user(caller_user_id, arguments, client=None, **kwargs):
     username = arguments['username']
@@ -224,19 +208,6 @@ def link_apple_login(caller_user, arguments, **kwargs):
     apple_token = arguments['appleIdToken']
     try:
         caller_user.link_federated_login('apple', apple_token)
-    except UserException as err:
-        raise ClientException(str(err)) from err
-    return caller_user.serialize(caller_user.id)
-
-
-@routes.register('Mutation.linkFacebookLogin')
-@validate_caller(allowed_statuses=(UserStatus.ACTIVE, UserStatus.ANONYMOUS))
-@update_last_client
-@update_last_disable_dating_date
-def link_facebook_login(caller_user, arguments, **kwargs):
-    facebook_token = arguments['facebookAccessToken']
-    try:
-        caller_user.link_federated_login('facebook', facebook_token)
     except UserException as err:
         raise ClientException(str(err)) from err
     return caller_user.serialize(caller_user.id)

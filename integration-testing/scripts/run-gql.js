@@ -135,16 +135,6 @@ const linkAppleLogin = gql`
   }
 `
 
-const linkFacebookLogin = gql`
-  mutation LinkFacebookLogin($facebookAccessToken: String!) {
-    linkFacebookLogin(facebookAccessToken: $facebookAccessToken) {
-      userId
-      userStatus
-      email
-    }
-  }
-`
-
 const linkGoogleLogin = gql`
   mutation LinkGoogleLogin($googleIdToken: String!) {
     linkGoogleLogin(googleIdToken: $googleIdToken) {

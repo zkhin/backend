@@ -14,7 +14,7 @@ def real_user(user_manager, cognito_client):
     yield user_manager.create_cognito_only_user(user_id, 'real')
 
 
-@pytest.mark.parametrize('provider', ['apple', 'facebook', 'google'])
+@pytest.mark.parametrize('provider', ['apple', 'google'])
 def test_create_federated_user_success(user_manager, real_user, provider):
     provider_token = 'fb-google-or-apple-token'
     cognito_token = 'cog-token'
@@ -51,7 +51,7 @@ def test_create_federated_user_success(user_manager, real_user, provider):
     ]
 
 
-@pytest.mark.parametrize('provider', ['apple', 'facebook', 'google'])
+@pytest.mark.parametrize('provider', ['apple', 'google'])
 def test_create_federated_user_user_id_taken(user_manager, provider):
     # configure cognito to respond as if user_id is already taken
     user_id, username = str(uuid4()), str(uuid4())[:8]
@@ -63,7 +63,7 @@ def test_create_federated_user_user_id_taken(user_manager, provider):
         user_manager.create_federated_user(provider, user_id, username, 'provider-token')
 
 
-@pytest.mark.parametrize('provider', ['apple', 'facebook', 'google'])
+@pytest.mark.parametrize('provider', ['apple', 'google'])
 def test_create_federated_user_username_taken(user_manager, provider):
     # configure cognito to respond as if username is already taken
     user_id, username = str(uuid4()), str(uuid4())[:8]
@@ -76,7 +76,7 @@ def test_create_federated_user_username_taken(user_manager, provider):
         user_manager.create_federated_user(provider, user_id, username, 'provider-token')
 
 
-@pytest.mark.parametrize('provider', ['apple', 'facebook', 'google'])
+@pytest.mark.parametrize('provider', ['apple', 'google'])
 def test_create_federated_user_email_taken(user_manager, provider):
     # configure cognito to respond as if email is already taken
     user_id, username = str(uuid4()), str(uuid4())[:8]
@@ -91,7 +91,7 @@ def test_create_federated_user_email_taken(user_manager, provider):
         user_manager.create_federated_user(provider, user_id, username, 'provider-token')
 
 
-@pytest.mark.parametrize('provider', ['apple', 'facebook', 'google'])
+@pytest.mark.parametrize('provider', ['apple', 'google'])
 def test_create_federated_user_invalid_token(user_manager, caplog, provider):
     provider_token = 'google-token'
     user_id = 'my-user-id'
@@ -111,7 +111,7 @@ def test_create_federated_user_invalid_token(user_manager, caplog, provider):
     assert 'wrong flavor' in caplog.records[0].msg
 
 
-@pytest.mark.parametrize('provider', ['apple', 'facebook', 'google'])
+@pytest.mark.parametrize('provider', ['apple', 'google'])
 def test_create_federated_user_cognito_identity_pool_exception_cleansup(user_manager, provider):
     user_id = 'my-user-id'
 

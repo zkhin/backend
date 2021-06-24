@@ -29,13 +29,6 @@ const cognitoUserPoolClient = new AWS.CognitoIdentityServiceProvider({params: {C
 prmt.message = ''
 prmt.start()
 
-const facebookHelp = `To generate:
-  - create a facebook developer account if needed, get it associated with our facebook app
-  - navigate to https://developers.facebook.com/tools/explorer/
-  - select our app in the top-right corner
-  - copy-paste the access token
-`
-
 const googleHelp = `To generate:
   - navigate to https://developers.google.com/oauthplayground/
   - click the settings gear in the top-right corner
@@ -52,7 +45,7 @@ const googleHelp = `To generate:
 const prmtSchema = {
   properties: {
     authSource: {
-      description: 'Where is the user from? Enter `c` for Cognito, `f` for Facebook, or `g` for Google.',
+      description: 'Where is the user from? Enter `c` for Cognito, or `g` for Google.',
       required: true,
       pattern: /^[cfg]?$/,
     },
@@ -66,11 +59,6 @@ const prmtSchema = {
       required: true,
       hidden: true,
       ask: () => prmt.history('authSource').value === 'c',
-    },
-    facebookAccessToken: {
-      description: `A facebook access token for our app for the User? ${facebookHelp}?`,
-      required: true,
-      ask: () => prmt.history('authSource').value === 'f',
     },
     googleIdToken: {
       description: `A google **id** (not access) token for the User? ${googleHelp}?`,
@@ -98,7 +86,6 @@ prmt.get(prmtSchema, async (err, result) => {
       process.stdout.write(' done.\n')
       return tokens.IdToken
     }
-    if (result.authSource === 'f') return result.facebookAccessToken
     if (result.authSource === 'g') return result.googleIdToken
     throw `Unrecognized auth source '${result.authSource}'`
   })()
@@ -174,7 +161,6 @@ const generateCognitoTokens = async (username, password) => {
 const generateGQLCredentials = async (authSource, token) => {
   const loginsKey = (() => {
     if (authSource === 'c') return `cognito-idp.${AWS.config.region}.amazonaws.com/${userPoolId}`
-    if (authSource === 'f') return 'graph.facebook.com'
     if (authSource === 'g') return 'accounts.google.com'
     throw `Unrecognized auth source '${authSource}'`
   })()

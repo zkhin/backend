@@ -8,7 +8,6 @@ __all__ = [
     'CognitoClient',
     'DynamoClient',
     'ElasticSearchClient',
-    'FacebookClient',
     'GoogleClient',
     'IdAnalyzerClient',
     'JumioClient',
@@ -31,7 +30,6 @@ from .cloudfront import CloudFrontClient
 from .cognito import CognitoClient
 from .dynamo import DynamoClient
 from .elasticsearch import ElasticSearchClient
-from .facebook import FacebookClient
 from .google import GoogleClient
 from .id_analyzer import IdAnalyzerClient
 from .jumio import JumioClient
