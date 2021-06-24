@@ -10,6 +10,13 @@ import {mutations, queries} from '../schema'
 const videoData = fs.readFileSync(fixturePath('sample.mov'))
 const videoHeaders = {'Content-Type': 'video/quicktime'}
 const loginCache = new cognito.AppSyncLoginCache()
+const videoResolutions = [
+  {width: 1920, height: 1080},
+  {width: 1280, height: 720},
+  {width: 960, height: 540},
+  {width: 640, height: 360},
+  {width: 480, height: 278},
+]
 
 beforeAll(async () => {
   loginCache.addCleanLogin(await cognito.getAppSyncLogin())
@@ -60,7 +67,7 @@ test(
     await got.head(image.url64p)
 
     // verify the video part of the post is all good
-    const {urlMasterM3U8: videoUrl, accessCookies: cookies} = video
+    const {urlMasterM3U8: videoUrl, accessCookies: cookies, resolutions} = video
     expect(videoUrl).toContain(userId)
     expect(videoUrl).toContain(postId)
     expect(videoUrl).toContain('hls')
@@ -74,6 +81,10 @@ test(
     expect(cookies.keyPairId).toBeTruthy()
     expect(videoUrl).toContain(cookies.domain)
     expect(videoUrl).toContain(cookies.path)
+    expect(resolutions).toHaveLength(5)
+    expect(
+      resolutions.sort((a, b) => a.width < b.width).map((a) => ({width: a.width, height: a.height})),
+    ).toEqual(videoResolutions)
 
     // https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Set-Cookie
     const cookieJar = new tough.CookieJar()
