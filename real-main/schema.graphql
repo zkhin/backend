@@ -823,6 +823,7 @@ type Image {
 type Video {
   urlMasterM3U8: AWSURL!
   accessCookies: CloudFrontAccessCookies!
+  resolutions: [Resolution!]!
 }
 
 # https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/private-content-setting-signed-cookie-custom-policy.html
@@ -1007,4 +1008,9 @@ enum IdVerificationType {
 enum IdVerificationImageType {
   JPEG
   PNG
+}
+
+type Resolution {
+  width: Int!
+  height: Int!
 }

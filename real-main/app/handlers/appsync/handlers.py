@@ -24,7 +24,7 @@ from app.models.post.enums import PostStatus, PostType
 from app.models.post.exceptions import PostException
 from app.models.user.enums import UserStatus
 from app.models.user.exceptions import UserException
-from app.utils import image_size
+from app.utils import image_size, video_size
 
 from .. import xray
 from . import routes
@@ -828,6 +828,13 @@ def post_video(caller_user_id, arguments, source=None, **kwargs):
     return {
         'urlMasterM3U8': post.get_hls_master_m3u8_url(),
         'accessCookies': post.get_hls_access_cookies(),
+        'resolutions': [
+            video_size.P1920.resolution,
+            video_size.P1280.resolution,
+            video_size.P960.resolution,
+            video_size.P640.resolution,
+            video_size.P480.resolution,
+        ],
     }
 
 

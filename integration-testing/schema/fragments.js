@@ -77,6 +77,10 @@ export const video = gql`
       signature
       keyPairId
     }
+    resolutions {
+      width
+      height
+    }
   }
 `
 
