@@ -147,7 +147,7 @@ register('comment', 'flag', ['REMOVE'], comment_manager.on_flag_delete)
 register(
     'post',
     '-',
-    ['INSERT', 'MODIFY'],
+    ['INSERT', 'MODIFY', 'REMOVE'],
     ad_feed_manager.on_ad_post_ad_status_change,
     {'adStatus': AdStatus.NOT_AD},
 )

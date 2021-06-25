@@ -22,11 +22,11 @@ class AdFeedManager:
         if 'real_transactions' in clients:
             self.real_transactions_client = clients['real_transactions']
 
-    def on_ad_post_ad_status_change(self, post_id, new_item, old_item=None):
+    def on_ad_post_ad_status_change(self, post_id, new_item=None, old_item=None):
         old_ad_status = (old_item or {}).get('adStatus', AdStatus.NOT_AD)
-        new_ad_status = new_item.get('adStatus', AdStatus.NOT_AD)
+        new_ad_status = (new_item or {}).get('adStatus', AdStatus.NOT_AD)
         assert old_ad_status != new_ad_status, 'Should only be called when adStatus changes'
-        posted_by_user_id = new_item['postedByUserId']
+        posted_by_user_id = (new_item or old_item)['postedByUserId']
         if old_ad_status != AdStatus.ACTIVE and new_ad_status == AdStatus.ACTIVE:
             user_id_generator = self.user_manager.dynamo.generate_user_ids_by_ads_disabled(
                 False, exclude_user_id=posted_by_user_id

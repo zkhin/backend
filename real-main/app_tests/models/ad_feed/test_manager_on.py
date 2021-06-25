@@ -43,9 +43,10 @@ def test_on_ad_post_ad_status_change_to_active(ad_feed_manager):
     assert dynamo_mock.mock_calls == [call.add_ad_post_for_users(post_id, user_id_gen)]
 
 
-def test_on_ad_post_ad_status_change_from_active(ad_feed_manager):
+@pytest.mark.parametrize('ad_status', [None, AdStatus.NOT_AD])
+def test_on_ad_post_ad_status_change_from_active(ad_feed_manager, ad_status):
     user_id, post_id = str(uuid4()), str(uuid4())
-    new_item = {'postId': post_id, 'postedByUserId': user_id, 'adStatus': str(uuid4())}
+    new_item = {'postId': post_id, 'postedByUserId': user_id, 'adStatus': ad_status} if ad_status else None
     old_item = {'postId': post_id, 'postedByUserId': user_id, 'adStatus': AdStatus.ACTIVE}
     with patch.object(ad_feed_manager, 'dynamo') as dynamo_mock:
         ad_feed_manager.on_ad_post_ad_status_change(post_id, new_item=new_item, old_item=old_item)
