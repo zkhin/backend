@@ -1,7 +1,7 @@
 import {v4 as uuidv4} from 'uuid'
 
-import {cognito, sleep} from '../utils'
-import {mutations, subscriptions} from '../schema'
+import {cognito, eventually, sleep} from '../utils'
+import {mutations, queries, subscriptions} from '../schema'
 
 const loginCache = new cognito.AppSyncLoginCache()
 
@@ -67,6 +67,10 @@ test('Cannot subscribe to other users notifications', async () => {
       variables: {userId: ourUserId, chatId, messageId: uuidv4(), messageText: 'lore'},
     })
     .then(({data: {createDirectChat: chat}}) => expect(chat.chatId).toBe(chatId))
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.chat, variables: {chatId}})
+    expect(data).toMatchObject({chat: {chatId, usersCount: 2}})
+  })
 
   // they send a messsage to the chat, which will increment our User.chatsWithUnviewedMessagesCount
   let nextNotification = new Promise((resolve) => ourHandlers.push(resolve))

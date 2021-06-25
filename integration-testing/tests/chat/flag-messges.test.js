@@ -238,14 +238,10 @@ test('Chat force deleted from combined assets - (chat messages, posts)', async (
       expect(data.flagChatMessage.messageId).toBe(messageId1)
       expect(data.flagChatMessage.flagStatus).toBe('FLAGGED')
     })
-
-  await expect(
-    ourClient.mutate({
-      mutation: mutations.addChatMessage,
-      variables: {chatId: chatId1, messageId: uuidv4(), text: 'a'},
-    }),
-  ).rejects.toThrow(/Chat .* does not exist/)
-
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.chat, variables: {chatId: chatId1}})
+    expect(data.chat).toBeNull()
+  })
   await eventually(async () => {
     const {data} = await ourClient.query({query: queries.self})
     expect(data.self.userStatus).toBe('ACTIVE')
@@ -264,11 +260,8 @@ test('Chat force deleted from combined assets - (chat messages, posts)', async (
       expect(data.flagChatMessage.messageId).toBe(messageId2)
       expect(data.flagChatMessage.flagStatus).toBe('FLAGGED')
     })
-
-  await expect(
-    ourClient.mutate({
-      mutation: mutations.addChatMessage,
-      variables: {chatId: chatId2, messageId: uuidv4(), text: 'a'},
-    }),
-  ).rejects.toThrow(/Chat .* does not exist/)
+  await eventually(async () => {
+    const {data} = await ourClient.query({query: queries.chat, variables: {chatId: chatId2}})
+    expect(data.chat).toBeNull()
+  })
 })
