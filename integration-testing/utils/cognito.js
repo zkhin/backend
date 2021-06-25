@@ -85,16 +85,13 @@ export const generateRRUuid = (callsite) => {
 
 export const getAppSyncClient = async (creds) => {
   const credentials = new AWS.Credentials(creds.AccessKeyId, creds.SecretKey, creds.SessionToken)
-  const appSyncConfig = {
-    url: appsyncApiUrl,
-    region: AWS.config.region,
-    auth: {type: 'AWS_IAM', credentials},
-    disableOffline: true,
-  }
-  const appSyncOptions = {
+  const appSyncClientOptions = {disableOffline: true}
+  const apolloClientOptions = {
     defaultOptions: {query: {fetchPolicy: 'no-cache'}},
     link: createAppSyncLink({
-      ...appSyncConfig,
+      auth: {type: 'AWS_IAM', credentials},
+      region: AWS.config.region,
+      url: appsyncApiUrl,
       resultsFetcherLink: ApolloLink.from([
         setContext((request, previousContext) => ({
           headers: {
@@ -105,13 +102,11 @@ export const getAppSyncClient = async (creds) => {
             ['x-real-uid']: uuidv4().substring(24),
           },
         })),
-        createHttpLink({uri: appSyncConfig.url, fetch: fetch}),
+        createHttpLink({uri: appsyncApiUrl, fetch}),
       ]),
     }),
   }
-  const client = new AWSAppSyncClient(appSyncConfig, appSyncOptions)
-  await client.hydrated()
-  return client
+  return new AWSAppSyncClient(appSyncClientOptions, apolloClientOptions)
 }
 
 /**
@@ -141,11 +136,7 @@ export const getAppSyncLogin = async (newUserPhone) => {
 
     // get an unathenticated ID from the identity pool, then
     // create user in the user pool, using the 'identity id' from the identity pool as the user pool 'username'
-    const userId = await identityPoolClient
-      .getId()
-      .promise()
-      .then(({IdentityId}) => IdentityId)
-
+    const {IdentityId: userId} = await identityPoolClient.getId().promise()
     await userPoolClient
       .signUp({
         Username: userId,
@@ -172,14 +163,13 @@ export const getAppSyncLogin = async (newUserPhone) => {
   // in the identity pool for the entry in the user pool.
   // Someimtes the identity pool randomly rejects credentials, but if you try again immediately,
   // it accepts them.
-  let appSyncClient
+  let creds
   let retries = 2
   while (retries > 0) {
     try {
-      appSyncClient = await identityPoolClient
+      ;({Credentials: creds} = await identityPoolClient
         .getCredentialsForIdentity({IdentityId: userId, Logins: {[userPoolLoginsKey]: idToken}})
-        .promise()
-        .then(({Credentials}) => getAppSyncClient(Credentials))
+        .promise())
       break
     } catch (err) {
       if (err.code !== 'NotAuthorizedException') throw err
@@ -187,8 +177,9 @@ export const getAppSyncLogin = async (newUserPhone) => {
     }
     retries -= 1
   }
-  if (!appSyncClient) throw Error(`User '${userId}' failed to get credentials from cognito identity pool`)
+  if (!creds) throw Error(`User '${userId}' failed to get credentials from cognito identity pool`)
 
+  const appSyncClient = await getAppSyncClient(creds)
   const username = familyName + myUuid.substring(24)
   await appSyncClient.mutate(
     reusingExistingUser
@@ -207,8 +198,8 @@ export const getAnonymousAppSyncLogin = async () => {
   const {Credentials} = await identityPoolClient.getCredentialsForIdentity({IdentityId}).promise()
   const client = await getAppSyncClient(Credentials)
   await client.mutate({mutation: mutations.createAnonymousUser})
-  const user = await client.query({query: queries.self}).then(({data: {self}}) => self)
-  return {client, userId: user.userId, username: user.username}
+  const {userId, username} = await client.query({query: queries.self}).then(({data: {self}}) => self)
+  return {client, userId, username}
 }
 
 /**
