@@ -11,6 +11,7 @@ from cryptography.hazmat.primitives.serialization import load_pem_private_key
 
 COGNITO_USER_POOL_ID = os.environ.get('COGNITO_USER_POOL_ID')
 COGNITO_BACKEND_CLIENT_ID = os.environ.get('COGNITO_USER_POOL_BACKEND_CLIENT_ID')
+COGNITO_FRONTEND_CLIENT_ID = os.environ.get('COGNITO_USER_POOL_FRONTEND_CLIENT_ID')
 
 logger = logging.getLogger()
 
@@ -21,12 +22,18 @@ class InvalidEncryption(Exception):
 
 class CognitoClient:
     def __init__(
-        self, user_pool_id=COGNITO_USER_POOL_ID, client_id=COGNITO_BACKEND_CLIENT_ID, real_key_pair_getter=None
+        self,
+        user_pool_id=COGNITO_USER_POOL_ID,
+        backend_client_id=COGNITO_BACKEND_CLIENT_ID,
+        frontend_client_id=COGNITO_FRONTEND_CLIENT_ID,
+        real_key_pair_getter=None,
     ):
         assert user_pool_id, "Cognito user pool id is required"
-        assert client_id, "Cognito user pool client id is required"
+        assert backend_client_id, "Cognito user pool backend client id is required"
+        assert frontend_client_id, "Cognito user pool frontend client id is required"
         self.user_pool_id = user_pool_id
-        self.client_id = client_id
+        self.backend_client_id = backend_client_id
+        self.frontend_client_id = frontend_client_id
         self.user_pool_client = boto3.client('cognito-idp')
         self.identity_pool_client = boto3.client('cognito-identity')
         self.real_key_pair_getter = real_key_pair_getter
@@ -69,20 +76,35 @@ class CognitoClient:
         # a FORCE_CHANGE_PASSWORD which does not allow them to reset their password, which
         # we use to allow users to add a password-based login to their account (assuming
         # they started with a federate auth login).
+        password = str(uuid4())
         self.user_pool_client.admin_set_user_password(
             UserPoolId=self.user_pool_id,
             Username=user_id,
-            Password=str(uuid4()),
+            Password=password,
             Permanent=True,
         )
+        return password
 
-    def get_user_pool_tokens(self, user_id):
-        resp = self.user_pool_client.admin_initiate_auth(
-            UserPoolId=self.user_pool_id,
-            ClientId=self.client_id,
-            AuthFlow='CUSTOM_AUTH',
-            AuthParameters={'USERNAME': user_id},
-        )
+    def get_user_pool_tokens(self, user_id, password=None):
+        """
+        Retrieve authentication tokens for the user.
+
+        To use the the frontend cognito client (and hence get a refresh token that can be used
+        by the frontend), use the `password` kwarg.
+        """
+        if password:
+            resp = self.user_pool_client.initiate_auth(
+                ClientId=self.frontend_client_id,
+                AuthFlow='USER_PASSWORD_AUTH',
+                AuthParameters={'USERNAME': user_id, 'PASSWORD': password},
+            )
+        else:
+            resp = self.user_pool_client.admin_initiate_auth(
+                UserPoolId=self.user_pool_id,
+                ClientId=self.backend_client_id,
+                AuthFlow='CUSTOM_AUTH',
+                AuthParameters={'USERNAME': user_id},
+            )
         return resp['AuthenticationResult']
 
     def set_user_password(self, user_id, encrypted_password):

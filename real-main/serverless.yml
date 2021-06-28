@@ -58,6 +58,7 @@ provider:
 
     COGNITO_USER_POOL_ID: ${cf:${self:provider.stackName}.CognitoUserPoolId, 'placeholder'}
     COGNITO_USER_POOL_BACKEND_CLIENT_ID: ${cf:${self:provider.stackName}.CognitoBackendUserPoolClientId, 'placeholder'}
+    COGNITO_USER_POOL_FRONTEND_CLIENT_ID: ${cf:${self:provider.stackName}.CognitoFrontendUserPoolClientId, 'placeholder'}
     COGNITO_USER_POOL_TESTING_CLIENT_ID: ${cf:${self:provider.stackName}.CognitoTestingUserPoolClientId, 'placeholder'}
 
     S3_PLACEHOLDER_PHOTOS_BUCKET: real-production-themes-#{AWS::AccountId}  # real-themes doesn't use different stages

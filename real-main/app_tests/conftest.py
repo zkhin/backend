@@ -91,7 +91,11 @@ def post_verification_client():
 def cognito_client():
     with moto.mock_cognitoidp():
         # https://github.com/spulec/moto/blob/80b64f9b3ff5/tests/test_cognitoidp/test_cognitoidp.py#L1133
-        cognito_client = clients.CognitoClient('dummy', 'dummy')
+        cognito_client = clients.CognitoClient(
+            user_pool_id='test_upid',
+            backend_client_id='test_bcid',
+            frontend_client_id='test_fcid',
+        )
         cognito_client.user_pool_id = cognito_client.user_pool_client.create_user_pool(
             PoolName=str(uuid.uuid4()),
             AliasAttributes=[
