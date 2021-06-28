@@ -730,6 +730,8 @@ def add_post(caller_user, arguments, **kwargs):
     verification_hidden = arguments.get('verificationHidden')
     keywords = arguments.get('keywords')
     payment = arguments.get('payment')
+    payment_ticker = arguments.get('paymentTicker')
+    payment_ticker_required_to_view = arguments.get('paymentTickerRequiredToView')
     is_ad = arguments.get('isAd')
     ad_payment = arguments.get('adPayment')
 
@@ -765,6 +767,8 @@ def add_post(caller_user, arguments, **kwargs):
             keywords=keywords,
             set_as_user_photo=set_as_user_photo,
             payment=payment,
+            payment_ticker=payment_ticker,
+            payment_ticker_required_to_view=payment_ticker_required_to_view,
             is_ad=is_ad,
             ad_payment=ad_payment,
             ad_payment_period=ad_payment_period,
@@ -867,6 +871,8 @@ def edit_post(caller_user, arguments, **kwargs):
         'verification_hidden': arguments.get('verificationHidden'),
         'keywords': arguments.get('keywords'),
         'payment': arguments.get('payment'),
+        'payment_ticker': arguments.get('paymentTicker'),
+        'payment_ticker_required_to_view': arguments.get('paymentTickerRequiredToView'),
     }
 
     post = post_manager.get_post(post_id)

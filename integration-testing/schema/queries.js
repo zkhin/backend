@@ -295,6 +295,8 @@ export const post = gql`
       }
       keywords
       payment
+      paymentTicker
+      paymentTickerRequiredToView
       adStatus
       adPayment
       adPaymentPeriod

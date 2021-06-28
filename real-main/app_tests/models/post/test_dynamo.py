@@ -70,7 +70,9 @@ def test_add_pending_post_with_options(post_dynamo):
     text = 'lore @ipsum'
     text_tags = [{'tag': '@ipsum', 'userId': 'uid'}]
     keywords = ['bird', 'mine', 'tea', 'bird']
-    paymentFlt = 0.125
+    payment_flt = 0.125
+    payment_ticker = 'pt'
+    payment_ticker_required_to_view = True
 
     post_item = post_dynamo.add_pending_post(
         user_id,
@@ -87,7 +89,9 @@ def test_add_pending_post_with_options(post_dynamo):
         album_id=album_id,
         set_as_user_photo=True,
         keywords=keywords,
-        payment=paymentFlt,
+        payment=payment_flt,
+        payment_ticker=payment_ticker,
+        payment_ticker_required_to_view=payment_ticker_required_to_view,
     )
 
     # retrieve post, check format
@@ -121,7 +125,11 @@ def test_add_pending_post_with_options(post_dynamo):
         'verificationHidden': True,
         'setAsUserPhoto': True,
         'keywords': list(set(keywords)),
-        'payment': Decimal(paymentFlt),
+        'payment': Decimal(payment_flt),
+        'paymentTicker': payment_ticker,
+        'paymentTickerRequiredToView': payment_ticker_required_to_view,
+        'gsiA5PartitionKey': 'postPaymentTicker/pt',
+        'gsiA5SortKey': posted_at_str,
     }
 
 
@@ -695,6 +703,53 @@ def test_set_payment(post_dynamo):
     # double check the value stuck
     post_item = post_dynamo.get_post('pid1')
     assert post_item['payment'] == 1
+
+
+def test_set_payment_ticker(post_dynamo):
+    # create a post
+    post_item = post_dynamo.add_pending_post('uidA', 'pid1', 'ptype', text='t')
+    assert post_dynamo.get_post('pid1') == post_item
+    posted_at = pendulum.parse(post_item['postedAt'])
+    assert 'paymentTicker' not in post_item
+    assert 'gsiA5PartitionKey' not in post_item
+    assert 'gsiA5SortKey' not in post_item
+
+    # verify we must pass posted_at in order to set payment_ticker
+    with pytest.raises(AssertionError):
+        post_dynamo.set('pid1', payment_ticker='foo')
+
+    # edit it back and forth
+    post_item = post_dynamo.set('pid1', payment_ticker='foo', posted_at=posted_at)
+    assert post_item['paymentTicker'] == 'foo'
+    assert post_item['gsiA5PartitionKey'] == 'postPaymentTicker/foo'
+    assert post_item['gsiA5SortKey'] == posted_at.to_iso8601_string()
+    post_item = post_dynamo.set('pid1', payment_ticker='bar', posted_at=posted_at)
+    assert post_item['paymentTicker'] == 'bar'
+    assert post_item['gsiA5PartitionKey'] == 'postPaymentTicker/bar'
+    assert post_item['gsiA5SortKey'] == posted_at.to_iso8601_string()
+
+    # double check the value stuck
+    post_item = post_dynamo.get_post('pid1')
+    assert post_item['paymentTicker'] == 'bar'
+    assert post_item['gsiA5PartitionKey'] == 'postPaymentTicker/bar'
+    assert post_item['gsiA5SortKey'] == posted_at.to_iso8601_string()
+
+
+def test_set_payment_ticker_required_to_view(post_dynamo):
+    # create a post
+    post_item = post_dynamo.add_pending_post('uidA', 'pid1', 'ptype', text='t')
+    assert post_dynamo.get_post('pid1') == post_item
+    assert 'paymentTickerRequiredToView' not in post_item
+
+    # edit it back and forth
+    post_item = post_dynamo.set('pid1', payment_ticker_required_to_view=True)
+    assert post_item['paymentTickerRequiredToView'] is True
+    post_item = post_dynamo.set('pid1', payment_ticker_required_to_view=False)
+    assert post_item['paymentTickerRequiredToView'] is False
+
+    # double check the value stuck
+    post_item = post_dynamo.get_post('pid1')
+    assert post_item['paymentTickerRequiredToView'] is False
 
 
 def test_generate_expired_post_pks_by_day(post_dynamo):

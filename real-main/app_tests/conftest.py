@@ -316,6 +316,7 @@ def post_manager(
             'real_transactions': real_transactions_client,
         },
         post_payment_default=Decimal(0.125),
+        post_payment_ticker_default='real',
     )
 
 

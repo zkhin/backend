@@ -90,6 +90,8 @@ class PostDynamo:
         keywords=None,
         set_as_user_photo=None,
         payment=None,
+        payment_ticker=None,
+        payment_ticker_required_to_view=None,
         ad_status=None,
         ad_payment=None,
         ad_payment_period=None,
@@ -146,6 +148,12 @@ class PostDynamo:
             item['keywords'] = list(set(keywords))  # remove duplicates
         if payment is not None:
             item['payment'] = to_decimal(payment)
+        if payment_ticker is not None:
+            item['paymentTicker'] = payment_ticker
+            item['gsiA5PartitionKey'] = f'postPaymentTicker/{payment_ticker}'
+            item['gsiA5SortKey'] = posted_at_str
+        if payment_ticker_required_to_view is not None:
+            item['paymentTickerRequiredToView'] = payment_ticker_required_to_view
         if ad_status is not None and ad_status is not enums.AdStatus.NOT_AD:
             item['adStatus'] = ad_status
             item['gsiK4PartitionKey'] = f'postAdStatus/{ad_status}'
@@ -226,7 +234,14 @@ class PostDynamo:
         verification_hidden=None,
         keywords=None,
         payment=None,
+        payment_ticker=None,
+        payment_ticker_required_to_view=None,
+        posted_at=None,
     ):
+        """
+        Note: the posted_at kwarg is not actually set, and is required only when
+        setting payment_ticker to a non-empty value.
+        """
         exp_actions = collections.defaultdict(list)
         exp_names = {}
         exp_values = {}
@@ -269,6 +284,19 @@ class PostDynamo:
         if payment is not None:
             exp_actions['SET'].append('payment = :py')
             exp_values[':py'] = to_decimal(payment)
+
+        if payment_ticker is not None:
+            assert posted_at
+            exp_actions['SET'].append('paymentTicker = :pt')
+            exp_actions['SET'].append('gsiA5PartitionKey = :gsia5pk')
+            exp_actions['SET'].append('gsiA5SortKey= :gsia5sk')
+            exp_values[':pt'] = payment_ticker
+            exp_values[':gsia5pk'] = f'postPaymentTicker/{payment_ticker}'
+            exp_values[':gsia5sk'] = posted_at.to_iso8601_string()
+
+        if payment_ticker_required_to_view is not None:
+            exp_actions['SET'].append('paymentTickerRequiredToView = :ptrtv')
+            exp_values[':ptrtv'] = payment_ticker_required_to_view
 
         assert exp_actions, 'Action-less post edit requested'
 

@@ -407,6 +407,8 @@ export const addPost = gql`
     $rotate: Int
     $keywords: [String!]
     $payment: Float
+    $paymentTicker: String
+    $paymentTickerRequiredToView: Boolean
     $isAd: Boolean
     $adPayment: Float
     $adPaymentPeriod: String
@@ -433,6 +435,8 @@ export const addPost = gql`
       setAsUserPhoto: $setAsUserPhoto
       keywords: $keywords
       payment: $payment
+      paymentTicker: $paymentTicker
+      paymentTickerRequiredToView: $paymentTickerRequiredToView
       isAd: $isAd
       adPayment: $adPayment
       adPaymentPeriod: $adPaymentPeriod
@@ -483,6 +487,8 @@ export const addPost = gql`
       flagStatus
       keywords
       payment
+      paymentTicker
+      paymentTickerRequiredToView
     }
   }
   ${fragments.comment}
@@ -500,6 +506,8 @@ export const editPost = gql`
     $verificationHidden: Boolean
     $keywords: [String!]
     $payment: Float
+    $paymentTicker: String
+    $paymentTickerRequiredToView: Boolean
   ) {
     editPost(
       postId: $postId
@@ -510,6 +518,8 @@ export const editPost = gql`
       verificationHidden: $verificationHidden
       keywords: $keywords
       payment: $payment
+      paymentTicker: $paymentTicker
+      paymentTickerRequiredToView: $paymentTickerRequiredToView
     ) {
       postId
       postStatus
@@ -532,6 +542,8 @@ export const editPost = gql`
       verificationHidden
       keywords
       payment
+      paymentTicker
+      paymentTickerRequiredToView
     }
   }
   ${fragments.textTaggedUser}

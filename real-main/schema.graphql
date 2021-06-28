@@ -206,6 +206,8 @@ type Mutation {
     setAsUserPhoto: Boolean,
     keywords: [String!],
     payment: Float,
+    paymentTicker: String
+    paymentTickerRequiredToView: Boolean
     isAd: Boolean,
     adPayment: Float,
     adPaymentPeriod: String,
@@ -221,6 +223,8 @@ type Mutation {
     verificationHidden: Boolean,
     keywords: [String!],
     payment: Float,
+    paymentTicker: String
+    paymentTickerRequiredToView: Boolean
   ): Post
 
   # Edit Post.album
@@ -854,7 +858,10 @@ type Post {
   verificationHidden: Boolean
   isVerified: Boolean
   keywords: [String!]
-  payment: Float!
+
+  payment: Float
+  paymentTicker: String
+  paymentTickerRequiredToView: Boolean
 
   adStatus: AdStatus!
   adPayment: Float

@@ -1,4 +1,9 @@
+#set ($adStatus = $util.defaultIfNull($ctx.source.adStatus, 'NOT_AD'))
+#if ($adStatus == 'NOT_AD')
+  #set ($default = ${postPaymentDefault})
+#end
+
 $util.toJson({
   'version': '2018-05-29',
-  'payload': $util.defaultIfNull($ctx.source.payment, ${postPaymentDefault})
+  'payload': $util.defaultIfNull($ctx.source.payment, $default)
 })

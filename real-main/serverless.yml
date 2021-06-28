@@ -24,8 +24,10 @@ provider:
     ELASTICSEARCH_DOMAIN: !GetAtt ElasticSearchDomain.DomainEndpoint
     MEDIACONVERT_ROLE_ARN: !GetAtt MediaCovertRole.Arn
     PINPOINT_APPLICATION_ID: !Ref PinpointApp
-    POST_PAYMENT_DEFAULT: 0.00001
     REAL_USER_ID: ${env:REAL_USER_ID, 'us-east-1:8a4d7c3b-809e-4182-859c-a2bdafa1a8ae'}  # default is correct value for production
+
+    POST_PAYMENT_DEFAULT: 0.00001
+    POST_PAYMENT_TICKER_DEFAULT: real
 
     DYNAMO_TABLE: real-${self:provider.stage}-main
     DYNAMO_PARTITION_KEY: partitionKey
