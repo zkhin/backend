@@ -493,10 +493,6 @@ class User(TrendingModelMixin):
             logger.warning(str(err))
             raise UserValidationException(str(err)) from err
 
-        # verify that new email value is not used by other
-        if self.email_dynamo.get(email):
-            raise UserException('User federated login email is already used by other')
-
         # verify that new email & device id are not banned
         self.validate_banned_user('email', email)
 

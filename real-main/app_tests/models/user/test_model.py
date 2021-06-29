@@ -900,30 +900,6 @@ def test_link_federated_login_anonymous_user(anonymous_user):
     assert user.clients['apple'].get_verified_email.mock_calls == [call('apple-id-token')]
 
 
-def test_link_federated_login_steal_email(anonymous_user, user_4_stream_updated):
-    steal_email = user_4_stream_updated.item['email']
-    # set up mocks, save state
-    user = anonymous_user
-    user.cognito_client.get_user_pool_tokens = Mock(return_value={'IdToken': 'cognito-id-token'})
-    user.cognito_client.link_identity_pool_entries = Mock()
-    user.cognito_client.set_user_email = Mock()
-    user.clients['apple'].get_verified_email = Mock(return_value=steal_email)
-    assert 'email' not in user.item
-    assert user.status == UserStatus.ANONYMOUS
-
-    # call, verify final state
-    with pytest.raises(UserException, match='email is already used by other'):
-        user.link_federated_login('apple', 'apple-id-token')
-    assert 'email' not in user.item
-    assert user.status == UserStatus.ANONYMOUS
-
-    # verify mock calls
-    assert user.cognito_client.get_user_pool_tokens.mock_calls == []
-    assert user.cognito_client.link_identity_pool_entries.mock_calls == []
-    assert user.cognito_client.set_user_email.mock_calls == []
-    assert user.clients['apple'].get_verified_email.mock_calls == [call('apple-id-token')]
-
-
 def test_link_federated_login_banned_user(anonymous_user, user_4_stream_updated):
     new_email = 'go@go.com'
     # set up mocks, save state
