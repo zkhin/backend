@@ -89,40 +89,57 @@ test('Username collision causes Mutation.createCognitoOnlyUser to fail', async (
   expect(resp).toHaveProperty('AuthenticationResult.IdToken')
 })
 
-test('Mutation.createCognitoOnlyUser saves fullName and can pull email from cognito, phone is null', async () => {
-  const {client, userId, email} = await loginCache.getCleanLogin()
+describe('Mutation.createCognitoOnlyUser', () => {
+  describe('when phone is null', () => {
+    let client, userId, email
 
-  // reset the user to clear their presence from dynamo
-  let resp = await client.mutate({mutation: mutations.resetUser})
-  expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['resetUser']['userId']).toBe(userId)
+    beforeEach(async () => {
+      ;({client, userId, email} = await loginCache.getCleanLogin())
+      // reset the user to clear their presence from dynamo
+      await client
+        .mutate({mutation: mutations.resetUser})
+        .then(({data: {resetUser}}) => expect(resetUser).toMatchObject({userId}))
+    })
 
-  // create a new user some deets
-  const username = 'TESTERYESnoMAYBEso' + shortRandomString()
-  const fullName = 'my-full-name'
-  resp = await client.mutate({mutation: mutations.createCognitoOnlyUser, variables: {username, fullName}})
-  expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['createCognitoOnlyUser']['userId']).toBe(userId)
-  expect(resp['data']['createCognitoOnlyUser']['username']).toBe(username)
-  expect(resp['data']['createCognitoOnlyUser']['fullName']).toBe(fullName)
-  expect(resp['data']['createCognitoOnlyUser']['email']).toBe(email)
-  expect(resp['data']['createCognitoOnlyUser']['phoneNumber']).toBeNull()
-})
+    afterEach(async () => {
+      await client.mutate({mutation: mutations.resetUser})
+    })
 
-test('Mutation.createCognitoOnlyUser can pull phone from cognito, if set', async () => {
-  const phone = '+12125551212'
-  const {client, userId} = await cognito.getAppSyncLogin(phone)
+    it('saves fullName and email from cognito', async () => {
+      // create a new user some deets
+      const username = 'TESTERYESnoMAYBEso' + shortRandomString()
+      const fullName = 'my-full-name'
+      await client
+        .mutate({mutation: mutations.createCognitoOnlyUser, variables: {username, fullName}})
+        .then(({data: {createCognitoOnlyUser: user}}) => {
+          expect(user).toMatchObject({userId, username, fullName, email, phoneNumber: null})
+        })
+    })
+  })
 
-  // reset the user to clear their presence from dynamo
-  let resp = await client.mutate({mutation: mutations.resetUser})
-  expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['resetUser']['userId']).toBe(userId)
+  describe('when phone is not null', () => {
+    const phone = '+12125551212'
+    let client, userId
 
-  // create a new user some deets
-  const username = 'TESTERYESnoMAYBEso' + shortRandomString()
-  resp = await client.mutate({mutation: mutations.createCognitoOnlyUser, variables: {username}})
-  expect(resp['errors']).toBeUndefined()
-  expect(resp['data']['createCognitoOnlyUser']['userId']).toBe(userId)
-  expect(resp['data']['createCognitoOnlyUser']['username']).toBe(username)
-  expect(resp['data']['createCognitoOnlyUser']['phoneNumber']).toBe(phone)
+    beforeEach(async () => {
+      ;({client, userId} = await cognito.getAppSyncLogin(phone))
+      // reset the user to clear their presence from dynamo
+      await client
+        .mutate({mutation: mutations.resetUser})
+        .then(({data: {resetUser}}) => expect(resetUser).toMatchObject({userId}))
+    })
+
+    afterEach(async () => {
+      await client.mutate({mutation: mutations.resetUser})
+    })
+
+    it('saves phone from cognito', async () => {
+      const username = 'TESTERYESnoMAYBEso' + shortRandomString()
+      await client
+        .mutate({mutation: mutations.createCognitoOnlyUser, variables: {username}})
+        .then(({data: {createCognitoOnlyUser: user}}) => {
+          expect(user).toMatchObject({userId, username, phoneNumber: phone})
+        })
+    })
+  })
 })
