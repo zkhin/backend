@@ -8,21 +8,23 @@ const loginCache = new cognito.AppSyncLoginCache()
 const grantData = fs.readFileSync(fixturePath('grant.jpg'))
 const grantDataB64 = new Buffer.from(grantData).toString('base64')
 
-let anonClient, anonUserId
 beforeAll(async () => {
   loginCache.addCleanLogin(await cognito.getAppSyncLogin())
 })
-beforeEach(async () => await loginCache.clean())
-afterAll(async () => {
-  if (anonClient) await anonClient.mutate({mutation: mutations.deleteUser})
-  anonClient = null
-})
+afterAll(async () => await loginCache.reset())
 
 const cardTitle = 'Add a profile photo'
 
 describe('New anonymous users do not get the add profile photo card', () => {
+  let anonClient, anonUserId
+
   beforeAll(async () => {
     ;({client: anonClient, userId: anonUserId} = await cognito.getAnonymousAppSyncLogin())
+  })
+
+  afterAll(async () => {
+    if (anonClient) await anonClient.mutate({mutation: mutations.deleteUser})
+    anonClient = null
   })
 
   test('User is indeed anonymous', async () => {
@@ -47,6 +49,7 @@ describe('New normal users and the add profile photo card', () => {
   let ourClient, ourUserId
 
   beforeAll(async () => {
+    await loginCache.clean()
     ;({client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin())
   })
 
