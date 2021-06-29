@@ -614,13 +614,14 @@ def test_on_post_view_focus_last_viewed_at_change_does_nothing(
 def test_on_post_view_focus_last_viewed_at_change_calls_real_transactions_client(
     post_manager, payment, post_payment_default
 ):
-    post_id, user_id, post_owner_id = str(uuid4()), str(uuid4()), str(uuid4())
+    post_id, user_id, post_owner_id, payment_ticker = str(uuid4()), str(uuid4()), str(uuid4()), str(uuid4())
     old_item = {'partitionKey': f'post/{post_id}', 'sortKey': f'view/{user_id}'}
     new_item = {**old_item, 'focusLastViewedAt': 'anything'}
     post_item = {
         'postId': post_id,
         'postType': 'pt',
         'postedByUserId': post_owner_id,
+        'paymentTicker': payment_ticker,
     }
     if payment is not None:
         post_item['payment'] = payment
@@ -631,7 +632,7 @@ def test_on_post_view_focus_last_viewed_at_change_calls_real_transactions_client
     with patch.object(post_manager, 'get_post', return_value=post):
         post_manager.on_post_view_focus_last_viewed_at_change(post_id, new_item=new_item, old_item=old_item)
     assert post_manager.real_transactions_client.mock_calls == [
-        call.pay_for_post_view(user_id, post_owner_id, post_id, expected_payment)
+        call.pay_for_post_view(user_id, post_owner_id, post_id, expected_payment, payment_ticker)
     ]
 
 
@@ -644,6 +645,7 @@ def test_on_post_view_focus_last_viewed_at_change_handles_insufficient_funds_exc
         'postType': 'pt',
         'postedByUserId': post_owner_id,
         'payment': Decimal('0.1'),
+        'paymentTicker': 'REAL',
     }
     post = post_manager.init_post(post_item)
     user = MagicMock()

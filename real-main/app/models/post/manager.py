@@ -546,7 +546,9 @@ class PostManager(FlagManagerMixin, TrendingManagerMixin, ViewManagerMixin, Mana
         if post.ad_status != AdStatus.NOT_AD or post.user_id == user_id or not post.payment:
             return
         try:
-            self.real_transactions_client.pay_for_post_view(user_id, post.user_id, post_id, post.payment)
+            self.real_transactions_client.pay_for_post_view(
+                user_id, post.user_id, post_id, post.payment, post.payment_ticker
+            )
         except InsufficientFundsException:
             user = self.user_manager.get_user(user_id)
             if user and user.item.get('adsDisabled', False):

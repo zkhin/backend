@@ -38,20 +38,25 @@ def mock_env_aws_auth(monkeypatch):
 
 
 @pytest.mark.parametrize('amount', [0.1, 1])
-@pytest.mark.parametrize('func_name', ['pay_for_ad_view', 'pay_for_post_view'])
-def test_amount_must_be_a_decimal(client, func_name, amount):
-    uid1, uid2, pid = str(uuid4()), str(uuid4()), str(uuid4())
+@pytest.mark.parametrize('func_name, ticker', [['pay_for_ad_view', None], ['pay_for_post_view', 'REAL']])
+def test_amount_must_be_a_decimal(client, amount, func_name, ticker):
+    args = [str(uuid4()), str(uuid4()), str(uuid4()), amount]
+    if ticker:
+        args.append(ticker)
     target = getattr(client, func_name)
     with pytest.raises(AssertionError, match="'amount' must be a Decimal"):
-        target(uid1, uid2, pid, amount)
+        target(*args)
 
 
-@pytest.mark.parametrize('func_name', ['pay_for_ad_view', 'pay_for_post_view'])
-def test_with_disabled_true(func_name):
+@pytest.mark.parametrize('func_name, ticker', [['pay_for_ad_view', None], ['pay_for_post_view', 'REAL']])
+def test_with_disabled_true(func_name, ticker):
     client = RealTransactionsClient(api_host=api_host, api_stage=api_stage, api_region=api_region, disabled=True)
     target = getattr(client, func_name)
+    args = [str(uuid4()), str(uuid4()), str(uuid4()), Decimal(random()).normalize(context=BasicContext)]
+    if ticker:
+        args.append(ticker)
     with requests_mock.Mocker() as m:
-        target(str(uuid4()), str(uuid4()), str(uuid4()), Decimal(random()).normalize(context=BasicContext))
+        target(*args)
     assert len(m.request_history) == 0
 
 
@@ -79,10 +84,11 @@ def test_pay_for_post_view_sends_correct_request(client, mock_env_aws_auth):
     viewer_id = str(uuid4())
     post_owner_id = str(uuid4())
     post_id = str(uuid4())
+    ticker = str(uuid4())
     amount = Decimal(random()).normalize(context=BasicContext)
     with requests_mock.Mocker() as m:
         m.post(url, status_code=200)
-        client.pay_for_post_view(viewer_id, post_owner_id, post_id, amount)
+        client.pay_for_post_view(viewer_id, post_owner_id, post_id, amount, ticker)
     assert len(m.request_history) == 1
     assert m.request_history[0].method == 'POST'
     assert m.request_history[0].json() == {
@@ -90,42 +96,49 @@ def test_pay_for_post_view_sends_correct_request(client, mock_env_aws_auth):
         'viewer_uuid': viewer_id,
         'post_uuid': post_id,
         'amount': str(amount),
+        'ticker': ticker,
     }
 
 
-@pytest.mark.parametrize('func_name', ['pay_for_ad_view', 'pay_for_post_view'])
-def test_handles_error_response(client, mock_env_aws_auth, func_name):
+@pytest.mark.parametrize('func_name, ticker', [['pay_for_ad_view', None], ['pay_for_post_view', 'REAL']])
+def test_handles_error_response(client, mock_env_aws_auth, func_name, ticker):
     url = endpoint_urls[func_name]
     failure_status = 400
     failure_response = {'message': 'Failed to process request', 'status': -2}
-    uid1, uid2, pid, amount = str(uuid4()), str(uuid4()), str(uuid4()), Decimal('0.01')
+    args = [str(uuid4()), str(uuid4()), str(uuid4()), Decimal('0.01')]
+    if ticker:
+        args.append(ticker)
     target = getattr(client, func_name)
     with requests_mock.Mocker() as m:
         m.post(url, status_code=failure_status, json=failure_response)
         with pytest.raises(requests.exceptions.HTTPError, match=str(failure_status)):
-            target(uid1, uid2, pid, amount)
+            target(*args)
 
 
-@pytest.mark.parametrize('func_name', ['pay_for_ad_view', 'pay_for_post_view'])
-def test_handles_notenoughfunds_error_response(client, mock_env_aws_auth, func_name):
+@pytest.mark.parametrize('func_name, ticker', [['pay_for_ad_view', None], ['pay_for_post_view', 'REAL']])
+def test_handles_notenoughfunds_error_response(client, mock_env_aws_auth, func_name, ticker):
     url = endpoint_urls[func_name]
     failure_status = 400
     failure_response = {'exception': 'NotEnoughFundsException'}
-    uid1, uid2, pid, amount = str(uuid4()), str(uuid4()), str(uuid4()), Decimal('0.01')
+    args = [str(uuid4()), str(uuid4()), str(uuid4()), Decimal('0.01')]
+    if ticker:
+        args.append(ticker)
     target = getattr(client, func_name)
     with requests_mock.Mocker() as m:
         m.post(url, status_code=failure_status, json=failure_response)
         with pytest.raises(InsufficientFundsException):
-            target(uid1, uid2, pid, amount)
+            target(*args)
 
 
-@pytest.mark.parametrize('func_name', ['pay_for_ad_view', 'pay_for_post_view'])
-def test_handles_success_response(client, mock_env_aws_auth, func_name):
+@pytest.mark.parametrize('func_name, ticker', [['pay_for_ad_view', None], ['pay_for_post_view', 'REAL']])
+def test_handles_success_response(client, mock_env_aws_auth, func_name, ticker):
     url = endpoint_urls[func_name]
     success_status = 200
     success_response = {'message': 'ok', 'status': 0}
-    uid1, uid2, pid, amount = str(uuid4()), str(uuid4()), str(uuid4()), Decimal('0.01')
+    args = [str(uuid4()), str(uuid4()), str(uuid4()), Decimal('0.01')]
+    if ticker:
+        args.append(ticker)
     target = getattr(client, func_name)
     with requests_mock.Mocker() as m:
         m.post(url, status_code=success_status, json=success_response)
-        target(uid1, uid2, pid, amount)  # silently succeeds
+        target(*args)  # silently succeeds

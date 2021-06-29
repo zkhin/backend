@@ -54,7 +54,7 @@ class RealTransactionsClient:
         }
         self.session.post(url, auth=self.auth, data=json.dumps(data, cls=DecimalAsStringJsonEncoder))
 
-    def pay_for_post_view(self, viewer_id, post_owner_id, post_id, amount):
+    def pay_for_post_view(self, viewer_id, post_owner_id, post_id, amount, ticker):
         "Raises InsufficientFundsException() if payment fails due to insufficient funds"
         assert isinstance(amount, Decimal), "'amount' must be a Decimal"
         if self.disabled:
@@ -65,5 +65,6 @@ class RealTransactionsClient:
             'post_owner_uuid': post_owner_id,
             'post_uuid': post_id,
             'viewer_uuid': viewer_id,
+            'ticker': ticker,
         }
         self.session.post(url, auth=self.auth, data=json.dumps(data, cls=DecimalAsStringJsonEncoder))
