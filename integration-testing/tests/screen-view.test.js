@@ -8,6 +8,10 @@ beforeAll(async () => {
   loginCache.addCleanLogin(await cognito.getAppSyncLogin())
 })
 beforeEach(async () => await loginCache.clean())
+afterEach(async () => {
+  if (anonClient) await anonClient.mutate({mutation: mutations.deleteUser})
+  anonClient = null
+})
 afterAll(async () => await loginCache.reset())
 
 test('Report views of some screens', async () => {
