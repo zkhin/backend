@@ -85,9 +85,9 @@ def test_migrate_one_post(dynamo_client, dynamo_table, caplog, post):
 
     # check final state
     new_post = dynamo_table.get_item(Key=key)['Item']
-    assert new_post['paymentTicker'] == 'real'
+    assert new_post['paymentTicker'] == 'REAL'
     assert new_post['paymentTickerRequiredToView'] is False
-    assert new_post['gsiA5PartitionKey'] == 'postPaymentTicker/real'
+    assert new_post['gsiA5PartitionKey'] == 'postPaymentTicker/REAL'
     assert new_post['gsiA5SortKey'] == new_post['postedAt']
 
 
@@ -109,9 +109,9 @@ def test_migrate_multiple(dynamo_client, dynamo_table, caplog, post1, post2, pos
     # check final state
     for key in keys:
         new_post = dynamo_table.get_item(Key=key)['Item']
-        assert new_post['paymentTicker'] == 'real'
+        assert new_post['paymentTicker'] == 'REAL'
         assert new_post['paymentTickerRequiredToView'] is False
-        assert new_post['gsiA5PartitionKey'] == 'postPaymentTicker/real'
+        assert new_post['gsiA5PartitionKey'] == 'postPaymentTicker/REAL'
         assert new_post['gsiA5SortKey'] == new_post['postedAt']
 
     # check running again is a no-op

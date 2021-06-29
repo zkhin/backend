@@ -141,7 +141,7 @@ describe('Post.paymentTicker', () => {
 
   test('Add post without setting paymentTicker', async () => {
     const postId = uuidv4()
-    const paymentTickerDefault = 'real'
+    const paymentTickerDefault = 'REAL'
     await client.mutate({mutation: mutations.addPost, variables: {postId, imageData}})
     await eventually(async () => {
       const {data} = await client.query({query: queries.post, variables: {postId}})

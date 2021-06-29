@@ -370,7 +370,7 @@ def test_set_cant_set_payment_to_negative_number(post):
 
 def test_set_payment_ticker(post):
     assert post.payment_ticker == post.post_manager.post_payment_ticker_default
-    assert post.payment_ticker == 'real'
+    assert post.payment_ticker == 'REAL'
 
     with pytest.raises(PostException, match='Cannot set paymentTicker to empty string'):
         post.set(payment_ticker='')

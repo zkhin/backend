@@ -55,9 +55,9 @@ class Migration:
                 '#sk': 'gsiA5SortKey',
             },
             'ExpressionAttributeValues': {
-                ':pt': 'real',
+                ':pt': 'REAL',
                 ':ptrtv': False,
-                ':pk': 'postPaymentTicker/real',
+                ':pk': 'postPaymentTicker/REAL',
                 ':sk': posted_at_str,
             },
         }
