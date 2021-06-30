@@ -1,34 +1,23 @@
-/**
- * This test suite cannot run in parrallel with others because it
- * depends on global state - namely the 'real' user.
- */
-
 import {cognito, eventually, realUser} from '../../utils'
 import {mutations, queries} from '../../schema'
 
 const loginCache = new cognito.AppSyncLoginCache()
-let realLogin
+let realClient, realUserId
 
 beforeAll(async () => {
-  realLogin = await realUser.getLogin()
+  ;({client: realClient, userId: realUserId} = await realUser.getLogin())
   loginCache.addCleanLogin(await cognito.getAppSyncLogin())
 })
 beforeEach(async () => {
-  await realUser.cleanLogin()
   await loginCache.clean()
 })
 afterAll(async () => {
-  await realUser.resetLogin()
   await loginCache.reset()
 })
 
 test('When a user is blocked by the real user, they are force-disabled', async () => {
   // the real user has a random username at this point from the [before|after]_each methods
   const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
-  const {client: realClient, userId: realUserId} = realLogin
-
-  // set the real user's username to 'real'
-  await realClient.mutate({mutation: mutations.setUsername, variables: {username: 'real'}})
 
   // we block the real user, verify real user is _not_ disabled
   await ourClient

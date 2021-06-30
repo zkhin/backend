@@ -1,33 +1,25 @@
-/**
- * This test suite cannot run in parrallel with others because it
- * depends on global state - namely the 'real' user.
- */
-
 import {v4 as uuidv4} from 'uuid'
 
 import {cognito, eventually, sleep} from '../../utils'
 import {realUser} from '../../utils'
 import {mutations, queries} from '../../schema'
 const loginCache = new cognito.AppSyncLoginCache()
-let realLogin
+let realClient
 
 beforeAll(async () => {
-  realLogin = await realUser.getLogin()
+  ;({client: realClient} = await realUser.getLogin())
   loginCache.addCleanLogin(await cognito.getAppSyncLogin())
   loginCache.addCleanLogin(await cognito.getAppSyncLogin())
   loginCache.addCleanLogin(await cognito.getAppSyncLogin())
 })
 beforeEach(async () => {
-  await realUser.cleanLogin()
   await loginCache.clean()
 })
 afterAll(async () => {
-  await realUser.resetLogin()
   await loginCache.reset()
 })
 
 test('If the `real` or `ian` users flag a post, it should be immediately archived', async () => {
-  const {client: realClient} = realLogin
   const {client: ourClient} = await loginCache.getCleanLogin()
   const {client: randoClient} = await loginCache.getCleanLogin()
 

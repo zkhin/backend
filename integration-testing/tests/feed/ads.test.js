@@ -1,7 +1,3 @@
-/**
- * This test suite cannot run in parrallel with others because it
- * depends on global state - namely the 'real' user.
- */
 import {v4 as uuidv4} from 'uuid'
 
 import {cognito, eventually, generateRandomJpeg} from '../../utils'
@@ -11,28 +7,25 @@ import {mutations, queries} from '../../schema'
 const imageBytes = generateRandomJpeg(8, 8)
 const imageData = new Buffer.from(imageBytes).toString('base64')
 const loginCache = new cognito.AppSyncLoginCache()
-let realLogin
+let realClient
 
 beforeAll(async () => {
-  realLogin = await realUser.getLogin()
+  ;({client: realClient} = await realUser.getLogin())
   loginCache.addCleanLogin(await cognito.getAppSyncLogin())
   loginCache.addCleanLogin(await cognito.getAppSyncLogin())
 })
 afterAll(async () => {
-  await realUser.resetLogin()
   await loginCache.reset()
 })
 
 describe('Ad injected into feed', () => {
   const [adid1, adid2] = [uuidv4(), uuidv4()]
   const [pid1, pid2, pid3] = [uuidv4(), uuidv4(), uuidv4()]
-  let client1, client2, realClient
+  let client1, client2
   let userId1
 
   beforeAll(async () => {
     await loginCache.clean()
-    await realUser.cleanLogin()
-    ;({client: realClient} = await realLogin)
     ;({client: client1, userId: userId1} = await loginCache.getCleanLogin())
     ;({client: client2} = await loginCache.getCleanLogin())
     // client1 adds an ad, which the real user approves
@@ -267,13 +260,11 @@ describe('Ad injected into feed', () => {
 describe('Targeting of injected ads', () => {
   const [adid1, adid2] = [uuidv4(), uuidv4()]
   const [pid1, pid2, pid3] = [uuidv4(), uuidv4(), uuidv4()]
-  let client1, client2, realClient
+  let client1, client2
 
   describe('user with full feed and ads of their own', () => {
     beforeAll(async () => {
       await loginCache.clean()
-      await realUser.cleanLogin()
-      ;({client: realClient} = await realLogin)
       ;({client: client1} = await loginCache.getCleanLogin())
       ;({client: client2} = await loginCache.getCleanLogin())
       // client1 adds an ad, which the real user approves
@@ -358,12 +349,10 @@ describe('Targeting of injected ads', () => {
 describe('Post lifecycle and ads injected into feed', () => {
   const adid1 = uuidv4()
   const [pid1, pid2] = [uuidv4(), uuidv4()]
-  let client1, client2, realClient
+  let client1, client2
 
   beforeAll(async () => {
     await loginCache.clean()
-    await realUser.cleanLogin()
-    ;({client: realClient} = await realLogin)
     ;({client: client1} = await loginCache.getCleanLogin())
     ;({client: client2} = await loginCache.getCleanLogin())
     // client2 ads to posts to fill up their feed
@@ -479,12 +468,10 @@ describe('Post lifecycle and ads injected into feed', () => {
 describe('Ads injection into feed is LRU', () => {
   const [adid1, adid2, adid3] = [uuidv4(), uuidv4(), uuidv4()]
   const [pid1, pid2] = [uuidv4(), uuidv4()]
-  let client1, client2, realClient
+  let client1, client2
 
   beforeAll(async () => {
     await loginCache.clean()
-    await realUser.cleanLogin()
-    ;({client: realClient} = await realLogin)
     ;({client: client1} = await loginCache.getCleanLogin())
     ;({client: client2} = await loginCache.getCleanLogin())
     // client2 ads to posts to fill up their feed

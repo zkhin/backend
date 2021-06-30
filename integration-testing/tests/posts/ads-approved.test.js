@@ -1,7 +1,3 @@
-/**
- * This test suite cannot run in parrallel with others because it
- * depends on global state - namely the 'real' user.
- */
 import {v4 as uuidv4} from 'uuid'
 
 import {cognito, eventually, generateRandomJpeg, sleep} from '../../utils'
@@ -11,14 +7,13 @@ import {mutations, queries} from '../../schema'
 const imageBytes = generateRandomJpeg(8, 8)
 const imageData = new Buffer.from(imageBytes).toString('base64')
 const loginCache = new cognito.AppSyncLoginCache()
-let realLogin
+let realClient
 
 beforeAll(async () => {
-  realLogin = await realUser.getLogin()
+  ;({client: realClient} = await realUser.getLogin())
   loginCache.addCleanLogin(await cognito.getAppSyncLogin())
 })
 afterAll(async () => {
-  await realUser.resetLogin()
   await loginCache.reset()
 })
 
@@ -26,12 +21,10 @@ describe('Approving an ad post', () => {
   const postIdAd = uuidv4()
   const postIdAdNotCompleted = uuidv4()
   const postIdNonAd = uuidv4()
-  let client, realClient
+  let client
 
   beforeAll(async () => {
     await loginCache.clean()
-    await realUser.cleanLogin()
-    ;({client: realClient} = await realLogin)
     ;({client} = await loginCache.getCleanLogin())
     await client.mutate({
       mutation: mutations.addPost,
@@ -139,12 +132,10 @@ describe('Approving an ad post', () => {
 
 describe('An ad post', () => {
   const postId = uuidv4()
-  let client, realClient
+  let client
 
   beforeAll(async () => {
     await loginCache.clean()
-    await realUser.cleanLogin()
-    ;({client: realClient} = await realLogin)
     ;({client} = await loginCache.getCleanLogin())
     await client.mutate({
       mutation: mutations.addPost,
@@ -202,13 +193,11 @@ describe('An ad post', () => {
 
 describe('A new user', () => {
   let postId = uuidv4()
-  let client, realClient, newClient
+  let client, newClient
 
   beforeAll(async () => {
     // users, excluding the one that will be newly created
     await loginCache.clean()
-    await realUser.cleanLogin()
-    ;({client: realClient} = await realLogin)
     ;({client} = await loginCache.getCleanLogin())
 
     // client adds an ad post
