@@ -86,7 +86,10 @@ class AlbumDynamo:
         else:
             update_query_kwargs['UpdateExpression'] = 'REMOVE artHash'
 
-        return self.client.update_item(update_query_kwargs)
+        try:
+            return self.client.update_item(update_query_kwargs)
+        except self.client.exceptions.ConditionalCheckFailedException as err:
+            raise AlbumDoesNotExist(album_id) from err
 
     def set_delete_at(self, album_id, delete_at):
         "Best effort, logs WARNING on failure"

@@ -9,7 +9,7 @@ import PIL.Image
 from app.utils import image_size
 
 from . import art
-from .exceptions import AlbumException
+from .exceptions import AlbumDoesNotExist, AlbumException
 
 logger = logging.getLogger()
 
@@ -136,7 +136,11 @@ class Album:
             buf_out.seek(0)
             self.save_art_images(new_art_hash, buf_out)
 
-        self.item = self.dynamo.set_album_art_hash(self.id, new_art_hash)
+        try:
+            self.item = self.dynamo.set_album_art_hash(self.id, new_art_hash)
+        except AlbumDoesNotExist:
+            # album has since been deleted, so delete the new art we just saved
+            self.delete_art_images(new_art_hash)
 
         if old_art_hash:
             self.delete_art_images(old_art_hash)

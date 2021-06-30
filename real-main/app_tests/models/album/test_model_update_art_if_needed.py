@@ -2,6 +2,7 @@ import base64
 import uuid
 from decimal import Decimal
 from os import path
+from unittest.mock import patch
 
 import pytest
 
@@ -106,6 +107,22 @@ def test_update_art_if_needed_add_change_and_remove_one_post(album, post1, s3_up
     for size in image_size.JPEGS:
         path = album.get_art_image_path(size, art_hash=art_hash)
         assert not album.s3_uploads_client.exists(path)
+
+
+def test_update_art_if_needed_album_does_not_exist(album, post1, s3_uploads_client):
+    assert 'artHash' not in album.item
+    # without an art hash, can't calculate s3 paths
+
+    # put the post in the album directly in dynamo
+    post1.dynamo.set_album_id(post1.item, album.id, album_rank=0)
+
+    # delete the album from dynamo
+    album.dynamo.delete_album(album.id)
+
+    # try to update art, should not throw error
+    with patch.object(album, 'delete_art_images') as mock_delete_art_images:
+        album.update_art_if_needed()
+    assert mock_delete_art_images.call_count == 1
 
 
 def test_changing_post_rank_changes_art(album, post1, post2, s3_uploads_client):

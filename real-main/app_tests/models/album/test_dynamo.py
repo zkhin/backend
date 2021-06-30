@@ -254,7 +254,7 @@ def test_generate_by_user(album_dynamo, album_item):
     assert album_items[1]['albumId'] == album_id_2
 
 
-def test_set_album_hash(album_dynamo, album_item):
+def test_set_album_art_hash(album_dynamo, album_item):
     album_id = album_item['albumId']
     assert 'artHash' not in album_id
 
@@ -268,6 +268,10 @@ def test_set_album_hash(album_dynamo, album_item):
     del album_item['artHash']
     assert album_dynamo.set_album_art_hash(album_id, None) == album_item
     assert album_dynamo.get_album(album_id) == album_item
+
+    # test setting the hash for an album that doesn't exist
+    with pytest.raises(AlbumDoesNotExist):
+        album_dynamo.set_album_art_hash(str(uuid4()), None)
 
 
 def test_set_and_clear_delete_at(album_dynamo, album_item, caplog):
