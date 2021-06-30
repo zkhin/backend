@@ -503,6 +503,8 @@ class User(TrendingModelMixin):
         }
         try:
             self.cognito_client.link_identity_pool_entries(self.id, **tokens)
+        except self.cognito_client.identity_pool_client.exceptions.ResourceConflictException as err:
+            raise UserException(f'{provider} provider is already linked to other account.') from err
         except Exception as err:
             raise UserException(f'Failed to link identity pool entries: {err}') from err
 

@@ -13,7 +13,7 @@ let anonClient, anonUserId
  * The email the oauth token is generated for must be one which this amazon account
  * is authorized to send to.
  */
-describe('Mutation.linkGoogleLogin', () => {
+describe.skip('Mutation.linkGoogleLogin', () => {
   const googleIdToken = process.env.GOOGLE_ID_TOKEN
 
   beforeAll(async () => {
