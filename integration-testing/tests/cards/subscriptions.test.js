@@ -41,13 +41,18 @@ test('Cannot subscribe to other users notifications', async () => {
   const {client: theirClient, userId: theirUserId} = await loginCache.getCleanLogin()
 
   // we try to subscribe to their notifications, should never get called
-  // Note: there doesn't seem to be any error thrown at the time of subscription, it's just that
-  // the subscription next() method is never triggered
   await ourClient
     .subscribe({query: subscriptions.onCardNotification, variables: {userId: theirUserId}})
     .subscribe({
       next: (response) => expect({cause: 'Subscription next() unexpectedly called', response}).toBeUndefined(),
-      error: (response) => expect({cause: 'Subscription error()', response}).toBeUndefined(),
+      error: ({errors}) => {
+        // AWS sometimes returns this error but usually it just silently ignores the invalid subscription
+        const innerError = {
+          errorType: 'ClientError',
+          message: 'ClientError: Cannot subscribe to notifications intended for another user',
+        }
+        expect(errors).toMatchObject([{message: `Connection failed: ${JSON.stringify({errors: [innerError]})}`}])
+      },
     })
 
   // they subscribe to their notifications

@@ -32,9 +32,6 @@ test('Notification trigger cannot be called from external graphql client', async
 })
 
 test('Cannot subscribe to other users notifications', async () => {
-  // Note: there doesn't seem to be any error thrown at the time of subscription, it's just that
-  // the subscription next() method is never triggered
-
   const {client: ourClient, userId: ourUserId} = await loginCache.getCleanLogin()
   const {client: theirClient} = await loginCache.getCleanLogin()
 
@@ -54,7 +51,14 @@ test('Cannot subscribe to other users notifications', async () => {
     })
   await theirClient.subscribe({query: subscriptions.onNotification, variables: {userId: ourUserId}}).subscribe({
     next: (response) => expect({cause: 'Subscription next() unexpectedly called', response}).toBeUndefined(),
-    error: (response) => expect({cause: 'Subscription error()', response}).toBeUndefined(),
+    error: ({errors}) => {
+      // AWS sometimes returns this error but usually it just silently ignores the invalid subscription
+      const innerError = {
+        errorType: 'ClientError',
+        message: 'ClientError: Cannot subscribe to notifications intended for another user',
+      }
+      expect(errors).toMatchObject([{message: `Connection failed: ${JSON.stringify({errors: [innerError]})}`}])
+    },
   })
   const subInitTimeout = sleep('subTimeout')
   await sleep('subInit')

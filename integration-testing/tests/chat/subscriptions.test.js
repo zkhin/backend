@@ -56,13 +56,18 @@ test('Cannot subscribe to other users messages', async () => {
   const {client: theirClient, userId: theirUserId} = await loginCache.getCleanLogin()
 
   // verify we cannot subscribe to their messages
-  // Note: there doesn't seem to be any error thrown at the time of subscription, it's just that
-  // the subscription next() method is never triggered
   await ourClient
     .subscribe({query: subscriptions.onChatMessageNotification, variables: {userId: theirUserId}})
     .subscribe({
       next: (response) => expect({cause: 'Subscription next() unexpectedly called', response}).toBeUndefined(),
-      error: (response) => expect({cause: 'Subscription error()', response}).toBeUndefined(),
+      error: ({errors}) => {
+        // AWS sometimes returns this error but usually it just silently ignores the invalid subscription
+        const innerError = {
+          errorType: 'ClientError',
+          message: 'ClientError: Cannot subscribe to notifications intended for another user',
+        }
+        expect(errors).toMatchObject([{message: `Connection failed: ${JSON.stringify({errors: [innerError]})}`}])
+      },
     })
 
   // they open up a chat with us
