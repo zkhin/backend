@@ -1,6 +1,6 @@
-module.exports.cognitoIdentityPoolAuthRolePolicyStatements = () => {
+module.exports.cognitoIdentityPoolRolesPolicyStatements = () => {
   // 'GraphQlApi' name comes from https://github.com/sid88in/serverless-appsync-plugin/blob/1.1.1/index.js#L11
-  const AWS_IDS = process.env.COGNITO_AUTH_ROLE_EXECUTE_API_AWS_ACCOUNT_IDS
+  const AWS_IDS = process.env.COGNITO_ROLES_EXECUTE_API_AWS_ACCOUNT_IDS
   return [
     {
       Effect: 'Allow',
