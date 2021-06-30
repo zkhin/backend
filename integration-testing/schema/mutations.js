@@ -49,6 +49,16 @@ export const createGoogleUser = gql`
   }
 `
 
+export const linkGoogleLogin = gql`
+  mutation LinkGoogleLogin($googleIdToken: String!) {
+    linkGoogleLogin(googleIdToken: $googleIdToken) {
+      userId
+      userStatus
+      email
+    }
+  }
+`
+
 export const setPassword = gql`
   mutation SetPassword($encryptedPassword: String!) {
     setUserPassword(encryptedPassword: $encryptedPassword) {
