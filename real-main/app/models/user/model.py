@@ -493,10 +493,6 @@ class User(TrendingModelMixin):
             logger.warning(str(err))
             raise UserValidationException(str(err)) from err
 
-        # verify that new email value is not used by other
-        if self.email_dynamo.get(email):
-            raise UserException('User federated login email is already used by other')
-
         # verify that new email & device id are not banned
         self.validate_banned_user('email', email)
 
@@ -507,6 +503,8 @@ class User(TrendingModelMixin):
         }
         try:
             self.cognito_client.link_identity_pool_entries(self.id, **tokens)
+        except self.cognito_client.identity_pool_client.exceptions.ResourceConflictException as err:
+            raise UserException(f'{provider} provider is already linked to other account.') from err
         except Exception as err:
             raise UserException(f'Failed to link identity pool entries: {err}') from err
 
