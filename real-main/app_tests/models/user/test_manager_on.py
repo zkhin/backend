@@ -381,17 +381,17 @@ def test_delete_user_clears_cognito(user_manager, user, cognito_client):
 
 
 def test_on_forced_deletion_sync_user_status(user_manager, user, caplog):
-    # test does not call
-    with patch.object(user, 'is_forced_disabling_criteria_met', return_value=False):
-        with patch.object(user_manager, 'init_user', return_value=user):
+    # test user that does not meet the criteria is not disabled
+    with patch.object(user_manager, 'init_user', return_value=user):
+        with patch.object(user, 'is_forced_disabling_criteria_met', return_value=False):
             with caplog.at_level(logging.WARNING):
                 user_manager.on_forced_deletion_sync_user_status(user.id, user.item, user.item)
     assert len(caplog.records) == 0
     assert user.refresh_item().status == UserStatus.ACTIVE
 
-    # test does call
-    with patch.object(user, 'is_forced_disabling_criteria_met', return_value=True):
-        with patch.object(user_manager, 'init_user', return_value=user):
+    # test user that meets the criteria is disabled
+    with patch.object(user_manager, 'init_user', return_value=user):
+        with patch.object(user, 'is_forced_disabling_criteria_met', return_value=True):
             with caplog.at_level(logging.WARNING):
                 user_manager.on_forced_deletion_sync_user_status(user.id, user.item, user.item)
     assert len(caplog.records) == 1
@@ -399,6 +399,15 @@ def test_on_forced_deletion_sync_user_status(user_manager, user, caplog):
     assert user.id in caplog.records[0].msg
     assert user.username in caplog.records[0].msg
     assert user.refresh_item().status == UserStatus.DISABLED
+
+
+def test_on_forced_deletion_sync_user_status_for_deleted_user_does_not_raise(user_manager, user, caplog):
+    user.dynamo.delete_user(user.id)
+    with patch.object(user_manager, 'init_user', return_value=user):
+        with patch.object(user, 'is_forced_disabling_criteria_met', return_value=True):
+            with caplog.at_level(logging.WARNING):
+                user_manager.on_forced_deletion_sync_user_status(user.id, user.item, user.item)
+    assert len(caplog.records) == 0
 
 
 def test_on_appstore_sub_status_change_update_subscription(user_manager, user):

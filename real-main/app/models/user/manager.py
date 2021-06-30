@@ -358,7 +358,9 @@ class UserManager(TrendingManagerMixin, ManagerBase):
     def on_forced_deletion_sync_user_status(self, user_id, new_item, old_item=None):
         user = self.init_user(new_item)
         if user.is_forced_disabling_criteria_met():
-            user.disable(forced=True)
+            user.refresh_item()
+            if user.item and user.is_forced_disabling_criteria_met():
+                user.disable(forced=True)
 
     def sync_elasticsearch(self, user_id, new_item, old_item=None):
         self.elasticsearch_client.put_user(user_id, new_item['username'], new_item.get('fullName'))

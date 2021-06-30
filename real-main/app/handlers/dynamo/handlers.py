@@ -331,14 +331,7 @@ register(
     'profile',
     ['INSERT', 'MODIFY'],
     user_manager.on_forced_deletion_sync_user_status,
-    {'chatsForcedDeletionCount': 0},
-)
-register(
-    'user',
-    'profile',
-    ['INSERT', 'MODIFY'],
-    user_manager.on_forced_deletion_sync_user_status,
-    {'commentForcedDeletionCount': 0},
+    {'chatsForcedDeletionCount': 0, 'commentForcedDeletionCount': 0, 'postForcedArchivingCount': 0},
 )
 register(
     'user',
@@ -348,13 +341,6 @@ register(
     {'dateOfBirth': None},
 )
 register('user', 'profile', ['INSERT', 'MODIFY'], user_manager.on_user_change_update_dating)
-register(
-    'user',
-    'profile',
-    ['INSERT', 'MODIFY'],
-    user_manager.on_forced_deletion_sync_user_status,
-    {'postForcedArchivingCount': 0},
-)
 register(
     'user',
     'profile',
