@@ -192,8 +192,22 @@ class Post(FlagModelMixin, TrendingModelMixin, ViewModelMixin):
 
     @property
     def payment(self):
-        assert self.post_manager.post_payment_default is not None
-        return self.item.get('payment', self.post_manager.post_payment_default)
+        # default value not written out to DB, so we can change it easily later on if needed
+        return (
+            self.item.get('payment', self.post_manager.post_payment_default)
+            if self.ad_status == AdStatus.NOT_AD
+            else None
+        )
+
+    @property
+    def payment_ticker(self):
+        # default value is written out to DB
+        return self.item.get('paymentTicker')
+
+    @property
+    def payment_ticker_required_to_view(self):
+        # default value is written out to DB
+        return self.item.get('paymentTickerRequiredToView')
 
     def refresh_item(self, strongly_consistent=False):
         self.item = self.dynamo.get_post(self.id, strongly_consistent=strongly_consistent)
@@ -487,16 +501,39 @@ class Post(FlagModelMixin, TrendingModelMixin, ViewModelMixin):
         verification_hidden=None,
         keywords=None,
         payment=None,
+        payment_ticker=None,
+        payment_ticker_required_to_view=None,
     ):
-        args = [text, comments_disabled, likes_disabled, sharing_disabled, verification_hidden, keywords, payment]
+        args = [
+            text,
+            comments_disabled,
+            likes_disabled,
+            sharing_disabled,
+            verification_hidden,
+            keywords,
+            payment,
+            payment_ticker,
+            payment_ticker_required_to_view,
+        ]
         if all(v is None for v in args):
             raise PostException('Empty edit requested')
 
         if self.type == PostType.TEXT_ONLY and text == '':
             raise PostException('Cannot set text to null on text-only post')
 
+        if self.ad_status != AdStatus.NOT_AD:
+            if payment is not None:
+                raise PostException('Cannot set payment for advertisement post')
+            if payment_ticker is not None:
+                raise PostException('Cannot set paymentTicker for advertisement post')
+            if payment_ticker_required_to_view is not None:
+                raise PostException('Cannot set paymentTickerRequiredToView for advertisement post')
+
         if payment is not None and payment < 0:
             raise PostException('Cannot set payment to negative value')
+
+        if payment_ticker == '':
+            raise PostException('Cannot set paymentTicker to empty string')
 
         text_tags = self.user_manager.get_text_tags(text) if text is not None else None
         self.item = self.dynamo.set(
@@ -509,6 +546,9 @@ class Post(FlagModelMixin, TrendingModelMixin, ViewModelMixin):
             verification_hidden=verification_hidden,
             keywords=keywords,
             payment=payment,
+            payment_ticker=payment_ticker,
+            payment_ticker_required_to_view=payment_ticker_required_to_view,
+            posted_at=self.posted_at,
         )
         return self
 

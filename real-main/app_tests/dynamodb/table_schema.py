@@ -41,6 +41,14 @@ main_table_schema = {
             'Projection': {'ProjectionType': 'ALL'},
         },
         {
+            'IndexName': 'GSI-A5',
+            'KeySchema': [
+                {'AttributeName': 'gsiA5PartitionKey', 'KeyType': 'HASH'},
+                {'AttributeName': 'gsiA5SortKey', 'KeyType': 'RANGE'},
+            ],
+            'Projection': {'ProjectionType': 'ALL'},
+        },
+        {
             'IndexName': 'GSI-K1',
             'KeySchema': [
                 {'AttributeName': 'gsiK1PartitionKey', 'KeyType': 'HASH'},
@@ -84,6 +92,8 @@ main_table_schema = {
         {'AttributeName': 'gsiA3SortKey', 'AttributeType': 'S'},
         {'AttributeName': 'gsiA4PartitionKey', 'AttributeType': 'S'},
         {'AttributeName': 'gsiA4SortKey', 'AttributeType': 'N'},
+        {'AttributeName': 'gsiA5PartitionKey', 'AttributeType': 'S'},
+        {'AttributeName': 'gsiA5SortKey', 'AttributeType': 'S'},
         {'AttributeName': 'gsiK1PartitionKey', 'AttributeType': 'S'},
         {'AttributeName': 'gsiK1SortKey', 'AttributeType': 'S'},
         {'AttributeName': 'gsiK2PartitionKey', 'AttributeType': 'S'},

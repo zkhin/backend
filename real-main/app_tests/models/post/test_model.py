@@ -314,6 +314,10 @@ def test_set(post, user):
     assert post.item.get('sharingDisabled', False) is False
     assert post.item.get('verificationHidden', False) is False
     assert 'payment' not in post.item
+    assert post.item['paymentTicker'] == post.post_manager.post_payment_ticker_default
+    assert (
+        post.item['paymentTickerRequiredToView'] is post.post_manager.post_payment_ticker_required_to_view_default
+    )
 
     # do some edits
     new_text = f'its a new dawn, right @{user.item["username"]}, its a new day'
@@ -324,6 +328,8 @@ def test_set(post, user):
         sharing_disabled=True,
         verification_hidden=True,
         payment=0.01,
+        payment_ticker='foobar',
+        payment_ticker_required_to_view=True,
     )
 
     # verify new values
@@ -334,6 +340,8 @@ def test_set(post, user):
     assert post.item.get('sharingDisabled', False) is True
     assert post.item.get('verificationHidden', False) is True
     assert post.item['payment'] == decimal.Decimal('0.01')
+    assert post.item['paymentTicker'] == 'foobar'
+    assert post.item['paymentTickerRequiredToView'] is True
 
     # edit some params, ignore others
     post.set(likes_disabled=False, verification_hidden=False)
@@ -346,6 +354,8 @@ def test_set(post, user):
     assert post.item.get('sharingDisabled', False) is True
     assert post.item.get('verificationHidden', False) is False
     assert post.item['payment'] == decimal.Decimal('0.01')
+    assert post.item['paymentTicker'] == 'foobar'
+    assert post.item['paymentTickerRequiredToView'] is True
 
     # set keywords
     keywords = ['bird', 'tea', 'mine']
@@ -356,6 +366,48 @@ def test_set(post, user):
 def test_set_cant_set_payment_to_negative_number(post):
     with pytest.raises(PostException, match='negative value'):
         post.set(payment=-0.1)
+
+
+def test_set_payment_ticker(post):
+    assert post.payment_ticker == post.post_manager.post_payment_ticker_default
+    assert post.payment_ticker == 'REAL'
+
+    with pytest.raises(PostException, match='Cannot set paymentTicker to empty string'):
+        post.set(payment_ticker='')
+
+    post.set(payment_ticker='foo')
+    assert post.payment_ticker == 'foo'
+
+    post.set(payment_ticker='bar')
+    assert post.payment_ticker == 'bar'
+
+
+def test_set_payment_ticker_required_to_view(post):
+    assert post.payment_ticker_required_to_view is post.post_manager.post_payment_ticker_required_to_view_default
+    assert post.payment_ticker_required_to_view is False
+
+    post.set(payment_ticker_required_to_view=True)
+    assert post.payment_ticker_required_to_view is True
+
+    post.set(payment_ticker_required_to_view=False)
+    assert post.payment_ticker_required_to_view is False
+
+
+def test_cant_set_payment_attributes_for_ad(post_manager, user):
+    post = post_manager.add_post(user, 'pid1', PostType.TEXT_ONLY, text='t', is_ad=True, ad_payment=1)
+    assert post.ad_status != AdStatus.NOT_AD
+    assert post.payment is None
+    assert post.payment_ticker is None
+    assert post.payment_ticker_required_to_view is None
+
+    with pytest.raises(PostException, match='Cannot set payment for advertisement post'):
+        post.set(payment=decimal.Decimal('0.1'))
+
+    with pytest.raises(PostException, match='Cannot set paymentTicker for advertisement post'):
+        post.set(payment_ticker='meh')
+
+    with pytest.raises(PostException, match='Cannot set paymentTickerRequiredToView for advertisement post'):
+        post.set(payment_ticker_required_to_view=False)
 
 
 def test_set_cant_create_contentless_post(post_manager, post):

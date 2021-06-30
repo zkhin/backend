@@ -32,6 +32,9 @@ describe('Adding ad posts', () => {
       expect(data.post.postStatus).toBe('COMPLETED')
       expect(data.post.adStatus).toBe('NOT_AD')
       expect(data.post.adPayment).toBeNull()
+      expect(data.post.payment).not.toBeNull()
+      expect(data.post.paymentTicker).not.toBeNull()
+      expect(data.post.paymentTickerRequiredToView).not.toBeNull()
     })
   })
 
@@ -77,6 +80,9 @@ describe('Adding ad posts', () => {
         expect(data.post.adStatus).toBe('PENDING')
         expect(data.post.adPayment).toBe(adPayment)
         expect(data.post.adPaymentPeriod).toBe(adPaymentPeriod || null)
+        expect(data.post.payment).toBeNull()
+        expect(data.post.paymentTicker).toBeNull()
+        expect(data.post.paymentTickerRequiredToView).toBeNull()
       })
     },
   )

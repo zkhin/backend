@@ -92,11 +92,23 @@ def test_add_post_errors(post_manager, user):
     with pytest.raises(Exception, match='with negative payment'):
         post_manager.add_post(user, 'pid', PostType.IMAGE, payment=-0.1)
 
+    # try to add post with empty string paymentTicker
+    with pytest.raises(Exception, match='with paymentTicker set to empty string'):
+        post_manager.add_post(user, 'pid', PostType.IMAGE, payment_ticker='')
+
 
 def test_add_post_as_ad_errors(post_manager, user):
     # try to add an ad with a payment
     with pytest.raises(PostException, match='Cannot add advertisement post with payment set'):
         post_manager.add_post(user, 'pid', PostType.IMAGE, is_ad=True, payment=0.1)
+
+    # try to add an ad with a paymentTicker
+    with pytest.raises(PostException, match='Cannot add advertisement post with paymentTicker set'):
+        post_manager.add_post(user, 'pid', PostType.IMAGE, is_ad=True, payment_ticker='foo')
+
+    # try to add an ad with a paymentTickerRequiredToView
+    with pytest.raises(PostException, match='Cannot add advertisement post with paymentTickerRequiredToView set'):
+        post_manager.add_post(user, 'pid', PostType.IMAGE, is_ad=True, payment_ticker_required_to_view=False)
 
     # try to add an ad without setting ad_payment
     with pytest.raises(PostException, match='Cannot add advertisement post without setting adPayment'):
@@ -416,6 +428,50 @@ def test_add_image_post_with_options(post_manager, album, user):
     assert post.image_item['crop'] == crop
     assert post.image_item['takenInReal'] is False
     assert post.image_item['originalFormat'] == 'org-format'
+
+
+def test_add_post_without_payment_options(post_manager, user):
+    post_id = str(uuid.uuid4())
+
+    post_manager.add_post(
+        user,
+        post_id,
+        PostType.IMAGE,
+    )
+
+    post = post_manager.get_post(post_id)
+    assert post.id == post_id
+    assert 'payment' not in post.item
+    assert post.item['paymentTicker'] == post_manager.post_payment_ticker_default
+    assert post.item['paymentTickerRequiredToView'] is False
+    assert post.payment == post_manager.post_payment_default
+    assert post.payment_ticker == post_manager.post_payment_ticker_default
+    assert post.payment_ticker_required_to_view is False
+
+
+def test_add_post_with_payment_options(post_manager, user):
+    post_id = str(uuid.uuid4())
+    payment = Decimal('0.1')
+    payment_ticker = 'foobar'
+    payment_ticker_required_to_view = True
+
+    post_manager.add_post(
+        user,
+        post_id,
+        PostType.IMAGE,
+        payment=payment,
+        payment_ticker=payment_ticker,
+        payment_ticker_required_to_view=payment_ticker_required_to_view,
+    )
+
+    post = post_manager.get_post(post_id)
+    assert post.id == post_id
+    assert post.item['payment'] == payment
+    assert post.item['paymentTicker'] == payment_ticker
+    assert post.item['paymentTickerRequiredToView'] == payment_ticker_required_to_view
+    assert post.payment == payment
+    assert post.payment_ticker == payment_ticker
+    assert post.payment_ticker_required_to_view is payment_ticker_required_to_view
 
 
 def test_add_post_settings_default_to_user_level_settings(post_manager, user):

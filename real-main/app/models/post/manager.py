@@ -23,6 +23,7 @@ from .exceptions import PostException
 from .model import Post
 
 POST_PAYMENT_DEFAULT = to_decimal(os.environ.get('POST_PAYMENT_DEFAULT'))
+POST_PAYMENT_TICKER_DEFAULT = os.environ.get('POST_PAYMENT_TICKER_DEFAULT')
 
 logger = logging.getLogger()
 
@@ -33,7 +34,13 @@ class PostManager(FlagManagerMixin, TrendingManagerMixin, ViewManagerMixin, Mana
     app_store_fee_percent = Decimal('0.15')
     real_fee_percent = Decimal('0.1')
 
-    def __init__(self, clients, managers=None, post_payment_default=POST_PAYMENT_DEFAULT):
+    def __init__(
+        self,
+        clients,
+        managers=None,
+        post_payment_default=POST_PAYMENT_DEFAULT,
+        post_payment_ticker_default=POST_PAYMENT_TICKER_DEFAULT,
+    ):
         super().__init__(clients, managers=managers)
         managers = managers or {}
         managers['post'] = self
@@ -57,6 +64,8 @@ class PostManager(FlagManagerMixin, TrendingManagerMixin, ViewManagerMixin, Mana
         if 'real_transactions' in clients:
             self.real_transactions_client = clients['real_transactions']
         self.post_payment_default = post_payment_default
+        self.post_payment_ticker_default = post_payment_ticker_default
+        self.post_payment_ticker_required_to_view_default = False
 
     def get_model(self, item_id, strongly_consistent=False):
         return self.get_post(item_id, strongly_consistent=strongly_consistent)
@@ -103,6 +112,8 @@ class PostManager(FlagManagerMixin, TrendingManagerMixin, ViewManagerMixin, Mana
         keywords=None,
         set_as_user_photo=None,
         payment=None,
+        payment_ticker=None,
+        payment_ticker_required_to_view=None,
         is_ad=None,
         ad_payment=None,
         ad_payment_period=None,
@@ -144,6 +155,10 @@ class PostManager(FlagManagerMixin, TrendingManagerMixin, ViewManagerMixin, Mana
         if is_ad:
             if payment is not None:
                 raise PostException('Cannot add advertisement post with payment set')
+            if payment_ticker is not None:
+                raise PostException('Cannot add advertisement post with paymentTicker set')
+            if payment_ticker_required_to_view is not None:
+                raise PostException('Cannot add advertisement post with paymentTickerRequiredToView set')
             if ad_payment is None:
                 raise PostException('Cannot add advertisement post without setting adPayment')
             if ad_payment < 0:
@@ -154,10 +169,17 @@ class PostManager(FlagManagerMixin, TrendingManagerMixin, ViewManagerMixin, Mana
                 raise PostException('Cannot add non-advertisement post with adPayment set')
             if ad_payment_period is not None:
                 raise PostException('Cannot add non-advertisement post with adPaymentPeriod set')
+            if payment_ticker is None:
+                payment_ticker = self.post_payment_ticker_default
+            if payment_ticker_required_to_view is None:
+                payment_ticker_required_to_view = self.post_payment_ticker_required_to_view_default
             ad_status = AdStatus.NOT_AD
 
         if payment is not None and payment < 0:
             raise PostException('Cannot add post with negative payment')
+
+        if payment_ticker == '':
+            raise PostException('Cannot add post with paymentTicker set to empty string')
 
         expires_at = now + lifetime_duration if lifetime_duration is not None else None
         if expires_at and expires_at <= now:
@@ -202,6 +224,8 @@ class PostManager(FlagManagerMixin, TrendingManagerMixin, ViewManagerMixin, Mana
             keywords=keywords,
             set_as_user_photo=set_as_user_photo,
             payment=payment,
+            payment_ticker=payment_ticker,
+            payment_ticker_required_to_view=payment_ticker_required_to_view,
             ad_status=ad_status,
             ad_payment=ad_payment,
             ad_payment_period=ad_payment_period,
@@ -522,7 +546,9 @@ class PostManager(FlagManagerMixin, TrendingManagerMixin, ViewManagerMixin, Mana
         if post.ad_status != AdStatus.NOT_AD or post.user_id == user_id or not post.payment:
             return
         try:
-            self.real_transactions_client.pay_for_post_view(user_id, post.user_id, post_id, post.payment)
+            self.real_transactions_client.pay_for_post_view(
+                user_id, post.user_id, post_id, post.payment, post.payment_ticker
+            )
         except InsufficientFundsException:
             user = self.user_manager.get_user(user_id)
             if user and user.item.get('adsDisabled', False):
