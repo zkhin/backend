@@ -60,7 +60,7 @@ test('Requested followers card with correct format, subscription notifications',
     expect(card.cardId).toBeTruthy()
     expect(card.title).toBe('You have 1 pending follow request')
     expect(card.subTitle).toBeNull()
-    expect(card.action).toBe('https://real.app/chat/')
+    expect(card.action).toBe('https://real.app/apps/social/chat/')
     return card
   })
   const {thumbnail: card1Thumbnail, ...card1ExcludingThumbnail} = card1
@@ -119,7 +119,7 @@ test('Requested followers card with correct format, subscription notifications',
     expect(card.cardId).toBeTruthy()
     expect(card.title).toBe('You have 1 pending follow request')
     expect(card.subTitle).toBeNull()
-    expect(card.action).toBe('https://real.app/chat/')
+    expect(card.action).toBe('https://real.app/apps/social/chat/')
   })
 
   // verify subscription fired correctly with that changed card

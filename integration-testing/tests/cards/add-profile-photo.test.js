@@ -69,7 +69,9 @@ describe('New normal users and the add profile photo card', () => {
       expect(data.self.cards.items.length).toBe(1)
       expect(data.self.cards.items[0].cardId).toBe(`${ourUserId}:ADD_PROFILE_PHOTO`)
       expect(data.self.cards.items[0].title).toBe(cardTitle)
-      expect(data.self.cards.items[0].action).toBe(`https://real.app/user/${ourUserId}/settings/photo`)
+      expect(data.self.cards.items[0].action).toBe(
+        `https://real.app/apps/social/user/${ourUserId}/settings/photo`,
+      )
     })
   })
 

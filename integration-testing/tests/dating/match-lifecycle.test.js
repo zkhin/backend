@@ -178,10 +178,10 @@ test('POTENTIAL -> CONFIRMED', async () => {
     // Unread chat message card
     const card = data.self.cards.items[0]
     expect(card.title).toBe('You have 1 chat with new messages')
-    expect(card.action).toBe('https://real.app/chat/')
+    expect(card.action).toBe('https://real.app/apps/social/chat/')
     const secondCard = data.self.cards.items[1]
     expect(secondCard.title).toBe("It's a match! Kick things off by saying hello!")
-    expect(secondCard.action).toBe(`https://real.app/user/${ourUserId}/dating_matched`)
+    expect(secondCard.action).toBe(`https://real.app/apps/social/user/${ourUserId}/dating_matched`)
     const chat = data.self.chats.items[0]
     expect(chat.chatType).toBe('GROUP')
     expect(chat.messagesCount).toBe(4)

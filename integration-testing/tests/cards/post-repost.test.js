@@ -52,7 +52,7 @@ test('PostRepost card generation and format, fullfilling card', async () => {
     expect(card.title).toMatch(RegExp('^@.* reposted one of your posts'))
     expect(card.title).toContain(theirUsername)
     expect(card.subTitle).toBeNull()
-    expect(card.action).toMatch(RegExp('^https://real.app/user/.*/post/.*'))
+    expect(card.action).toMatch(RegExp('^https://real.app/apps/social/user/.*/post/.*'))
     expect(card.action).toContain(theirUserId)
     expect(card.action).toContain(postId)
     expect(card.thumbnail).toBeTruthy()
