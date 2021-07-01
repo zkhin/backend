@@ -34,15 +34,15 @@ test('Grant a user a free diamond subscription', async () => {
 
   // we give grant ourselves our subscription bonus
   const subscriptionDuration = dayjs.duration({months: 1})
-  const before = dayjs().add(subscriptionDuration).toISOString()
+  const before = dayjs().add(subscriptionDuration)
   const expiresAt = await ourClient
     .mutate({mutation: mutations.grantUserSubscriptionBonus})
     .then(({data: {grantUserSubscriptionBonus: user}}) => {
-      const after = dayjs().add(subscriptionDuration).toISOString()
+      const after = dayjs().add(subscriptionDuration)
       expect(user.userId).toBe(ourUserId)
       expect(user.subscriptionLevel).toBe('DIAMOND')
-      expect(user.subscriptionExpiresAt > before).toBe(true)
-      expect(user.subscriptionExpiresAt < after).toBe(true)
+      expect(dayjs(user.subscriptionExpiresAt) - before).toBeGreaterThan(0)
+      expect(dayjs(user.subscriptionExpiresAt) - after).toBeLessThan(0)
       return user.subscriptionExpiresAt
     })
 

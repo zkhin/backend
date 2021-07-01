@@ -278,18 +278,18 @@ test('Find contacts and check lastFoundContactsAt', async () => {
   })
 
   // Run the findContacts Query
-  let before = dayjs().toISOString()
+  let before = dayjs()
   const contacts = [{contactId: 'contactId_1', emails: [ourEmail]}]
   await ourClient
     .query({query: queries.findContacts, variables: {contacts}})
     .then(({data: {findContacts}}) => expect(findContacts.map((i) => i.user.userId)).toEqual([ourUserId]))
-  let after = dayjs().toISOString()
+  let after = dayjs()
 
   // Then check lastFoundContactsAt timestamp
   await eventually(async () => {
     const {data} = await ourClient.query({query: queries.self})
-    expect(before <= data.self.lastFoundContactsAt).toBe(true)
-    expect(after >= data.self.lastFoundContactsAt).toBe(true)
+    expect(dayjs(data.self.lastFoundContactsAt) - before).toBeGreaterThan(0)
+    expect(dayjs(data.self.lastFoundContactsAt) - after).toBeLessThan(0)
   })
 
   // Check another user can't see lastFoundContactsAt
@@ -305,6 +305,6 @@ test('Find contacts and check lastFoundContactsAt', async () => {
 
   await eventually(async () => {
     const {data} = await ourClient.query({query: queries.self})
-    expect(after <= data.self.lastFoundContactsAt).toBe(true)
+    expect(dayjs(data.self.lastFoundContactsAt) - after).toBeGreaterThan(0)
   })
 })

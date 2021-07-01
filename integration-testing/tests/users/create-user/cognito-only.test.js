@@ -123,9 +123,9 @@ describe('cognito-only user', () => {
     test('Mutation.createCognitoOnlyUser succeds if identity pool id and user pool "username" match', async () => {
       // pick a random username, register it, check all is good!
       const username = cognito.generateUsername()
-      const before = dayjs().toISOString()
+      const before = dayjs()
       let resp = await client.mutate({mutation: mutations.createCognitoOnlyUser, variables: {username}})
-      const after = dayjs().toISOString()
+      const after = dayjs()
       expect(resp['errors']).toBeUndefined()
       expect(resp['data']['createCognitoOnlyUser']['userId']).toBe(userId)
       expect(resp['data']['createCognitoOnlyUser']['username']).toBe(username)
@@ -134,8 +134,8 @@ describe('cognito-only user', () => {
 
       // check the signedUpAt is within our bookends
       const signedUpAt = resp['data']['createCognitoOnlyUser']['signedUpAt']
-      expect(before <= signedUpAt).toBe(true)
-      expect(after >= signedUpAt).toBe(true)
+      expect(dayjs(signedUpAt) - before).toBeGreaterThan(0)
+      expect(dayjs(signedUpAt) - after).toBeLessThan(0)
     })
 
     test('Mutation.createCognitoOnlyUser handles empty string fullName', async () => {

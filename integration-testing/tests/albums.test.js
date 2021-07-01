@@ -27,9 +27,9 @@ test('Add, read, and delete an album', async () => {
   // we add an album with minimal options
   const albumId = uuidv4()
   const orgAlbum = await (async () => {
-    const before = dayjs().toISOString()
+    const before = dayjs()
     const resp = await ourClient.mutate({mutation: mutations.addAlbum, variables: {albumId, name: 'album name'}})
-    const after = dayjs().toISOString()
+    const after = dayjs()
     return {before, album: resp.data.addAlbum, after}
   })().then(({before, album, after}) => {
     expect(album.albumId).toBe(albumId)
@@ -43,8 +43,8 @@ test('Add, read, and delete an album', async () => {
     expect(album.postCount).toBe(0)
     expect(album.postsLastUpdatedAt).toBeNull()
     expect(album.posts.items).toHaveLength(0)
-    expect(before <= album.createdAt).toBe(true)
-    expect(after >= album.createdAt).toBe(true)
+    expect(dayjs(album.createdAt) - before).toBeGreaterThan(0)
+    expect(dayjs(album.createdAt) - after).toBeLessThan(0)
     return album
   })
 

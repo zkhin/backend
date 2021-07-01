@@ -46,28 +46,28 @@ test('Create a direct chat', async () => {
   // we open up a direct chat with them
   const [chatId, messageId] = [uuidv4(), uuidv4()]
   const messageText = 'lore ipsum'
-  const before = dayjs().toISOString()
+  const before = dayjs()
   await ourClient
     .mutate({
       mutation: mutations.createDirectChat,
       variables: {userId: theirUserId, chatId, messageId, messageText},
     })
     .then(({data}) => expect(data.createDirectChat.chatId).toBe(chatId))
-  const after = dayjs().toISOString()
+  const after = dayjs()
 
   await eventually(async () => {
     const {data} = await ourClient.query({query: queries.chat, variables: {chatId}})
     expect(data).toMatchObject({chat: {chatId, chatType: 'DIRECT', name: null}})
-    expect(data.chat.createdAt > before).toBe(true)
-    expect(data.chat.createdAt < after).toBe(true)
-    expect(data.chat.createdAt < data.chat.lastMessageActivityAt).toBe(true)
+    expect(dayjs(data.chat.createdAt) - before).toBeGreaterThan(0)
+    expect(dayjs(data.chat.createdAt) - after).toBeLessThan(0)
+    expect(dayjs(data.chat.createdAt) - dayjs(data.chat.lastMessageActivityAt)).toBeLessThan(0)
     expect(data.chat.usersCount).toBe(2)
     expect(data.chat.users.items.map((u) => u.userId).sort()).toEqual([ourUserId, theirUserId].sort())
     expect(data.chat.messages.items).toHaveLength(1)
     expect(data.chat.messages.items[0].messageId).toBe(messageId)
     expect(data.chat.messages.items[0].text).toBe(messageText)
     expect(data.chat.messages.items[0].textTaggedUsers).toEqual([])
-    expect(data.chat.createdAt < data.chat.messages.items[0].createdAt).toBe(true)
+    expect(dayjs(data.chat.messages.items[0].createdAt) - dayjs(data.chat.createdAt)).toBeGreaterThan(0)
     expect(data.chat.messages.items[0].lastEditedAt).toBeNull()
     expect(data.chat.messages.items[0].chat.chatId).toBe(chatId)
     expect(data.chat.messages.items[0].author.userId).toBe(ourUserId)

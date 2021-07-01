@@ -16,11 +16,11 @@ afterEach(async () => {
 
 test('Mutation.createAnonymousUser success', async () => {
   // pick a random username, register it, check all is good!
-  const before = dayjs().toISOString()
+  const before = dayjs()
   const after = await client
     .mutate({mutation: mutations.createAnonymousUser})
     .then(({data: {createAnonymousUser: cognitoTokens}}) => {
-      const after = dayjs().toISOString()
+      const after = dayjs()
       expect(cognitoTokens.AccessToken).toBeTruthy()
       expect(cognitoTokens.ExpiresIn).toBeGreaterThan(0)
       expect(cognitoTokens.TokenType).toBe('Bearer')
@@ -38,8 +38,8 @@ test('Mutation.createAnonymousUser success', async () => {
     expect(user.phoneNumber).toBeNull()
     expect(user.fullName).toBeNull()
     expect(user.userStatus).toBe('ANONYMOUS')
-    expect(before <= user.signedUpAt).toBe(true)
-    expect(after >= user.signedUpAt).toBe(true)
+    expect(dayjs(user.signedUpAt) - before).toBeGreaterThan(0)
+    expect(dayjs(user.signedUpAt) - after).toBeLessThan(0)
   })
   await client.query({query: queries.user, variables: {userId}}).then(({data: {user}}) => {
     expect(user.userId).toBe(userId)

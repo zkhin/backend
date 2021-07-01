@@ -43,17 +43,17 @@ test('Add messages to a direct chat', async () => {
 
   // they add another message to the chat, check the timestamp
   const [messageId4, text4] = [uuidv4(), 'msg 4']
-  const before = dayjs().toISOString()
+  const before = dayjs()
   await theirClient.mutate({
     mutation: mutations.addChatMessage,
     variables: {chatId, messageId: messageId4, text: text4},
   })
-  const after = dayjs().toISOString()
+  const after = dayjs()
   await eventually(async () => {
     const {data} = await theirClient.query({query: queries.chat, variables: {chatId}})
     expect(data).toMatchObject({chat: {chatId, messagesCount: 4}})
-    expect(data.chat.messages.items[3].createdAt > before).toBe(true)
-    expect(data.chat.messages.items[3].createdAt < after).toBe(true)
+    expect(dayjs(data.chat.messages.items[3].createdAt) - before).toBeGreaterThan(0)
+    expect(dayjs(data.chat.messages.items[3].createdAt) - after).toBeLessThan(0)
     expect(data.chat.lastMessageActivityAt).toBe(data.chat.messages.items[3].createdAt)
   })
 
@@ -375,18 +375,17 @@ test('Edit chat message', async () => {
 
   // check they *can* edit the message
   let newText = `lore new, @${ourUsername}`
-  let before = dayjs().toISOString()
+  let before = dayjs()
   resp = await theirClient.mutate({mutation: mutations.editChatMessage, variables: {messageId, text: newText}})
-  let after = dayjs().toISOString()
+  let after = dayjs()
   expect(resp.data.editChatMessage.messageId).toBe(messageId)
   expect(resp.data.editChatMessage.text).toBe(newText)
   expect(resp.data.editChatMessage.textTaggedUsers).toHaveLength(1)
   expect(resp.data.editChatMessage.textTaggedUsers[0].tag).toBe(`@${ourUsername}`)
   expect(resp.data.editChatMessage.textTaggedUsers[0].user.userId).toBe(ourUserId)
   expect(resp.data.editChatMessage.viewedStatus).toBe('VIEWED')
-  const lastEditedAt = resp.data.editChatMessage.lastEditedAt
-  expect(before <= lastEditedAt).toBe(true)
-  expect(after >= lastEditedAt).toBe(true)
+  expect(dayjs(resp.data.editChatMessage.lastEditedAt) - before).toBeGreaterThan(0)
+  expect(dayjs(resp.data.editChatMessage.lastEditedAt) - after).toBeLessThan(0)
   const message = resp.data.editChatMessage
 
   // check that really stuck in db

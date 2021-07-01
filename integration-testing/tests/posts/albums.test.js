@@ -22,37 +22,41 @@ test('Create a posts in an album, album post ordering', async () => {
 
   // we add an album
   const albumId = uuidv4()
-  let resp = await ourClient.mutate({mutation: mutations.addAlbum, variables: {albumId, name: 'n'}})
-  expect(resp.data.addAlbum.albumId).toBe(albumId)
-  expect(resp.data.addAlbum.postCount).toBe(0)
-  expect(resp.data.addAlbum.postsLastUpdatedAt).toBeNull()
-  expect(resp.data.addAlbum.posts.items).toHaveLength(0)
+  await ourClient
+    .mutate({mutation: mutations.addAlbum, variables: {albumId, name: 'n'}})
+    .then(({data: {addAlbum: album}}) => {
+      expect(album).toMatchObject({albumId, postCount: 0, postsLastUpdatedAt: null, posts: {items: []}})
+    })
 
   // we add an image post in that album
   const postId1 = uuidv4()
-  let variables = {postId: postId1, albumId, imageData}
-  resp = await ourClient.mutate({mutation: mutations.addPost, variables})
-  expect(resp.data.addPost.postId).toBe(postId1)
-  let postedAt = resp.data.addPost.postedAt
+  const postedAt = await ourClient
+    .mutate({mutation: mutations.addPost, variables: {postId: postId1, albumId, imageData}})
+    .then(({data: {addPost: post}}) => {
+      expect(post).toMatchObject({postId: postId1, postedAt: expect.anything()})
+      return dayjs(post.postedAt)
+    })
 
   // check the album
   await eventually(async () => {
     const {data} = await ourClient.query({query: queries.album, variables: {albumId}})
     expect(data.album.albumId).toBe(albumId)
     expect(data.album.postCount).toBe(1)
-    expect(data.album.postsLastUpdatedAt > postedAt).toBe(true)
-    expect(data.album.postsLastUpdatedAt < dayjs().toISOString()).toBe(true)
+    expect(dayjs(data.album.postsLastUpdatedAt) - postedAt).toBeGreaterThan(0)
+    expect(dayjs(data.album.postsLastUpdatedAt) - dayjs()).toBeLessThan(0)
     expect(data.album.posts.items).toHaveLength(1)
     expect(data.album.posts.items[0].postId).toBe(postId1)
   })
 
   // we add another image post in that album, this one via cloudfront upload
   const postId2 = uuidv4()
-  variables = {postId: postId2, albumId}
-  resp = await ourClient.mutate({mutation: mutations.addPost, variables})
-  expect(resp.data.addPost.postId).toBe(postId2)
-  let uploadUrl = resp.data.addPost.imageUploadUrl
-  let before = dayjs()
+  const uploadUrl = await ourClient
+    .mutate({mutation: mutations.addPost, variables: {postId: postId2, albumId}})
+    .then(({data: {addPost: post}}) => {
+      expect(post).toMatchObject({postId: postId2, imageUploadUrl: expect.anything()})
+      return post.imageUploadUrl
+    })
+  const before = dayjs()
   await got.put(uploadUrl, {headers: imageHeaders, body: imageBytes})
 
   // check the album
@@ -60,8 +64,8 @@ test('Create a posts in an album, album post ordering', async () => {
     const {data} = await ourClient.query({query: queries.album, variables: {albumId}})
     expect(data.album.albumId).toBe(albumId)
     expect(data.album.postCount).toBe(2)
-    expect(data.album.postsLastUpdatedAt > before.toISOString()).toBe(true)
-    expect(data.album.postsLastUpdatedAt < dayjs().toISOString()).toBe(true)
+    expect(dayjs(data.album.postsLastUpdatedAt) - before).toBeGreaterThan(0)
+    expect(dayjs(data.album.postsLastUpdatedAt) - dayjs()).toBeLessThan(0)
     expect(data.album.posts.items).toHaveLength(2)
     expect(data.album.posts.items[0].postId).toBe(postId1)
     expect(data.album.posts.items[1].postId).toBe(postId2)
@@ -69,9 +73,12 @@ test('Create a posts in an album, album post ordering', async () => {
 
   // we a text-only post in that album
   const postId3 = uuidv4()
-  variables = {postId: postId3, albumId, text: 'lore ipsum', postType: 'TEXT_ONLY'}
-  resp = await ourClient.mutate({mutation: mutations.addPost, variables})
-  expect(resp.data.addPost.postId).toBe(postId3)
+  await ourClient
+    .mutate({
+      mutation: mutations.addPost,
+      variables: {postId: postId3, albumId, text: 'lore ipsum', postType: 'TEXT_ONLY'},
+    })
+    .then(({data: {addPost: post}}) => expect(post).toMatchObject({postId: postId3}))
 
   // check the album
   await eventually(async () => {
@@ -235,8 +242,8 @@ test('Add, remove, change albums for an existing post', async () => {
     expect(data.album.postCount).toBe(1)
     expect(data.album.posts.items).toHaveLength(1)
     expect(data.album.posts.items[0].postId).toBe(postId)
-    expect(data.album.postsLastUpdatedAt > before.toISOString()).toBe(true)
-    expect(data.album.postsLastUpdatedAt < dayjs().toISOString()).toBe(true)
+    expect(dayjs(data.album.postsLastUpdatedAt) - before).toBeGreaterThan(0)
+    expect(dayjs(data.album.postsLastUpdatedAt) - dayjs()).toBeLessThan(0)
   })
 
   // add an unrelated text-only post to the first album
@@ -259,8 +266,8 @@ test('Add, remove, change albums for an existing post', async () => {
     expect(data.album.albumId).toBe(albumId2)
     expect(data.album.postCount).toBe(0)
     expect(data.album.posts.items).toHaveLength(0)
-    expect(data.album.postsLastUpdatedAt > before.toISOString()).toBe(true)
-    expect(data.album.postsLastUpdatedAt < dayjs().toISOString()).toBe(true)
+    expect(dayjs(data.album.postsLastUpdatedAt) - before).toBeGreaterThan(0)
+    expect(dayjs(data.album.postsLastUpdatedAt) - dayjs()).toBeLessThan(0)
   })
 
   // check the first album, including post order - new post should be at the back
@@ -271,8 +278,8 @@ test('Add, remove, change albums for an existing post', async () => {
     expect(data.album.posts.items).toHaveLength(2)
     expect(data.album.posts.items[0].postId).toBe(postId2)
     expect(data.album.posts.items[1].postId).toBe(postId)
-    expect(data.album.postsLastUpdatedAt > before.toISOString()).toBe(true)
-    expect(data.album.postsLastUpdatedAt < dayjs().toISOString()).toBe(true)
+    expect(dayjs(data.album.postsLastUpdatedAt) - before).toBeGreaterThan(0)
+    expect(dayjs(data.album.postsLastUpdatedAt) - dayjs()).toBeLessThan(0)
   })
 
   // remove the post from that album
@@ -288,8 +295,8 @@ test('Add, remove, change albums for an existing post', async () => {
     expect(data.album.postCount).toBe(1)
     expect(data.album.posts.items).toHaveLength(1)
     expect(data.album.posts.items[0].postId).toBe(postId2)
-    expect(data.album.postsLastUpdatedAt > before.toISOString()).toBe(true)
-    expect(data.album.postsLastUpdatedAt < dayjs().toISOString()).toBe(true)
+    expect(dayjs(data.album.postsLastUpdatedAt) - before).toBeGreaterThan(0)
+    expect(dayjs(data.album.postsLastUpdatedAt) - dayjs()).toBeLessThan(0)
   })
 })
 
@@ -399,7 +406,7 @@ test('Archiving a post removes it from Album.posts & friends, restoring it does 
     expect(data.album.posts.items[0].postId).toBe(postId)
     expect(data.album.posts.items[1].postId).toBe(postId2)
     expect(data.album.postsLastUpdatedAt).toBeTruthy()
-    return data.album.postsLastUpdatedAt
+    return dayjs(data.album.postsLastUpdatedAt)
   })
 
   // archive the post
@@ -414,8 +421,8 @@ test('Archiving a post removes it from Album.posts & friends, restoring it does 
     expect(data.album.postCount).toBe(1)
     expect(data.album.posts.items).toHaveLength(1)
     expect(data.album.posts.items[0].postId).toBe(postId2)
-    expect(data.album.postsLastUpdatedAt > postsLastUpdatedAt).toBe(true)
-    return data.album.postsLastUpdatedAt
+    expect(dayjs(data.album.postsLastUpdatedAt) - postsLastUpdatedAt).toBeGreaterThan(0)
+    return dayjs(data.album.postsLastUpdatedAt)
   })
 
   // restore the post
@@ -431,7 +438,7 @@ test('Archiving a post removes it from Album.posts & friends, restoring it does 
     expect(data.album.posts.items).toHaveLength(2)
     expect(data.album.posts.items[0].postId).toBe(postId2)
     expect(data.album.posts.items[1].postId).toBe(postId)
-    expect(data.album.postsLastUpdatedAt > postsLastUpdatedAt).toBe(true)
+    expect(dayjs(data.album.postsLastUpdatedAt) - postsLastUpdatedAt).toBeGreaterThan(0)
   })
 })
 
@@ -459,7 +466,7 @@ test('Deleting a post removes it from Album.posts & friends', async () => {
     expect(data.album.posts.items).toHaveLength(1)
     expect(data.album.posts.items[0].postId).toBe(postId)
     expect(data.album.postsLastUpdatedAt).toBeTruthy()
-    return data.album.postsLastUpdatedAt
+    return dayjs(data.album.postsLastUpdatedAt)
   })
 
   // delete the post
@@ -473,7 +480,7 @@ test('Deleting a post removes it from Album.posts & friends', async () => {
     expect(data.album.albumId).toBe(albumId)
     expect(data.album.postCount).toBe(0)
     expect(data.album.posts.items).toHaveLength(0)
-    expect(postsLastUpdatedAt < data.album.postsLastUpdatedAt).toBe(true)
+    expect(dayjs(data.album.postsLastUpdatedAt) - postsLastUpdatedAt).toBeGreaterThan(0)
   })
 })
 
@@ -612,7 +619,7 @@ test('Edit album post order', async () => {
     const {data} = await ourClient.query({query: queries.album, variables: {albumId}})
     expect(data.album.albumId).toBe(albumId)
     expect(data.album.postCount).toBe(3)
-    expect(data.album.postsLastUpdatedAt > album.postsLastUpdatedAt).toBe(true)
+    expect(dayjs(data.album.postsLastUpdatedAt) - dayjs(album.postsLastUpdatedAt)).toBeGreaterThan(0)
     expect(data.album.posts.items).toHaveLength(3)
     expect(data.album.posts.items[0].postId).toBe(postId3)
     expect(data.album.posts.items[1].postId).toBe(postId1)
@@ -636,7 +643,7 @@ test('Edit album post order', async () => {
     const {data} = await ourClient.query({query: queries.album, variables: {albumId}})
     expect(data.album.albumId).toBe(albumId)
     expect(data.album.postCount).toBe(3)
-    expect(data.album.postsLastUpdatedAt > album.postsLastUpdatedAt).toBe(true)
+    expect(dayjs(data.album.postsLastUpdatedAt) - dayjs(album.postsLastUpdatedAt)).toBeGreaterThan(0)
     expect(data.album.posts.items).toHaveLength(3)
     expect(data.album.posts.items[0].postId).toBe(postId3)
     expect(data.album.posts.items[1].postId).toBe(postId2)
@@ -660,7 +667,7 @@ test('Edit album post order', async () => {
     const {data} = await ourClient.query({query: queries.album, variables: {albumId}})
     expect(data.album.albumId).toBe(albumId)
     expect(data.album.postCount).toBe(3)
-    expect(data.album.postsLastUpdatedAt > album.postsLastUpdatedAt).toBe(true)
+    expect(dayjs(data.album.postsLastUpdatedAt) - dayjs(album.postsLastUpdatedAt)).toBeGreaterThan(0)
     expect(data.album.posts.items).toHaveLength(3)
     expect(data.album.posts.items[0].postId).toBe(postId1)
     expect(data.album.posts.items[1].postId).toBe(postId3)

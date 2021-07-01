@@ -26,7 +26,7 @@ test('Create and edit a group chat', async () => {
 
   // we create a group chat with all of us in it, check details are correct
   const [chatId, messageId1] = [uuidv4(), uuidv4()]
-  const before = dayjs().toISOString()
+  const before = dayjs()
   await ourClient
     .mutate({
       mutation: mutations.createGroupChat,
@@ -39,14 +39,14 @@ test('Create and edit a group chat', async () => {
       },
     })
     .then(({data}) => expect(data.createGroupChat.chatId).toBe(chatId))
-  const after = dayjs().toISOString()
+  const after = dayjs()
 
   const firstMessageIds = await eventually(async () => {
     const {data} = await ourClient.query({query: queries.chat, variables: {chatId}})
     expect(data).toMatchObject({chat: {chatId, chatType: 'GROUP', name: 'x'}})
-    expect(data.chat.createdAt > before).toBe(true)
-    expect(data.chat.createdAt < after).toBe(true)
-    expect(data.chat.createdAt < data.chat.lastMessageActivityAt).toBe(true)
+    expect(dayjs(data.chat.createdAt) - before).toBeGreaterThan(0)
+    expect(dayjs(data.chat.createdAt) - after).toBeLessThan(0)
+    expect(dayjs(data.chat.createdAt) - dayjs(data.chat.lastMessageActivityAt)).toBeLessThan(0)
     expect(data.chat.usersCount).toBe(3)
     expect(data.chat.users.items.map((u) => u.userId).sort()).toEqual(
       [ourUserId, other1UserId, other2UserId].sort(),
