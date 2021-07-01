@@ -82,6 +82,17 @@
       - $context.args.nextToken
 
 - type: Query
+  field: postsByPaymentTicker
+  response: PassThru.response.vtl
+  dataSource: DynamodbDataSource
+  caching:
+    keys:
+      - $context.args.paymentTicker
+      - $context.args.paymentTickerRequiredToView
+      - $context.args.limit
+      - $context.args.nextToken
+
+- type: Query
   field: album
   request: Query.album/before.request.vtl
   response: Query.album/after.response.vtl

@@ -350,6 +350,27 @@ export const similarPosts = gql`
   }
 `
 
+export const postsByPaymentTicker = gql`
+  query PostsByPaymentTicker(
+    $paymentTicker: String!
+    $paymentTickerRequiredToView: Boolean
+    $limit: Int
+    $nextToken: String
+  ) {
+    posts: postsByPaymentTicker(
+      paymentTicker: $paymentTicker
+      paymentTickerRequiredToView: $paymentTickerRequiredToView
+      limit: $limit
+      nextToken: $nextToken
+    ) {
+      items {
+        postId
+      }
+      nextToken
+    }
+  }
+`
+
 export const searchKeywords = gql`
   query SearchKeywords($keyword: String!) {
     searchKeywords(keyword: $keyword)
