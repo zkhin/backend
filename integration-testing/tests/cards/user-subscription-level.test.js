@@ -37,7 +37,7 @@ test('User subscription level card: generating, format', async () => {
     expect(card.cardId).toBe(`${ourUserId}:USER_SUBSCRIPTION_LEVEL`)
     expect(card.title).toBe('Welcome to Diamond')
     expect(card.subTitle).toBe('Enjoy exclusive perks of being a subscriber')
-    expect(card.action).toBe('https://real.app/diamond')
+    expect(card.action).toBe('https://real.app/apps/social/diamond')
   })
 })
 
@@ -62,7 +62,7 @@ test('Grant user subscription level with FREE_FOR_LIFE grant code', async () => 
     expect(card.cardId).toBe(`${ourUserId}:USER_SUBSCRIPTION_LEVEL`)
     expect(card.title).toBe('Welcome to Diamond')
     expect(card.subTitle).toBe('Enjoy exclusive perks of being a subscriber')
-    expect(card.action).toBe('https://real.app/diamond')
+    expect(card.action).toBe('https://real.app/apps/social/diamond')
   })
 })
 
@@ -124,7 +124,7 @@ test('Promote user subscription level with promotion code', async () => {
     expect(card.cardId).toBe(`${ourUserId}:USER_SUBSCRIPTION_LEVEL`)
     expect(card.title).toBe('Welcome to Diamond')
     expect(card.subTitle).toBe('Enjoy exclusive perks of being a subscriber')
-    expect(card.action).toBe('https://real.app/diamond')
+    expect(card.action).toBe('https://real.app/apps/social/diamond')
   })
 
   // we try to use redeem promotion code twice

@@ -61,7 +61,7 @@ describe('New anonymous users and the user upsell card', () => {
       const {data} = await anonClient.query({query: queries.self})
       expect(data.self.cards.items).toHaveLength(1)
       expect(data.self.cards.items[0].title).toBe(cardTitle)
-      expect(data.self.cards.items[0].action).toBe(`https://real.app/signup/${anonUserId}`)
+      expect(data.self.cards.items[0].action).toBe(`https://real.app/apps/social/signup/${anonUserId}`)
       expect(data.self.cards.items[0].cardId).toBe(`${anonUserId}:ANONYMOUS_USER_UPSELL`)
       return data.self.cards.items[0].cardId
     })

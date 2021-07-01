@@ -85,8 +85,8 @@ test('List cards', async () => {
     expect(data.self.userId).toBe(ourUserId)
     expect(data.self.cardCount).toBe(2)
     expect(data.self.cards.items).toHaveLength(2)
-    expect(data.self.cards.items[0].action).toContain('https://real.app/')
-    expect(data.self.cards.items[1].action).toContain('https://real.app/')
+    expect(data.self.cards.items[0].action).toContain('https://real.app/apps/social/')
+    expect(data.self.cards.items[1].action).toContain('https://real.app/apps/social/')
   })
 })
 

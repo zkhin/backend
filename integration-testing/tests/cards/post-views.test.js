@@ -66,7 +66,7 @@ test('PostViews card generation and format', async () => {
     expect(card.cardId).toBeTruthy()
     expect(card.title).toBe('You have new views')
     expect(card.subTitle).toBeNull()
-    expect(card.action).toMatch(RegExp('^https://real.app/user/.*/post/.*/views'))
+    expect(card.action).toMatch(RegExp('^https://real.app/apps/social/user/.*/post/.*/views'))
     expect(card.action).toContain(postId)
     expect(card.thumbnail).toBeTruthy()
     expect(card.thumbnail.url64p).toMatch(RegExp('^https://.*.jpg'))

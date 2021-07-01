@@ -205,7 +205,7 @@ test('Find contacts sends cards to the users that were found', async () => {
     expect(card.cardId).toBe(`${other1UserId}:CONTACT_JOINED:${ourUserId}`)
     expect(card.title).toBe(`${ourUsername} joined REAL`)
     expect(card.subTitle).toBeNull()
-    expect(card.action).toBe(`https://real.app/user/${ourUserId}`)
+    expect(card.action).toBe(`https://real.app/apps/social/user/${ourUserId}`)
     return card.cardId
   })
 

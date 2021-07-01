@@ -69,7 +69,7 @@ test('Comment card format, subscription notifications', async () => {
     expect(card.cardId).toBeTruthy()
     expect(card.title).toBe('You have 1 new comment')
     expect(card.subTitle).toBeNull()
-    expect(card.action).toMatch(RegExp('^https://real.app/user/.*/post/.*/comments$'))
+    expect(card.action).toMatch(RegExp('^https://real.app/apps/social/user/.*/post/.*/comments$'))
     expect(card.action).toContain(postId)
     expect(card.thumbnail).toBeTruthy()
     expect(card.thumbnail.url64p).toMatch(RegExp('^https://.*.jpg'))

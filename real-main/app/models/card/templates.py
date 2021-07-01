@@ -1,5 +1,7 @@
 import pendulum
 
+deeplink_prefix = 'https://real.app/apps/social'
+
 
 class CardTemplate:
 
@@ -18,7 +20,7 @@ class CardTemplate:
 
 class ChatCardTemplate(CardTemplate):
 
-    action = 'https://real.app/chat/'
+    action = f'{deeplink_prefix}/chat/'
     notify_user_after = pendulum.duration(minutes=5)
 
     @staticmethod
@@ -43,7 +45,7 @@ class CommentCardTemplate(CardTemplate):
     def __init__(self, user_id, post_id, unviewed_comments_count):
         super().__init__(user_id)
         self.card_id = self.get_card_id(user_id, post_id)
-        self.action = f'https://real.app/user/{user_id}/post/{post_id}/comments'
+        self.action = f'{deeplink_prefix}/user/{user_id}/post/{post_id}/comments'
         cnt = unviewed_comments_count
         self.title = f'You have {cnt} new comment{"s" if cnt > 1 else ""}'
         self.post_id = post_id
@@ -60,7 +62,9 @@ class CommentMentionCardTemplate(CardTemplate):
     def __init__(self, user_id, comment):
         super().__init__(user_id)
         self.card_id = self.get_card_id(user_id, comment.id)
-        self.action = f'https://real.app/user/{comment.post.user_id}/post/{comment.post_id}/comments/{comment.id}'
+        self.action = (
+            f'{deeplink_prefix}/user/{comment.post.user_id}/post/{comment.post_id}/comments/{comment.id}'
+        )
         self.title = f'@{comment.user.username} mentioned you in a comment'
         self.post_id = comment.post_id
         self.comment_id = comment.id
@@ -78,7 +82,7 @@ class PostLikesCardTemplate(CardTemplate):
     def __init__(self, user_id, post_id):
         super().__init__(user_id)
         self.card_id = self.get_card_id(user_id, post_id)
-        self.action = f'https://real.app/user/{user_id}/post/{post_id}/likes'
+        self.action = f'{deeplink_prefix}/user/{user_id}/post/{post_id}/likes'
         self.post_id = post_id
 
 
@@ -93,7 +97,7 @@ class PostMentionCardTemplate(CardTemplate):
     def __init__(self, user_id, post):
         super().__init__(user_id)
         self.card_id = self.get_card_id(user_id, post.id)
-        self.action = f'https://real.app/user/{post.user_id}/post/{post.id}'
+        self.action = f'{deeplink_prefix}/user/{post.user_id}/post/{post.id}'
         self.title = f'@{post.user.username} tagged you in a post'
         self.post_id = post.id
 
@@ -109,7 +113,7 @@ class PostRepostCardTemplate(CardTemplate):
     def __init__(self, user_id, post):
         super().__init__(user_id)
         self.card_id = self.get_card_id(user_id, post.id)
-        self.action = f'https://real.app/user/{post.user_id}/post/{post.id}'
+        self.action = f'{deeplink_prefix}/user/{post.user_id}/post/{post.id}'
         self.title = f'@{post.user.username} reposted one of your posts'
         self.post_id = post.id
 
@@ -126,13 +130,13 @@ class PostViewsCardTemplate(CardTemplate):
     def __init__(self, user_id, post_id):
         super().__init__(user_id)
         self.card_id = self.get_card_id(user_id, post_id)
-        self.action = f'https://real.app/user/{user_id}/post/{post_id}/views'
+        self.action = f'{deeplink_prefix}/user/{user_id}/post/{post_id}/views'
         self.post_id = post_id
 
 
 class RequestedFollowersCardTemplate(CardTemplate):
 
-    action = 'https://real.app/chat/'
+    action = f'{deeplink_prefix}/chat/'
     notify_user_after = pendulum.duration(hours=24)
 
     @staticmethod
@@ -157,7 +161,7 @@ class NewFollowersCardTemplate(CardTemplate):
     def __init__(self, user_id):
         super().__init__(user_id)
         self.card_id = self.get_card_id(user_id)
-        self.action = f'https://real.app/user/{user_id}/new_followers'
+        self.action = f'{deeplink_prefix}/user/{user_id}/new_followers'
         self.title = 'You have new followers'
 
 
@@ -172,13 +176,13 @@ class ContactJoinedCardTemplate(CardTemplate):
     def __init__(self, user_id, user_id_joined, username_joined):
         super().__init__(user_id)
         self.card_id = self.get_card_id(user_id, user_id_joined)
-        self.action = f'https://real.app/user/{user_id_joined}'
+        self.action = f'{deeplink_prefix}/user/{user_id_joined}'
         self.title = f'{username_joined} joined REAL'
 
 
 class UserSubscriptionLevelTemplate(CardTemplate):
 
-    action = 'https://real.app/diamond'
+    action = f'{deeplink_prefix}/diamond'
     notify_user_after = pendulum.duration(hours=24)
 
     @staticmethod
@@ -200,7 +204,7 @@ class AddProfilePhotoCardTemplate(CardTemplate):
     def __init__(self, user_id):
         super().__init__(user_id)
         self.card_id = self.get_card_id(user_id)
-        self.action = f'https://real.app/user/{user_id}/settings/photo'
+        self.action = f'{deeplink_prefix}/user/{user_id}/settings/photo'
         self.title = 'Add a profile photo'
 
 
@@ -215,7 +219,7 @@ class AnonymousUserUpsellCardTemplate(CardTemplate):
     def __init__(self, user_id):
         super().__init__(user_id)
         self.card_id = self.get_card_id(user_id)
-        self.action = f'https://real.app/signup/{user_id}'
+        self.action = f'{deeplink_prefix}/signup/{user_id}'
         self.title = 'Reserve your username & sign up!'
 
 
@@ -230,7 +234,7 @@ class UserNewDatingMatchesTemplate(CardTemplate):
     def __init__(self, user_id):
         super().__init__(user_id)
         self.card_id = self.get_card_id(user_id)
-        self.action = f'https://real.app/user/{user_id}/new_matches'
+        self.action = f'{deeplink_prefix}/user/{user_id}/new_matches'
         self.title = 'You have new dating matches to review.'
 
 
@@ -245,5 +249,5 @@ class UserDatingMatchedCardTemplate(CardTemplate):
     def __init__(self, user_id):
         super().__init__(user_id)
         self.card_id = self.get_card_id(user_id)
-        self.action = f'https://real.app/user/{user_id}/dating_matched'
+        self.action = f'{deeplink_prefix}/user/{user_id}/dating_matched'
         self.title = "It's a match! Kick things off by saying hello!"

@@ -61,7 +61,7 @@ test('Unread chat message card with correct format', async () => {
     expect(card.cardId).toBeTruthy()
     expect(card.title).toBe('You have 1 chat with new messages')
     expect(card.subTitle).toBeNull()
-    expect(card.action).toBe('https://real.app/chat/')
+    expect(card.action).toBe('https://real.app/apps/social/chat/')
     expect(card.thumbnail).toBeNull()
     return card
   })

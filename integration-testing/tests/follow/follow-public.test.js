@@ -46,7 +46,7 @@ test('Follow & unfollow a public user', async () => {
     expect(user.cardCount).toBeGreaterThanOrEqual(1)
     const card = user.cards.items[0]
     expect(card.title).toBe('You have new followers')
-    expect(card.action).toBe(`https://real.app/user/${theirUserId}/new_followers`)
+    expect(card.action).toBe(`https://real.app/apps/social/user/${theirUserId}/new_followers`)
   })
 
   // we unfollow them, goes through immediately

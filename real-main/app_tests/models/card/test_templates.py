@@ -36,7 +36,7 @@ def test_post_views_card_template(user, post):
     template = templates.PostViewsCardTemplate(user.id, post.id)
     assert template.card_id == card_id
     assert template.user_id == user.id
-    assert template.action == f'https://real.app/user/{user.id}/post/{post.id}/views'
+    assert template.action == f'https://real.app/apps/social/user/{user.id}/post/{post.id}/views'
     assert template.title == 'You have new views'
     assert not template.only_usernames
     assert template.post_id == post.id
@@ -54,6 +54,8 @@ def test_comment_mention_card_template(user, comment):
         'https:',
         '',
         'real.app',
+        'apps',
+        'social',
         'user',
         comment.post.user_id,
         'post',
@@ -75,7 +77,7 @@ def test_post_mention_card_template(user, post):
     template = templates.PostMentionCardTemplate(user.id, post)
     assert template.card_id == card_id
     assert template.user_id == user.id
-    assert template.action == f'https://real.app/user/{post.user_id}/post/{post.id}'
+    assert template.action == f'https://real.app/apps/social/user/{post.user_id}/post/{post.id}'
     assert re.match(r'@.* tagged you in a post', template.title)
     assert post.user.username in template.title
     assert not template.only_usernames
@@ -90,7 +92,7 @@ def test_post_repost_card_template(user, post, user2):
     template = templates.PostRepostCardTemplate(user2.id, post)
     assert template.card_id == card_id
     assert template.user_id == user2.id
-    assert template.action == f'https://real.app/user/{post.user_id}/post/{post.id}'
+    assert template.action == f'https://real.app/apps/social/user/{post.user_id}/post/{post.id}'
     assert re.match(r'@.* reposted one of your posts', template.title)
     assert post.user.username in template.title
     assert not template.only_usernames
@@ -105,7 +107,7 @@ def test_post_likes_card_template(user, post):
     template = templates.PostLikesCardTemplate(user.id, post.id)
     assert template.card_id == card_id
     assert template.user_id == user.id
-    assert template.action == f'https://real.app/user/{user.id}/post/{post.id}/likes'
+    assert template.action == f'https://real.app/apps/social/user/{user.id}/post/{post.id}/likes'
     assert template.title == 'You have new likes'
     assert not template.only_usernames
     assert template.post_id == post.id
@@ -119,7 +121,7 @@ def test_comment_card_template(user, post):
     template = templates.CommentCardTemplate(user.id, post.id, 1)
     assert template.card_id == card_id
     assert template.user_id == user.id
-    assert template.action == f'https://real.app/user/{user.id}/post/{post.id}/comments'
+    assert template.action == f'https://real.app/apps/social/user/{user.id}/post/{post.id}/comments'
     assert not template.only_usernames
     assert template.post_id == post.id
     assert not template.comment_id
@@ -154,7 +156,7 @@ def test_chat_card_template(user):
     template = templates.ChatCardTemplate(user.id, 1)
     assert template.card_id == card_id
     assert template.user_id == user.id
-    assert template.action == 'https://real.app/chat/'
+    assert template.action == 'https://real.app/apps/social/chat/'
     assert not template.only_usernames
     assert not template.post_id
     assert not template.comment_id
@@ -178,7 +180,7 @@ def test_requested_followers_card_template(user):
     template = templates.RequestedFollowersCardTemplate(user.id, 1)
     assert template.card_id == card_id
     assert template.user_id == user.id
-    assert template.action == 'https://real.app/chat/'
+    assert template.action == 'https://real.app/apps/social/chat/'
     assert not template.only_usernames
     assert not template.post_id
     assert not template.comment_id
@@ -202,7 +204,7 @@ def test_contact_joined_card_template(user, user2):
     template = templates.ContactJoinedCardTemplate(user.id, user2.id, user2.username)
     assert template.card_id == card_id
     assert template.user_id == user.id
-    assert template.action == f'https://real.app/user/{user2.id}'
+    assert template.action == f'https://real.app/apps/social/user/{user2.id}'
     assert user2.username in template.title
     assert ' joined REAL' in template.title
     assert not template.only_usernames

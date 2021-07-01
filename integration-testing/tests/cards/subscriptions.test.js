@@ -25,7 +25,7 @@ test('Card message triggers cannot be called from external graphql client', asyn
           type: 'ADDED',
           cardId: uuidv4(),
           title: 'title',
-          action: 'https://real.app/go',
+          action: 'https://real.app/apps/social/go',
         },
       },
       errorPolicy: 'all',
