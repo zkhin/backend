@@ -27,18 +27,6 @@ describe('Query.postsByPaymentTicker', () => {
     await client1.mutate({mutation: mutations.addPost, variables: {postId: postIdWithDefaultTicker, imageData}})
   })
 
-  describe('when querying for the default REAL paymentTicker', () => {
-    it('returns all posts that were created without a paymentTicker', async () => {
-      await eventually(async () => {
-        const {data} = await client1.query({
-          query: queries.postsByPaymentTicker,
-          variables: {paymentTicker: 'REAL'},
-        })
-        expect(data).toMatchObject({posts: {items: [{postId: postIdWithDefaultTicker}], nextToken: null}})
-      })
-    })
-  })
-
   describe('when there are no posts with that paymentTicker', () => {
     it('returns no posts', async () => {
       const {data} = await client1.query({
