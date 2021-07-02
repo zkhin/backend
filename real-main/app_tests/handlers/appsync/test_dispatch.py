@@ -36,6 +36,22 @@ def api_key_authed_event():
 
 
 @pytest.fixture
+def function_event():
+    yield {
+        'info': {
+            'parentTypeName': 'Something',
+            'fieldName': 'else',
+        },
+        'arguments': ['arg1', 'arg2'],
+        'identity': {},
+        'source': {'anotherField': 42},
+        'request': {'headers': {}},
+        'stash': {'functionName': 'Type.field'},
+        'prev': {'foo': 'bar'},
+    }
+
+
+@pytest.fixture
 def setup_one_route():
     routes.clear()
 
@@ -60,6 +76,7 @@ def test_basic_success(setup_one_route, cognito_authed_event):
                 'context': {},
                 'client': {'version': '1.2.3(456)'},
                 'event': cognito_authed_event,
+                'prev': {},
             },
         },
     }
@@ -76,6 +93,7 @@ def test_no_source(setup_one_route, cognito_authed_event):
                 'context': {},
                 'client': {'version': '1.2.3(456)'},
                 'event': cognito_authed_event,
+                'prev': {},
             },
         },
     }
@@ -91,6 +109,7 @@ def test_api_key_authenticated(setup_one_route, api_key_authed_event):
                 'context': {},
                 'client': {},
                 'event': api_key_authed_event,
+                'prev': {},
             },
         },
     }
@@ -106,6 +125,23 @@ def test_context_passed(setup_one_route, api_key_authed_event):
                 'context': {'foo': 'bar'},
                 'client': {},
                 'event': api_key_authed_event,
+                'prev': {},
+            },
+        },
+    }
+
+
+def test_from_function(setup_one_route, function_event):
+    assert dispatch(function_event, {'foo': 'bar'}) == {
+        'data': {
+            'caller_user_id': None,
+            'arguments': ['arg1', 'arg2'],
+            'kwargs': {
+                'source': {'anotherField': 42},
+                'context': {'foo': 'bar'},
+                'client': {},
+                'event': function_event,
+                'prev': {'foo': 'bar'},
             },
         },
     }

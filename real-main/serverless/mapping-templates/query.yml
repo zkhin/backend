@@ -61,6 +61,7 @@
   functions:
     - Posts.batchGet
     - Posts.filterBy.adStatus
+    - Posts.filterBy.paymentTickerRequiredToView
     - Users.beginPipeline
     - Users.batchGet
     - Users.batchGet.blockerStatus

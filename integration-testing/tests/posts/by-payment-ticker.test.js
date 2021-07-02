@@ -71,14 +71,11 @@ describe('Query.postsByPaymentTicker', () => {
 
     beforeAll(async () => {
       await client2.mutate({mutation: mutations.addPost, variables: {postId: postId1, paymentTicker}})
-      await client2.mutate({
-        mutation: mutations.addPost,
-        variables: {postId: postId2, paymentTicker, paymentTickerRequiredToView: true},
-      })
+      await client2.mutate({mutation: mutations.addPost, variables: {postId: postId2, paymentTicker}})
       await client1.mutate({mutation: mutations.addPost, variables: {postId: postId3, paymentTicker}})
     })
 
-    it('returns two posts, most recently created first', async () => {
+    it('returns the posts, most recently created first', async () => {
       await eventually(async () => {
         const {data} = await client1.query({query: queries.postsByPaymentTicker, variables: {paymentTicker}})
         expect(data).toMatchObject({
@@ -108,16 +105,6 @@ describe('Query.postsByPaymentTicker', () => {
       })
     })
 
-    describe('when using the paymentRequiredToView parameter', () => {
-      it('filters out posts that dont have paymentRequiredToView set from the result', async () => {
-        const {data} = await client1.query({
-          query: queries.postsByPaymentTicker,
-          variables: {paymentTicker, paymentTickerRequiredToView: true},
-        })
-        expect(data).toMatchObject({posts: {items: [{postId: postId2}], nextToken: null}})
-      })
-    })
-
     describe('when the user has been blocked by one of the post owners', () => {
       beforeAll(async () => {
         await client1.mutate({mutation: mutations.blockUser, variables: {userId: userId2}})
@@ -130,6 +117,37 @@ describe('Query.postsByPaymentTicker', () => {
       it('filters out the blockers users posts from the result', async () => {
         const {data} = await client2.query({query: queries.postsByPaymentTicker, variables: {paymentTicker}})
         expect(data).toMatchObject({posts: {items: [{postId: postId2}, {postId: postId1}], nextToken: null}})
+      })
+    })
+  })
+
+  describe('when there are some posts with paymentTickerRequiredToView set', () => {
+    const paymentTicker = uuidv4()
+    const [postId1, postId2, postId3] = [uuidv4(), uuidv4(), uuidv4()]
+
+    beforeAll(async () => {
+      await client1.mutate({
+        mutation: mutations.addPost,
+        variables: {postId: postId1, paymentTicker, paymentTickerRequiredToView: false},
+      })
+      await client1.mutate({mutation: mutations.addPost, variables: {postId: postId2, paymentTicker}})
+      await client1.mutate({
+        mutation: mutations.addPost,
+        variables: {postId: postId3, paymentTicker, paymentTickerRequiredToView: true},
+      })
+    })
+
+    describe.each([
+      [null, [postId3, postId2, postId1]],
+      [false, [postId3, postId2, postId1]],
+      [true, [postId3]],
+    ])('when setting the paymentTickerRequiredToView parameter to %p', (paymentTickerRequiredToView, postIds) => {
+      it('filters out the right posts from the results', async () => {
+        const {data} = await client1.query({
+          query: queries.postsByPaymentTicker,
+          variables: {paymentTicker, paymentTickerRequiredToView},
+        })
+        expect(data).toMatchObject({posts: {items: postIds.map((postId) => ({postId})), nextToken: null}})
       })
     })
   })

@@ -68,3 +68,12 @@ class RealTransactionsClient:
             'ticker': ticker,
         }
         self.session.post(url, auth=self.auth, data=json.dumps(data, cls=DecimalAsStringJsonEncoder))
+
+    def get_user_tickers(self, user_id):
+        "Return a list coin tickers the user is holding in their wallet"
+        if self.disabled:
+            return ['REAL', user_id]
+        url = f'{self.api_root}/wallet'
+        data = {'user_uuid': user_id}
+        resp = self.session.post(url, auth=self.auth, data=json.dumps(data))
+        return list(resp.json().get('body', {}).get('wallet', {}).keys())

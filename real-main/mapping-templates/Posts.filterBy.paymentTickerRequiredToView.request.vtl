@@ -1,0 +1,21 @@
+#set ($prevPosts = $ctx.prev.result)
+#set ($callerUserId = $ctx.identity.cognitoIdentityId)
+
+#set ($needsFiltering = false)
+#foreach ($post in $prevPosts)
+  #if ($post.paymentTickerRequiredToView and $post.postedByUserId != $callerUserId)
+    #set ($needsFiltering = true)
+    #break
+  #end
+#end
+
+#if (!$needsFiltering)
+  #return ($prevPosts)
+#end
+
+$util.qr($ctx.stash.put('functionName', 'Posts.filterBy.paymentTickerRequiredToView'))
+{
+  "version": "2018-05-29",
+  "operation": "Invoke",
+  "payload": $util.toJson($ctx)
+}

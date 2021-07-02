@@ -742,3 +742,181 @@ def test_find_posts(post_manager, user):
         call.query_posts().__getitem__().__getitem__('hits'),
         call.query_posts().__getitem__().__getitem__().__iter__(),
     ]
+
+
+@pytest.mark.parametrize(
+    'post_items, transactions_service_calls',
+    [
+        [
+            [
+                {
+                    'postId': '1',
+                    'postedByUserId': 'cid',
+                    'paymentTickerRequiredToView': True,
+                    'paymentTicker': 'xxx',
+                }
+            ],
+            [],
+        ],
+        [
+            [
+                {
+                    'postId': '1',
+                    'postedByUserId': 'fff',
+                    'paymentTickerRequiredToView': False,
+                    'paymentTicker': 'xxx',
+                }
+            ],
+            [],
+        ],
+        [
+            [
+                {
+                    'postId': '1',
+                    'postedByUserId': 'cid',
+                    'paymentTickerRequiredToView': True,
+                    'paymentTicker': 'xxx',
+                },
+                {
+                    'postId': '2',
+                    'postedByUserId': 'fff',
+                    'paymentTickerRequiredToView': False,
+                    'paymentTicker': 'xxx',
+                },
+            ],
+            [],
+        ],
+        [
+            [
+                {
+                    'postId': '1',
+                    'postedByUserId': 'fff',
+                    'paymentTickerRequiredToView': True,
+                    'paymentTicker': 'yyy',
+                }
+            ],
+            [call.get_user_tickers('cid')],
+        ],
+        [
+            [
+                {
+                    'postId': '1',
+                    'postedByUserId': 'cid',
+                    'paymentTickerRequiredToView': True,
+                    'paymentTicker': 'xxx',
+                },
+                {
+                    'postId': '2',
+                    'postedByUserId': 'fff',
+                    'paymentTickerRequiredToView': False,
+                    'paymentTicker': 'xxx',
+                },
+                {
+                    'postId': '3',
+                    'postedByUserId': 'fff',
+                    'paymentTickerRequiredToView': True,
+                    'paymentTicker': 'yyy',
+                },
+                {
+                    'postId': '4',
+                    'postedByUserId': 'fff',
+                    'paymentTickerRequiredToView': True,
+                    'paymentTicker': 'yy',
+                },
+            ],
+            [call.get_user_tickers('cid')],
+        ],
+    ],
+)
+def test_filter_by_payment_ticker_required_to_view_no_filtering(
+    post_manager, post_items, transactions_service_calls
+):
+    with patch.object(post_manager, 'real_transactions_client') as rtmock:
+        rtmock.configure_mock(**{'get_user_tickers.return_value': ['y', 'yy', 'yyy']})
+        resp = post_manager.filter_by_payment_ticker_required_to_view('cid', post_items)
+    assert resp == post_items
+    assert rtmock.mock_calls == transactions_service_calls
+
+
+@pytest.mark.parametrize(
+    'post_items_in, post_items_out',
+    [
+        [
+            [
+                {
+                    'postId': '1',
+                    'postedByUserId': 'fff',
+                    'paymentTickerRequiredToView': True,
+                    'paymentTicker': 'xxx',
+                }
+            ],
+            [],
+        ],
+        [
+            [
+                {
+                    'postId': '1',
+                    'postedByUserId': 'fff',
+                    'paymentTickerRequiredToView': True,
+                    'paymentTicker': 'xxx',
+                },
+                {
+                    'postId': '2',
+                    'postedByUserId': 'cid',
+                    'paymentTickerRequiredToView': True,
+                    'paymentTicker': 'xxx',
+                },
+                {
+                    'postId': '3',
+                    'postedByUserId': 'fff',
+                    'paymentTickerRequiredToView': True,
+                    'paymentTicker': 'xxx',
+                },
+                {
+                    'postId': '4',
+                    'postedByUserId': 'fff',
+                    'paymentTickerRequiredToView': False,
+                    'paymentTicker': 'xxx',
+                },
+                {
+                    'postId': '5',
+                    'postedByUserId': 'fff',
+                    'paymentTickerRequiredToView': True,
+                    'paymentTicker': 'xxx',
+                },
+                {
+                    'postId': '6',
+                    'postedByUserId': 'fff',
+                    'paymentTickerRequiredToView': True,
+                    'paymentTicker': 'yyy',
+                },
+            ],
+            [
+                {
+                    'postId': '2',
+                    'postedByUserId': 'cid',
+                    'paymentTickerRequiredToView': True,
+                    'paymentTicker': 'xxx',
+                },
+                {
+                    'postId': '4',
+                    'postedByUserId': 'fff',
+                    'paymentTickerRequiredToView': False,
+                    'paymentTicker': 'xxx',
+                },
+                {
+                    'postId': '6',
+                    'postedByUserId': 'fff',
+                    'paymentTickerRequiredToView': True,
+                    'paymentTicker': 'yyy',
+                },
+            ],
+        ],
+    ],
+)
+def test_filter_by_payment_ticker_required_to_view_filters(post_manager, post_items_in, post_items_out):
+    with patch.object(post_manager, 'real_transactions_client') as rtmock:
+        rtmock.configure_mock(**{'get_user_tickers.return_value': ['y', 'yy', 'yyy']})
+        resp = post_manager.filter_by_payment_ticker_required_to_view('cid', post_items_in)
+    assert resp == post_items_out
+    assert rtmock.mock_calls == [call.get_user_tickers('cid')]

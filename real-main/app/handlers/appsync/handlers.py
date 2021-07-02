@@ -60,6 +60,7 @@ clients = {
     'pinpoint': clients.PinpointClient(),
     'post_verification': clients.PostVerificationClient(secrets_manager_client.get_post_verification_api_creds),
     'real_dating': clients.RealDatingClient(),
+    'real_transactions': clients.RealTransactionsClient(),
     'redeem_promotion': clients.RedeemPromotionClient(),
     's3_uploads': clients.S3Client(S3_UPLOADS_BUCKET),
     's3_placeholder_photos': clients.S3Client(S3_PLACEHOLDER_PHOTOS_BUCKET),
@@ -1656,3 +1657,15 @@ def swiped_right_users(caller_user, arguments, **kwargs):
             response.append(user.serialize(caller_user.id))
 
     return response
+
+
+@routes.register('Posts.filterBy.paymentTickerRequiredToView')
+def posts_filter_by_payment_ticker_required_to_view(caller_user_id, arguments, prev=None, **kwargs):
+    posts = prev['result']
+
+    try:
+        filtered_posts = post_manager.filter_by_payment_ticker_required_to_view(caller_user_id, posts)
+    except PostException as err:
+        raise ClientException(str(err)) from err
+
+    return filtered_posts

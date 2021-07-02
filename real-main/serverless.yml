@@ -264,6 +264,7 @@ custom:
         functions:
           - Posts.batchGet
           - Posts.filterBy.adStatus
+          - Posts.filterBy.paymentTickerRequiredToView
           - PaginatedPosts.items.applyFilters
           - Users.beginPipeline
           - Users.batchGet
@@ -335,6 +336,10 @@ custom:
 
       - dataSource: DynamodbDataSource
         name: Posts.filterBy.adStatus
+
+      - dataSource: LambdaDataSource
+        name: Posts.filterBy.paymentTickerRequiredToView
+        response: Lambda.response.vtl
 
       - dataSource: DynamodbDataSource
         name: PaginatedPosts.items.applyFilters
