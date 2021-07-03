@@ -1,11 +1,9 @@
 import dayjs from 'dayjs'
-import duration from 'dayjs/plugin/duration'
 import {v4 as uuidv4} from 'uuid'
 
 import {cognito, eventually, generateRandomJpeg} from '../../utils'
 import {mutations, queries} from '../../schema'
 
-dayjs.extend(duration)
 let anonClient
 const imageBytes = generateRandomJpeg(300, 200)
 const imageData = new Buffer.from(imageBytes).toString('base64')
@@ -62,8 +60,7 @@ test('Add post with expiration', async () => {
 
   const postId = uuidv4()
   const text = 'zeds dead baby, zeds dead'
-  const lifetime = 'P7D'
-  let variables = {postId, text, lifetime}
+  let variables = {postId, text, lifetime: 'P7D'}
   let resp = await ourClient.mutate({mutation: mutations.addPost, variables})
   const post = resp.data.addPost
   expect(post.postId).toBe(postId)
@@ -72,7 +69,7 @@ test('Add post with expiration', async () => {
   expect(post.text).toBe(text)
   expect(post.postedAt).toBeTruthy()
   expect(post.expiresAt).toBeTruthy()
-  const expected_expires_at = dayjs(post.postedAt).add(dayjs.duration(lifetime))
+  const expected_expires_at = dayjs(post.postedAt).add(7, 'days')
   const expires_at = dayjs(post.expiresAt)
   expect(expires_at.isSame(expected_expires_at)).toBe(true)
 })

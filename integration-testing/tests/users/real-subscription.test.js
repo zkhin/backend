@@ -1,10 +1,8 @@
 import dayjs from 'dayjs'
-import duration from 'dayjs/plugin/duration'
 
 import {cognito} from '../../utils'
 import {mutations, queries} from '../../schema'
 
-dayjs.extend(duration)
 const loginCache = new cognito.AppSyncLoginCache()
 
 beforeAll(async () => {
@@ -33,12 +31,11 @@ test('Grant a user a free diamond subscription', async () => {
   })
 
   // we give grant ourselves our subscription bonus
-  const subscriptionDuration = dayjs.duration({months: 1})
-  const before = dayjs().add(subscriptionDuration)
+  const before = dayjs().add(1, 'month')
   const expiresAt = await ourClient
     .mutate({mutation: mutations.grantUserSubscriptionBonus})
     .then(({data: {grantUserSubscriptionBonus: user}}) => {
-      const after = dayjs().add(subscriptionDuration)
+      const after = dayjs().add(1, 'month')
       expect(user.userId).toBe(ourUserId)
       expect(user.subscriptionLevel).toBe('DIAMOND')
       expect(dayjs(user.subscriptionExpiresAt) - before).toBeGreaterThan(0)
