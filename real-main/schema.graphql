@@ -66,6 +66,13 @@ type Query {
   # Globally trending posts
   trendingPosts(limit: Int, nextToken: String): PaginatedPosts!
 
+  postsByPaymentTicker(
+    paymentTicker: String!,
+    paymentTickerRequiredToView: Boolean,
+    limit: Int,
+    nextToken: String,
+  ): PaginatedPosts!
+
   # Search keywords for autocomplete
   searchKeywords(keyword: String!): [String]!
 

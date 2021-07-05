@@ -378,6 +378,21 @@ class PostManager(FlagManagerMixin, TrendingManagerMixin, ViewManagerMixin, Mana
 
         return list(set(keywords))
 
+    def filter_by_payment_ticker_required_to_view(self, caller_user_id, post_items):
+        # avoid calling the transactions service if we don't have to
+        if any(p['paymentTickerRequiredToView'] and p['postedByUserId'] != caller_user_id for p in post_items):
+            tickers = self.real_transactions_client.get_user_tickers(caller_user_id)
+            post_items = [
+                pi
+                for pi in post_items
+                if (
+                    not pi['paymentTickerRequiredToView']
+                    or pi['postedByUserId'] == caller_user_id
+                    or pi['paymentTicker'] in tickers
+                )
+            ]
+        return post_items
+
     def on_user_delete_delete_all_by_user(self, user_id, old_item):
         for post_item in self.dynamo.generate_posts_by_user(user_id):
             self.init_post(post_item).delete()

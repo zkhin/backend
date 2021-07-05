@@ -61,6 +61,7 @@
   functions:
     - Posts.batchGet
     - Posts.filterBy.adStatus
+    - Posts.filterBy.paymentTickerRequiredToView
     - Users.beginPipeline
     - Users.batchGet
     - Users.batchGet.blockerStatus
@@ -78,6 +79,17 @@
   dataSource: DynamodbDataSource
   caching:
     keys:
+      - $context.args.limit
+      - $context.args.nextToken
+
+- type: Query
+  field: postsByPaymentTicker
+  response: PassThru.response.vtl
+  dataSource: DynamodbDataSource
+  caching:
+    keys:
+      - $context.args.paymentTicker
+      - $context.args.paymentTickerRequiredToView
       - $context.args.limit
       - $context.args.nextToken
 

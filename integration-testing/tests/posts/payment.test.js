@@ -233,7 +233,7 @@ describe('Post.paymentTickerRequiredToView', () => {
     })
   })
 
-  test('Add post without setting paymentTicker', async () => {
+  test('Add post without setting paymentTickerRequiredToView', async () => {
     const postId = uuidv4()
     const paymentTickerRequiredToViewDefault = false
     await client.mutate({mutation: mutations.addPost, variables: {postId, imageData}})
@@ -245,7 +245,7 @@ describe('Post.paymentTickerRequiredToView', () => {
     })
   })
 
-  test('Add post with paymentTicker set', async () => {
+  test('Add post with paymentTickerRequiredToView set', async () => {
     const postId = uuidv4()
     const paymentTickerRequiredToView = true
     await client.mutate({

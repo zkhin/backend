@@ -1,0 +1,25 @@
+#if ($ctx.args.limit < 1 or $ctx.args.limit > 100)
+  $util.error('ClientError: Limit cannot be less than 1 or greater than 100', 'ClientError')
+#end
+#set ($limit = $util.defaultIfNull($ctx.args.limit, 20))
+
+#set ($nextToken = $ctx.args.nextToken)
+#set ($paymentTicker = $ctx.args.paymentTicker)
+#set ($paymentTickerRequiredToView = $ctx.args.paymentTickerRequiredToView)
+
+{
+  "version": "2018-05-29",
+  "operation": "Query",
+  "query": {
+    "expression": "gsiA5PartitionKey = :pk",
+    "expressionValues": {":pk": {"S": "postPaymentTicker/$paymentTicker"}}
+  },
+  "index": "GSI-A5",
+  "scanIndexForward": false,
+  "limit": $limit
+  #if ($nextToken), "nextToken": "$nextToken"#end
+  #if ($paymentTickerRequiredToView), "filter": {
+    "expression": "paymentTickerRequiredToView = :ptrtv",
+    "expressionValues": {":ptrtv": {"BOOL": true}}
+  }#end
+}

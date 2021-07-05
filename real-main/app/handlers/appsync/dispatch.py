@@ -28,10 +28,14 @@ def get_client_details(event):
 
 def get_gql_details(event):
     return {
-        'arguments': event.get('arguments') or {},
-        'field': event['info']['parentTypeName'] + '.' + event['info']['fieldName'],
-        'source': event.get('source') or {},
-        'callerUserId': (event.get('identity') or {}).get('cognitoIdentityId'),
+        'arguments': event.get('arguments', {}),
+        'field': (
+            event.get('stash', {}).get('functionName')
+            or '.'.join([event['info']['parentTypeName'], event['info']['fieldName']])
+        ),
+        'source': event.get('source', {}),
+        'callerUserId': event.get('identity', {}).get('cognitoIdentityId'),
+        'prev': event.get('prev', {}),
     }
 
 
@@ -65,6 +69,7 @@ def dispatch(event, context):
             gql['callerUserId'],
             gql['arguments'],
             source=gql['source'],
+            prev=gql['prev'],
             context=context,
             event=event,
             client=client,

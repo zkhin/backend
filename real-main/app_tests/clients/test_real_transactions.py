@@ -18,6 +18,7 @@ api_region = 'the-region'
 endpoint_urls = {
     'pay_for_ad_view': f'https://{api_host}/{api_stage}/pay_user_for_advertisement',
     'pay_for_post_view': f'https://{api_host}/{api_stage}/pay_for_post_view',
+    'get_user_tickers': f'https://{api_host}/{api_stage}/wallet',
 }
 
 
@@ -142,3 +143,15 @@ def test_handles_success_response(client, mock_env_aws_auth, func_name, ticker):
     with requests_mock.Mocker() as m:
         m.post(url, status_code=success_status, json=success_response)
         target(*args)  # silently succeeds
+
+
+@pytest.mark.parametrize('tickers', [[], ['foo', 'bar']])
+def test_get_user_tickers(client, mock_env_aws_auth, tickers):
+    url = endpoint_urls['get_user_tickers']
+    success_status = 200
+    success_response = {"message": "ok", "status": 0, "body": {"wallet": {t: {} for t in tickers}}}
+    user_id = str(uuid4())
+    with requests_mock.Mocker() as m:
+        m.post(url, status_code=success_status, json=success_response)
+        result = client.get_user_tickers(user_id)
+    assert result == tickers
