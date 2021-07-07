@@ -371,10 +371,11 @@ class PostManager(FlagManagerMixin, TrendingManagerMixin, ViewManagerMixin, Mana
         search_result = self.elasticsearch_client.query_keywords(query)
         keywords = []
 
-        for hit in search_result['hits']['hits']:
-            source = hit.get('_source')
-            if source is not None:
-                keywords.append(source['keyword'])
+        if search_result and search_result.get('hits') and search_result.get('hits').get('hits'):
+            for hit in search_result['hits']['hits']:
+                source = hit.get('_source')
+                if source:
+                    keywords.append(source['keyword'])
 
         return list(set(keywords))
 
