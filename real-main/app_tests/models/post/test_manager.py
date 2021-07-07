@@ -738,6 +738,12 @@ def test_find_posts(post_manager, user):
 
     assert elasticsearch_client_mock.mock_calls == [
         call.query_posts(query),
+        call.query_posts().__bool__(),
+        call.query_posts().get('hits'),
+        call.query_posts().get().__bool__(),
+        call.query_posts().get('hits'),
+        call.query_posts().get().get('hits'),
+        call.query_posts().get().get().__bool__(),
         call.query_posts().__getitem__('hits'),
         call.query_posts().__getitem__().__getitem__('hits'),
         call.query_posts().__getitem__().__getitem__().__iter__(),
