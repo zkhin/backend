@@ -66,6 +66,9 @@ test('Add comments with bad word - force banned', async () => {
   await eventually(async () => {
     const {data} = await theirClient.query({query: queries.self})
     expect(data.self.userStatus).toBe('DISABLED')
+    // card count and cards will be null for disabled user
+    expect(data.self.cardCount).toBeNull()
+    expect(data.self.cards).toBeNull()
   })
 
   // other tries to change email with banned email and it's also disabled
@@ -79,5 +82,10 @@ test('Add comments with bad word - force banned', async () => {
     otherClient.mutate({mutation: mutations.startChangeUserEmail, variables: {email: theirEmail}}),
   ).rejects.toThrow(/ClientError: User email is already banned and disabled/)
 
-  await otherClient.query({query: queries.self}).then(({data}) => expect(data.self.userStatus).toBe('DISABLED'))
+  await otherClient.query({query: queries.self}).then(({data}) => {
+    expect(data.self.userStatus).toBe('DISABLED')
+    // card count and cards will be null for disabled user
+    expect(data.self.cardCount).toBeNull()
+    expect(data.self.cards).toBeNull()
+  })
 })

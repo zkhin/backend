@@ -11,6 +11,11 @@
   #return
 #end
 
+## private to disabled user
+#if ($util.defaultIfNull($ctx.source.userStatus, 'ACTIVE') == 'DISABLED')
+  #return
+#end
+
 {
   "version": "2018-05-29",
   "operation": "Query",
