@@ -60,7 +60,9 @@ type Query {
 
   # Find similar posts
   #   - find keywords matched posts
+  #   - return order by keyword matches
   #   - return order by trending score
+  #   - return order by view count
   similarPosts(postId: ID!, limit: Int, nextToken: String): PaginatedPosts!
 
   # Globally trending posts

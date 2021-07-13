@@ -337,10 +337,9 @@ class PostManager(FlagManagerMixin, TrendingManagerMixin, ViewManagerMixin, Mana
                 source = hit.get('_source')
                 if source is not None:
                     post_id = source['postId']
-                    post = self.get_post(source['postId'])
+                    post = self.get_post(post_id)
                     if post:
-                        trending_score = self.get_post(source['postId']).trending_score
-                        post_id_to_trending_score[post_id] = trending_score
+                        post_id_to_trending_score[post_id] = post.trending_score
 
         if post_id_to_trending_score:
             # sort post ids by trending weight
